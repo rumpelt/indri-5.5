@@ -4,15 +4,15 @@
 void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) {
 
   _filename = filename;
-  std::FILE *filePtr = std::fopen(filename.c_str(), "rb");
+  _file = std::fopen(filename.c_str(), "rb");
 
-  _file = boost::shared_ptr<FILE>(filePtr);
+  // _file = boost::shared_ptr<FILE>(filePtr);
 
   if(_file == NULL)
     LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't open file " + filename + "." );
 
   lzma_stream strm = LZMA_STREAM_INIT;
-  _lzmaStream = boost::shared_ptr<lzma_stream>(&strm);   
+  _lzmaStream = &strm;   
 
   indri::parse::ThriftDocumentExtractor::init_decoder(_lzmaStream);
   cout << "\ndecompressing \n";
@@ -24,8 +24,8 @@ void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) 
   cout << "initialze transport layer";
 }
 
-bool indri::parse::ThriftDocumentExtractor::init_decoder(boost::shared_ptr<lzma_stream> strm) {
-        lzma_ret ret = lzma_stream_decoder(strm.get(), UINT64_MAX, LZMA_CONCATENATED);
+bool indri::parse::ThriftDocumentExtractor::init_decoder(lzma_stream *strm) {
+        lzma_ret ret = lzma_stream_decoder(strm, UINT64_MAX, LZMA_CONCATENATED);
 
 	// Return successfully if the initialization went fine.
 	if (ret == LZMA_OK)
@@ -64,13 +64,13 @@ bool indri::parse::ThriftDocumentExtractor::decompress(){
 
   
   while (true) {
-    if (_lzmaStream->avail_in == 0 && !feof(_file.get())) {
+    if (_lzmaStream->avail_in == 0 && !feof(_file)) {
       _lzmaStream->next_in = inbuf;
-      _lzmaStream->avail_in = fread(inbuf, 1, sizeof(inbuf), _file.get()); 
-      if(feof(_file.get()))
+      _lzmaStream->avail_in = fread(inbuf, 1, sizeof(inbuf), _file); 
+      if(feof(_file))
         action = LZMA_FINISH;
     }
-    lzma_ret ret = lzma_code(_lzmaStream.get(), action);
+    lzma_ret ret = lzma_code(_lzmaStream, action);
     if (_lzmaStream->avail_out == 0 || ret == LZMA_STREAM_END) {
       size_t write_size = sizeof(outbuf) - _lzmaStream->avail_out;
       for(int idx = 0 ; idx < write_size; idx++)
@@ -120,22 +120,32 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
 
   try {
     _streamItem.read(_protocol.get());
-    std::stringbuf doc;
-    doc.sputn("<DOC>\n",6);
-
-    doc.sputn("<DOCNO>\n",8);
-    doc.sputn(_streamItem.doc_id.c_str(), _streamItem.doc_id.size());
-    doc.sputn("</DOCNO>\n",9);
- 
-    doc.sputn("<DOCHDR>\n",9);
     
-    doc.sputn("</DOCHDR>\n",10);
+    std::stringstream doc;
+    doc << "<DOC>\n";
+    doc << "<DOCNO>\n";
+    doc << _streamItem.stream_id.c_str();
+    doc << "</DOCNO>\n";
+  
+    doc  << "<DOCHDR>\n";
+    if (_streamItem.abs_url.size() > 0)
+      doc << _streamItem.abs_url.c_str();
+    doc << "</DOCHDR>\n";
     
-    doc.sputn("<html>\n",7);
-    doc.sputn(_streamItem.body.raw.data(), _streamItem.body.raw.size());
-    doc.sputn("</html>\n",8);
+    doc << "<html>\n";
 
-    doc.sputn("</DOC>",6);    
+    streamcorpus::StreamTime stime = _streamItem.stream_time;
+    doc << "<TIMESTAMP>\n";
+    doc << stime.epoch_ticks;   
+    doc << "</TIMESTAMP>";
+
+    if(_streamItem.body.clean_html.size() > 0)
+        doc << _streamItem.body.clean_html.data();
+    
+    
+    doc << "</html>\n";
+
+    doc << "</DOC>";    
      
     indri::parse::MetadataPair pair;
     pair.value = _filename.c_str();
@@ -145,7 +155,7 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
 
     _docnostring.assign(_filename.c_str());
     cleanDocno();
-    pair.value = _streamItem.doc_id.c_str();
+    pair.value = _streamItem.stream_id.c_str();
     pair.valueLength = _docnostring.length()+1;
     pair.key = "docno";
     _document.metadata.push_back( pair );
@@ -170,5 +180,7 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
 }
 
 void indri::parse::ThriftDocumentExtractor::close() {
-  fclose(_file.get());
+  fclose(_file);
+//  int a;
 }
+

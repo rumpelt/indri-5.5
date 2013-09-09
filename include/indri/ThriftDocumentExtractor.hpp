@@ -50,12 +50,12 @@ namespace indri
       std::string _filename;
       UnparsedDocument _document;
       std::vector<uint8_t> _thriftContent;
-      boost::shared_ptr<lzma_stream> _lzmaStream;
+      lzma_stream *_lzmaStream;
       boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>  _memoryTransport;
       boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol> _protocol;
       streamcorpus::StreamItem _streamItem;
   
-      boost::shared_ptr<std::FILE>  _file;
+      std::FILE  *_file;
    
       
 
@@ -63,7 +63,7 @@ namespace indri
       void open( const std::string& filename );
       UnparsedDocument* nextDocument();
       void close();
-      bool init_decoder(boost::shared_ptr<lzma_stream> strm);
+      bool init_decoder(lzma_stream *strm);
       bool decompress();
 
     };
