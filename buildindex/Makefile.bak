@@ -1,0 +1,21 @@
+ 
+include ../MakeDefns
+SHARED=
+INCPATH= $(patsubst %, -I../contrib/%/include, $(DEPENDENCIES))
+LIBPATH= -L../obj  $(patsubst %, -L../contrib/%/obj, $(DEPENDENCIES))
+LIBS=$(patsubst %, -l%, $(DEPENDENCIES))
+APP=IndriBuildIndex
+
+%.o: stream%.cpp Kba%.cpp
+	$(CXX) -Wall  -g  -c -I../externalinclude -I../externalinclude/lzma $< -o ../obj/$@ -L../externallib -llzma -lthrift 
+
+all:
+	$(CXX) $(CXXFLAGS) $(APP).cpp -o $(APP) $(LIBPATH) $(LIBS) $(CPPLDFLAGS)
+
+install:
+	$(INSTALL_PROGRAM) $(APP) $(bindir)
+
+clean:
+	rm -f $(APP)
+
+
