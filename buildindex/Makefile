@@ -3,7 +3,7 @@ include ../MakeDefns
 SHARED=
 INCPATH=-I../include $(patsubst %, -I../contrib/%/include, $(DEPENDENCIES))
 LIBPATH=-L../obj  $(patsubst %, -L../contrib/%/obj, $(DEPENDENCIES))
-LIBS=-lindri  $(patsubst %, -l%, $(DEPENDENCIES))
+LIBS=-lindri -lthrift -llzma -lthriftz  $(patsubst %, -l%, $(DEPENDENCIES))
 APP=IndriBuildIndex
 
 all:

@@ -5,6 +5,7 @@ void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) 
 
   _filename = filename;
   std::FILE *filePtr = std::fopen(filename.c_str(), "rb");
+
   _file = boost::shared_ptr<FILE>(filePtr);
 
   if(_file == NULL)
@@ -12,18 +13,19 @@ void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) 
 
   lzma_stream strm = LZMA_STREAM_INIT;
   _lzmaStream = boost::shared_ptr<lzma_stream>(&strm);   
+
   indri::parse::ThriftDocumentExtractor::init_decoder(_lzmaStream);
+  cout << "\ndecompressing \n";
   if(!indri::parse::ThriftDocumentExtractor::decompress())
     LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't decompress the xz file " + filename + "." );
-  
+  //  cout << _thriftContent.size();
   _memoryTransport= boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
   _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));
-  
+  cout << "initialze transport layer";
 }
 
 bool indri::parse::ThriftDocumentExtractor::init_decoder(boost::shared_ptr<lzma_stream> strm) {
-        lzma_ret ret = lzma_stream_decoder(
-					   strm.get(), UINT64_MAX, LZMA_CONCATENATED);
+        lzma_ret ret = lzma_stream_decoder(strm.get(), UINT64_MAX, LZMA_CONCATENATED);
 
 	// Return successfully if the initialization went fine.
 	if (ret == LZMA_OK)
@@ -73,14 +75,17 @@ bool indri::parse::ThriftDocumentExtractor::decompress(){
       size_t write_size = sizeof(outbuf) - _lzmaStream->avail_out;
       for(int idx = 0 ; idx < write_size; idx++)
         _thriftContent.push_back(outbuf[idx]);
-      
+      //      cout <<"\n" +_thriftContent.size();
       _lzmaStream->next_out = outbuf;
       _lzmaStream->avail_out = sizeof(outbuf);    
     }
 
     if (ret != LZMA_OK) {
       if (ret == LZMA_STREAM_END)
+      { 
+        cout << "\n returnitng true ";
         return true;
+      }
       const char *msg;
       switch (ret) {
         case LZMA_MEM_ERROR:
@@ -103,6 +108,7 @@ bool indri::parse::ThriftDocumentExtractor::decompress(){
 	  msg = "Unknown error, possibly a bug";
 	  break;
       }
+      cout << msg;
       return false;
     }
   }
@@ -119,9 +125,12 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
 
     doc.sputn("<DOCNO>\n",8);
     doc.sputn(_streamItem.doc_id.c_str(), _streamItem.doc_id.size());
-    doc.sputn("</DOCNO>\n",9); 
+    doc.sputn("</DOCNO>\n",9);
+ 
+    doc.sputn("<DOCHDR>\n",9);
     
-  
+    doc.sputn("</DOCHDR>\n",10);
+    
     doc.sputn("<html>\n",7);
     doc.sputn(_streamItem.body.raw.data(), _streamItem.body.raw.size());
     doc.sputn("</html>\n",8);

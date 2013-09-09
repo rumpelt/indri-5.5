@@ -580,6 +580,7 @@ are specified for the currently indexing document ID.</dd>
 #include <string>
 #include <cctype>
 
+
 #include "indri/Parameters.hpp"
 #include "indri/IndexEnvironment.hpp"
 #include <time.h>
@@ -603,6 +604,7 @@ are specified for the currently indexing document ID.</dd>
 #include "indri/DirectoryIterator.hpp"
 #include "indri/Path.hpp"
 #include "indri/ThriftDocumentExtractor.hpp"
+#include "indri/UnparsedDocument.hpp"
 // Recover a repository that crashed during build to be consistent with
 // its latest checkpoint. If it can't be recovered, create an empty one.
 static bool _recoverRepository(const std::string &path) {
@@ -1073,8 +1075,15 @@ int main(int argc, char * argv[]) {
         indri::file::FileTreeIterator files( corpusPath );
 
         for( ; files != indri::file::FileTreeIterator::end(); files++ ) {
-          if( fileClass.length() )
-            env.addFile( *files, fileClass );
+          if( fileClass.length() ) {
+            cout << "opeing "+*files;
+	    indri::parse::ThriftDocumentExtractor thriftext;
+	    thriftext.open(*files);
+	    indri::parse::UnparsedDocument *doc = thriftext.nextDocument();
+             
+            cout << doc->text;
+	    //            env.addFile( *files, fileClass );
+	  }
           else {
             std::string extension = indri::file::Path::extension( *files );
             indri::parse::FileClassEnvironmentFactory::Specification *spec = env.getFileClassSpec(extension);

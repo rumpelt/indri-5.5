@@ -1,0 +1,14 @@
+<parameters>
+  <index>/usa/arao/trec/trec-kba/2013/lemurindex</index>
+  <memory>2G</memory>
+  <corpus>
+    <path>/data/data/collections/KBA/2013/aws-publicdatasets/trec/kba/kba-streamcorpus-2013-v0_2_0-english-and-unknown-language</path>
+    <class>trecweb</class>
+  </corpus>
+  <metadata>
+    <field>DOCNO</field>
+    <forward>DOCNO</forward>
+    <backward>DOCNO</backward>
+  </metadata>
+  <stemmer>Krovetz</stemmer>
+</parameters>
