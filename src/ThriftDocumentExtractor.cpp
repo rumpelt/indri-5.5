@@ -1,5 +1,6 @@
 #include "indri/ThriftDocumentExtractor.hpp"
 
+lzma_stream indri::parse::ThriftDocumentExtractor::_lzmaStream = LZMA_STREAM_INIT;
 
 void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) {
 
@@ -11,17 +12,29 @@ void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) 
   if(_file == NULL)
     LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't open file " + filename + "." );
 
-  lzma_stream strm = LZMA_STREAM_INIT;
-  _lzmaStream = &strm;   
-
-  indri::parse::ThriftDocumentExtractor::init_decoder(_lzmaStream);
-  cout << "\ndecompressing \n";
-  if(!indri::parse::ThriftDocumentExtractor::decompress())
+  
+  indri::parse::ThriftDocumentExtractor::init_decoder(&indri::parse::ThriftDocumentExtractor::_lzmaStream);
+  //cout << "\ndecompressing \n";
+  
+  if(!indri::parse::ThriftDocumentExtractor::decompress(&indri::parse::ThriftDocumentExtractor::_lzmaStream))
     LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't decompress the xz file " + filename + "." );
+
+  lzma_end(&indri::parse::ThriftDocumentExtractor::_lzmaStream);
+
   //  cout << _thriftContent.size();
-  _memoryTransport= boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
-  _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));
-  cout << "initialze transport layer";
+  /**  
+  uint8_t *fixedBuffer = (uint8_t*)std::malloc(_thriftContent.size());
+   
+  for(size_t idx=0; idx < _thriftContent.size() ; idx++)
+  {
+    *(fixedBuffer + idx) = _thriftContent[idx];
+  } 
+  */
+  _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
+
+  _protocol = new apache::thrift::protocol::TBinaryProtocol(_memoryTransport);
+
+  //cout << "initialze transport layer";
 }
 
 bool indri::parse::ThriftDocumentExtractor::init_decoder(lzma_stream *strm) {
@@ -51,41 +64,39 @@ bool indri::parse::ThriftDocumentExtractor::init_decoder(lzma_stream *strm) {
 	return false;
 }
 
-bool indri::parse::ThriftDocumentExtractor::decompress(){
+bool indri::parse::ThriftDocumentExtractor::decompress(lzma_stream *strm){
   lzma_action action = LZMA_RUN;
 
   uint8_t inbuf[BUFSIZ];
   uint8_t outbuf[BUFSIZ];
-  
-  _lzmaStream->next_in = NULL;
-  _lzmaStream->avail_in = 0;
-  _lzmaStream->next_out = outbuf;
-  _lzmaStream->avail_out = sizeof(outbuf);
+  _thriftContent.clear();
+  strm->next_in = NULL;
+  strm->avail_in = 0;
+  strm->next_out = outbuf;
+  strm->avail_out = sizeof(outbuf);
 
   
   while (true) {
-    if (_lzmaStream->avail_in == 0 && !feof(_file)) {
-      _lzmaStream->next_in = inbuf;
-      _lzmaStream->avail_in = fread(inbuf, 1, sizeof(inbuf), _file); 
+    if (strm->avail_in == 0 && !feof(_file)) {
+      strm->next_in = inbuf;
+      strm->avail_in = fread(inbuf, 1, sizeof(inbuf), _file); 
       if(feof(_file))
         action = LZMA_FINISH;
     }
-    lzma_ret ret = lzma_code(_lzmaStream, action);
-    if (_lzmaStream->avail_out == 0 || ret == LZMA_STREAM_END) {
-      size_t write_size = sizeof(outbuf) - _lzmaStream->avail_out;
+    lzma_ret ret = lzma_code(strm, action);
+    if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
+      size_t write_size = sizeof(outbuf) - strm->avail_out;
       for(int idx = 0 ; idx < write_size; idx++)
         _thriftContent.push_back(outbuf[idx]);
       //      cout <<"\n" +_thriftContent.size();
-      _lzmaStream->next_out = outbuf;
-      _lzmaStream->avail_out = sizeof(outbuf);    
+      strm->next_out = outbuf;
+      strm->avail_out = sizeof(outbuf);    
     }
 
     if (ret != LZMA_OK) {
       if (ret == LZMA_STREAM_END)
-      { 
-        cout << "\n returnitng true ";
         return true;
-      }
+
       const char *msg;
       switch (ret) {
         case LZMA_MEM_ERROR:
@@ -116,10 +127,12 @@ bool indri::parse::ThriftDocumentExtractor::decompress(){
 indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocument() {
   _document.text = 0;
   _document.textLength = 0;
+  _document.content = 0;
+  _document.contentLength = 0;
   _document.metadata.clear();
 
   try {
-    _streamItem.read(_protocol.get());
+    _streamItem.read(_protocol);
     
     std::stringstream doc;
     doc << "<DOC>\n";
@@ -132,44 +145,67 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
       doc << _streamItem.abs_url.c_str();
     doc << "</DOCHDR>\n";
     
+    doc << "<TIMESTAMP>\n";
+    streamcorpus::StreamTime stime = _streamItem.stream_time;
+    doc << fixed << stime.epoch_ticks;
+    doc << "</TIMESTAMP>\n";
+    
+    doc  << "<SOURCE>\n";
+    if (_streamItem.source.size() > 0)
+      doc << _streamItem.source.c_str();
+    doc << "</SOURCE>\n";
+    
+    doc  << "<MEDIATYPE>\n";
+    if (_streamItem.body.media_type.size() > 0)
+      doc << _streamItem.body.media_type.c_str();
+    doc << "</MEDIATYPE>\n";
+
+    if (_streamItem.other_content.find("title") != _streamItem.other_content.end())
+    {
+      doc << "<TITLE>\n";
+      doc << _streamItem.other_content["title"].raw.data();
+      doc << "</TITLE>\n";
+    }
+
+    if (_streamItem.other_content.find("anchor") != _streamItem.other_content.end())
+    {
+      doc << "<ANCHOR>\n";
+      doc << _streamItem.other_content["anchor"].raw.data();
+      doc << "</ANCHOR>\n";
+    }
+
+    
     doc << "<html>\n";
 
-    streamcorpus::StreamTime stime = _streamItem.stream_time;
-    doc << "<TIMESTAMP>\n";
-    doc << stime.epoch_ticks;   
-    doc << "</TIMESTAMP>";
-
     if(_streamItem.body.clean_html.size() > 0)
-        doc << _streamItem.body.clean_html.data();
-    
+      doc << _streamItem.body.clean_html.data();
+    else if(_streamItem.body.raw.size() > 0)
+      doc << _streamItem.body.raw.data();
     
     doc << "</html>\n";
 
     doc << "</DOC>";    
-     
+    
     indri::parse::MetadataPair pair;
+
     pair.value = _filename.c_str();
     pair.valueLength = _filename.length()+1;
     pair.key = "path";
     _document.metadata.push_back( pair );
 
-    _docnostring.assign(_filename.c_str());
+    _docnostring.assign(_streamItem.stream_id.c_str());
     cleanDocno();
     pair.value = _streamItem.stream_id.c_str();
     pair.valueLength = _docnostring.length()+1;
     pair.key = "docno";
     _document.metadata.push_back( pair );
 
-    pair.key = "filetype";
-    pair.value = (void*) "TRECWEB";
-    pair.valueLength = 8;
-    _document.metadata.push_back( pair );
     
     std::string docContent = doc.str();
     size_t numChars = docContent.size();
    
     _document.text = docContent.data();
-    _document.textLength = numChars + 1;
+    _document.textLength = numChars + 1; //for null character
     _document.content = docContent.data();
     _document.contentLength = numChars; // no null
     
@@ -184,3 +220,9 @@ void indri::parse::ThriftDocumentExtractor::close() {
 //  int a;
 }
 
+indri::parse::ThriftDocumentExtractor::~ThriftDocumentExtractor() {
+  _thriftContent.clear();
+  indri::parse::ThriftDocumentExtractor::close();
+  _memoryTransport->close();
+  delete _protocol;
+}

@@ -578,6 +578,7 @@ are specified for the currently indexing document ID.</dd>
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <fstream>
 #include <cctype>
 
 
@@ -935,6 +936,25 @@ void require_parameter( const char* name, indri::api::Parameters& p ) {
   }
 }
 
+/**
+ * for kba purose to read the files to process in ascending order
+ * of time.
+ */
+std::vector<std::string> readKbaDirList(std::string filename){
+  std::vector<std::string> directories;
+  std::ifstream filestrm;
+  filestrm.open(filename.c_str(), std::ifstream::in);
+  std::string line;
+  while(std::getline(filestrm, line))
+  {
+    directories.push_back(line);
+  }
+  std::sort(directories.begin(), directories.end());
+  filestrm.close();
+  return directories;
+}
+
+
 int main(int argc, char * argv[]) {
   try {
     indri::api::Parameters& parameters = indri::api::Parameters::instance();
@@ -1042,7 +1062,7 @@ int main(int argc, char * argv[]) {
       require_parameter( "path", thisCorpus );
       std::string corpusPath = thisCorpus["path"];
       std::string fileClass = thisCorpus.get("class", "");
-      
+      std::string kbaDirList = thisCorpus.get("KbaDirList", ""); 
       // augment field/metadata tags in the environment if needed.
       if( fileClass.length() ) {
         indri::parse::FileClassEnvironmentFactory::Specification *spec = env.getFileClassSpec(fileClass);
@@ -1070,32 +1090,37 @@ int main(int argc, char * argv[]) {
       // Support for offset metadata file
       std::string offsetMetadataPath = thisCorpus.get( "metadata", "" );
       env.setOffsetMetadataPath( offsetMetadataPath );
+      
+      if( isDirectory ) { 
+	std::vector<string> dirlist = readKbaDirList(kbaDirList);
+	
+        for(std::vector<string>::iterator dirit = dirlist.begin(); dirit != dirlist.end(); dirit++) {
+          cout << "\n"+*dirit;
+          indri::file::FileTreeIterator files( corpusPath +"/"+*dirit);
 
-      if( isDirectory ) {
-        indri::file::FileTreeIterator files( corpusPath );
-
-        for( ; files != indri::file::FileTreeIterator::end(); files++ ) {
-          if( fileClass.length() ) {
-            cout << "opeing "+*files;
-	    indri::parse::ThriftDocumentExtractor thriftext;
-	    thriftext.open(*files);
-	    indri::parse::UnparsedDocument *doc = thriftext.nextDocument();
-             
-            cout << doc->text;
-	    //            env.addFile( *files, fileClass );
-	  }
-          else {
-            std::string extension = indri::file::Path::extension( *files );
-            indri::parse::FileClassEnvironmentFactory::Specification *spec = env.getFileClassSpec(extension);
-            if( spec ) {
-              // add fields if necessary, only update if changed.
-              if( augmentSpec( spec, fields, metadata, metadataForward, metadataBackward ) ) 
-                env.addFileClass(*spec);
-              delete(spec);
+          for( ; files != indri::file::FileTreeIterator::end(); files++ ) {
+            if( fileClass.length() ) {
+	      //       cout << "opeing "+*files;
+	      indri::parse::ThriftDocumentExtractor thriftext;
+	      thriftext.open(*files);
+              indri::parse::UnparsedDocument *doc;
+              while((doc = thriftext.nextDocument()) != NULL) {
+	        env.addString(doc, fileClass);     
+              }
+	    }
+            else {
+              std::string extension = indri::file::Path::extension( *files );
+              indri::parse::FileClassEnvironmentFactory::Specification *spec = env.getFileClassSpec(extension);
+              if( spec ) {
+                // add fields if necessary, only update if changed.
+                if( augmentSpec( spec, fields, metadata, metadataForward, metadataBackward ) ) 
+                  env.addFileClass(*spec);
+                delete(spec);
+              }
+              env.addFile( *files );
             }
-            env.addFile( *files );
           }
-        }
+	}
       } else {
         if( fileClass.length() )
           env.addFile( corpusPath, fileClass );

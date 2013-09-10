@@ -1,5 +1,5 @@
 /**
-@author : ashwani
+ *@author : ashwani
 */
 
 #ifndef INDRI_THRIFTDOCUMENTEXTRACTOR_HPP
@@ -50,22 +50,20 @@ namespace indri
       std::string _filename;
       UnparsedDocument _document;
       std::vector<uint8_t> _thriftContent;
-      lzma_stream *_lzmaStream;
+      static lzma_stream _lzmaStream;
       boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>  _memoryTransport;
-      boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol> _protocol;
+      apache::thrift::protocol::TBinaryProtocol *_protocol;
       streamcorpus::StreamItem _streamItem;
   
       std::FILE  *_file;
-   
-      
 
     public:
       void open( const std::string& filename );
       UnparsedDocument* nextDocument();
       void close();
       bool init_decoder(lzma_stream *strm);
-      bool decompress();
-
+      bool decompress(lzma_stream *strm);
+      ~ThriftDocumentExtractor();
     };
   }
 }

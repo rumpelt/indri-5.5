@@ -252,7 +252,10 @@ namespace indri
       /// @param fileName the file to add
       /// @param fileClass the file class to add (eg trecweb).
       void addFile( const std::string& fileName, const std::string& fileClass );
-
+       
+      lemur::api::DOCID_T addString(indri::parse::UnparsedDocument *doc, 
+                     const std::string& fileClass);  
+      
       /// Adds a string to the index and repository.  The documentString is assumed to contain the kind of
       /// text that would be found in a file of type fileClass.
       /// @param documentString the document to add

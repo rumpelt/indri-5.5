@@ -1,14 +1,54 @@
 <parameters>
-  <index>/usa/arao/trec/trec-kba/2013/lemurindex</index>
+  <index>/data/data/collections/KBA/2013/indriindex/b</index>
   <memory>2G</memory>
   <corpus>
     <path>/data/data/collections/KBA/2013/aws-publicdatasets/trec/kba/kba-streamcorpus-2013-v0_2_0-english-and-unknown-language</path>
     <class>trecweb</class>
+    <KbaDirList>/usa/arao/trec/trec-kba/2013/subdirab</KbaDirList>
   </corpus>
   <metadata>
     <field>DOCNO</field>
-    <forward>DOCNO</forward>
+    <field>TITLE</field>
+    <field>TIMESTAMP</field>
+    <field>MEDIATYPE</field>
+    <field>DOCHDR</field>
+    <field>ANCHOR</field>
+    <backward>TIMESTAMP</backward>
     <backward>DOCNO</backward>
   </metadata>
-  <stemmer>Krovetz</stemmer>
+  <field>
+    <name>DOCNO</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>TIMESTAMP</name>
+    <numeric>true</numeric>
+  </field>
+  <field>
+    <name>TITLE</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>DOCHDR</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>SOURCE</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>MEDIATYPE</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>ANCHOR</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>html</name>
+    <numeric>false</numeric>
+  </field>
+  <stemmer>
+    <name>Krovetz</name>
+  </stemmer>
 </parameters>

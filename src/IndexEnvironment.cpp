@@ -420,6 +420,32 @@ void indri::api::IndexEnvironment::addFile( const std::string& fileName, const s
   }
 }
 
+lemur::api::DOCID_T indri::api::IndexEnvironment::addString(indri::parse::UnparsedDocument *document, const std::string& fileClass) {
+  indri::parse::Parser* parser;
+  indri::parse::Tokenizer* tokenizer;
+  indri::parse::DocumentIterator* iterator;
+  indri::parse::Conflater* conflater;
+  std::string nothing;
+
+  _documentsSeen++;
+
+  
+  _getParsingContext( &parser, &tokenizer, &iterator, &conflater, fileClass );
+
+  if( parser == 0 ) {
+    LEMUR_THROW( LEMUR_RUNTIME_ERROR, "File class '" + fileClass + "' wasn't recognized." );
+  }
+  indri::parse::TokenizedDocument* tokenized = tokenizer->tokenize(document);
+
+  ParsedDocument* parsed = parser->parse( tokenized );
+  lemur::api::DOCID_T documentID =_repository.addDocument( parsed );
+
+  _documentsIndexed++;
+  if( _callback ) (*_callback)( indri::api::IndexStatus::DocumentCount, nothing, _error, _documentsIndexed, _documentsSeen );
+
+  return documentID;
+}
+
 //
 // addString
 //
