@@ -708,10 +708,10 @@ class StatusMonitor : public indri::api::IndexStatus {
         break;
 
       case indri::api::IndexStatus::FileClose:
-        buildindex_print_status( "Documents parsed: ", documentsSeen, " Documents indexed: ", documentsParsed );
-        buildindex_print_event( "" );
+	//    buildindex_print_status( "Documents parsed: ", documentsSeen, " Documents indexed: ", documentsParsed );
+        //buildindex_print_event( "" );
         event << "Closed " << documentFile;
-        buildindex_print_event( event.str() ); 
+        //buildindex_print_event( event.str() ); 
         break;
 
       case indri::api::IndexStatus::FileSkip:
@@ -1095,18 +1095,24 @@ int main(int argc, char * argv[]) {
 	std::vector<string> dirlist = readKbaDirList(kbaDirList);
 	
         for(std::vector<string>::iterator dirit = dirlist.begin(); dirit != dirlist.end(); dirit++) {
-          cout << "\n"+*dirit;
+	  // cout << "\n"+*dirit;
           indri::file::FileTreeIterator files( corpusPath +"/"+*dirit);
 
           for( ; files != indri::file::FileTreeIterator::end(); files++ ) {
             if( fileClass.length() ) {
-	      //       cout << "opeing "+*files;
+	      // cout << "\nopening: "+*files;
 	      indri::parse::ThriftDocumentExtractor thriftext;
 	      thriftext.open(*files);
-              indri::parse::UnparsedDocument *doc;
+               indri::parse::UnparsedDocument *doc;
+                 
               while((doc = thriftext.nextDocument()) != NULL) {
-	        env.addString(doc, fileClass);     
+                // must initialize doc->text to 0 before populating it with chars
+		//cout << "\nnext doc \n";
+                if(doc->text != NULL) {
+		       env.addString(doc, fileClass);     
+		}
               }
+         
 	    }
             else {
               std::string extension = indri::file::Path::extension( *files );

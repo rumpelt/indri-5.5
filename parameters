@@ -1,10 +1,10 @@
 <parameters>
-  <index>/data/data/collections/KBA/2013/indriindex/b</index>
+  <index>/data/data/collections/KBA/2013/indriindex/a</index>
   <memory>2G</memory>
   <corpus>
     <path>/data/data/collections/KBA/2013/aws-publicdatasets/trec/kba/kba-streamcorpus-2013-v0_2_0-english-and-unknown-language</path>
     <class>trecweb</class>
-    <KbaDirList>/usa/arao/trec/trec-kba/2013/subdirab</KbaDirList>
+    <KbaDirList>/usa/arao/trec/trec-kba/2013/subdiraa</KbaDirList>
   </corpus>
   <metadata>
     <field>DOCNO</field>

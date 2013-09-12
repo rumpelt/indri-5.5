@@ -52,9 +52,9 @@ namespace indri
       std::vector<uint8_t> _thriftContent;
       static lzma_stream _lzmaStream;
       boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>  _memoryTransport;
-      apache::thrift::protocol::TBinaryProtocol *_protocol;
+      boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol> _protocol;
       streamcorpus::StreamItem _streamItem;
-  
+      
       std::FILE  *_file;
 
     public:

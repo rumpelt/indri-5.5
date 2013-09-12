@@ -21,20 +21,10 @@ void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) 
 
   lzma_end(&indri::parse::ThriftDocumentExtractor::_lzmaStream);
 
-  //  cout << _thriftContent.size();
-  /**  
-  uint8_t *fixedBuffer = (uint8_t*)std::malloc(_thriftContent.size());
-   
-  for(size_t idx=0; idx < _thriftContent.size() ; idx++)
-  {
-    *(fixedBuffer + idx) = _thriftContent[idx];
-  } 
-  */
   _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
 
-  _protocol = new apache::thrift::protocol::TBinaryProtocol(_memoryTransport);
+  _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));
 
-  //cout << "initialze transport layer";
 }
 
 bool indri::parse::ThriftDocumentExtractor::init_decoder(lzma_stream *strm) {
@@ -125,6 +115,7 @@ bool indri::parse::ThriftDocumentExtractor::decompress(lzma_stream *strm){
   }
 }
 indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocument() {
+  //cout << "Inside next doc";
   _document.text = 0;
   _document.textLength = 0;
   _document.content = 0;
@@ -132,7 +123,8 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
   _document.metadata.clear();
 
   try {
-    _streamItem.read(_protocol);
+  
+    _streamItem.read(_protocol.get());
     
     std::stringstream doc;
     doc << "<DOC>\n";
@@ -150,11 +142,13 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
     doc << fixed << stime.epoch_ticks;
     doc << "</TIMESTAMP>\n";
     
+
     doc  << "<SOURCE>\n";
     if (_streamItem.source.size() > 0)
       doc << _streamItem.source.c_str();
     doc << "</SOURCE>\n";
     
+
     doc  << "<MEDIATYPE>\n";
     if (_streamItem.body.media_type.size() > 0)
       doc << _streamItem.body.media_type.c_str();
@@ -174,7 +168,7 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
       doc << "</ANCHOR>\n";
     }
 
-    
+
     doc << "<html>\n";
 
     if(_streamItem.body.clean_html.size() > 0)
@@ -203,10 +197,11 @@ indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocum
     
     std::string docContent = doc.str();
     size_t numChars = docContent.size();
-   
-    _document.text = docContent.data();
+    
+    const char* doctext = docContent.c_str();
+    _document.text = doctext;
     _document.textLength = numChars + 1; //for null character
-    _document.content = docContent.data();
+    _document.content = doctext;
     _document.contentLength = numChars; // no null
     
     return &_document;
@@ -220,9 +215,8 @@ void indri::parse::ThriftDocumentExtractor::close() {
 //  int a;
 }
 
-indri::parse::ThriftDocumentExtractor::~ThriftDocumentExtractor() {
+indri::parse::ThriftDocumentExtractor::~ThriftDocumentExtractor()
+{
   _thriftContent.clear();
   indri::parse::ThriftDocumentExtractor::close();
-  _memoryTransport->close();
-  delete _protocol;
 }

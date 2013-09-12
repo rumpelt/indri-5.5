@@ -1,0 +1,22 @@
+/**
+ * Ashwani : Redland library for parsing data stored in rdf format.
+ */
+#ifndef INDRI_RDFPARSER_HPP
+#define INDRI_RDFPARSER_HPP
+#include "indri/DirectoryIterator.hpp"
+#include <stdio.h>
+
+namespace indri
+{
+  namespace parser
+  {
+    class RDFParser {
+
+    public:
+      RDFParser();
+      static FILE* _storageDir;
+      static parserTripleStore(); 
+    } 
+  }
+}
+#endif
