@@ -727,7 +727,7 @@ class StatusMonitor : public indri::api::IndexStatus {
       default:
       case indri::api::IndexStatus::DocumentCount:
         if( !(documentsSeen % 500) ) {
-          buildindex_print_status( "Documents parsed: ", documentsSeen, " Documents indexed: ", documentsParsed );
+          buildindex_print_status( "\nDocuments parsed: ", documentsSeen, " Documents indexed: ", documentsParsed );
           buildindex_flush_status();
         }
         break;
@@ -1095,7 +1095,7 @@ int main(int argc, char * argv[]) {
 	std::vector<string> dirlist = readKbaDirList(kbaDirList);
 	
         for(std::vector<string>::iterator dirit = dirlist.begin(); dirit != dirlist.end(); dirit++) {
-	  // cout << "\n"+*dirit;
+	  cout << *dirit + "\n";
           indri::file::FileTreeIterator files( corpusPath +"/"+*dirit);
 
           for( ; files != indri::file::FileTreeIterator::end(); files++ ) {

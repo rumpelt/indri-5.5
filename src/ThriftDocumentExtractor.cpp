@@ -9,16 +9,17 @@ void indri::parse::ThriftDocumentExtractor::open( const std::string& filename ) 
 
   // _file = boost::shared_ptr<FILE>(filePtr);
 
-  if(_file == NULL)
-    LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't open file " + filename + "." );
-
+  if(_file == NULL) {
+    // LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't open file " + filename + "." );
+  }
   
   indri::parse::ThriftDocumentExtractor::init_decoder(&indri::parse::ThriftDocumentExtractor::_lzmaStream);
   //cout << "\ndecompressing \n";
   
-  if(!indri::parse::ThriftDocumentExtractor::decompress(&indri::parse::ThriftDocumentExtractor::_lzmaStream))
-    LEMUR_THROW( LEMUR_IO_ERROR, "Couldn't decompress the xz file " + filename + "." );
-
+  if(!indri::parse::ThriftDocumentExtractor::decompress(&indri::parse::ThriftDocumentExtractor::_lzmaStream)) {
+    std::cout << "Could not decmpress xz file :"+filename+"\n";
+    return;
+  }
   lzma_end(&indri::parse::ThriftDocumentExtractor::_lzmaStream);
 
   _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
@@ -116,6 +117,8 @@ bool indri::parse::ThriftDocumentExtractor::decompress(lzma_stream *strm){
 }
 indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocument() {
   //cout << "Inside next doc";
+  if(_memoryTransport == NULL || _protocol == NULL)
+    return 0; 
   _document.text = 0;
   _document.textLength = 0;
   _document.content = 0;

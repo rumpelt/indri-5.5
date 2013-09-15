@@ -4,7 +4,16 @@
 #ifndef INDRI_RDFPARSER_HPP
 #define INDRI_RDFPARSER_HPP
 #include "indri/DirectoryIterator.hpp"
+
 #include <stdio.h>
+#include <iostream>
+#ifdef _cplusplus
+extern "C" { 
+#endif
+  #include <redland.h>
+#ifdef _cplusplus
+}
+#endif
 
 namespace indri
 {
@@ -12,29 +21,26 @@ namespace indri
   {
     class RDFParser {
 
-    public:
+    private:
     
-      static librdf_world* world;
-      static librdf_storage* storage;
-      static librdf_parser* parser;
-      static librdf_model* model;
-      static librdf_stream* stream;
-      static librdf_node *subject, *predicate;
-      static librdf_iterator* iterator;
-      static librdf_statement *partial_statement, *statement2;
-      static librdf_uri *uriToParse;
-      static raptor_world *raptor_world_ptr;
-      static raptor_iostream* iostr;
-
-      static FILE* _storageDir;
-
+      librdf_world* _world;
+      librdf_storage* _storage;
+      librdf_parser* _parser;
+      librdf_model* _model;
+      std::string _parserName; // By default we set to "ntriples", other valid values "rdfxml", "turtle"
+      std::string _hashType; // The format of the datastore, by defailt it is berkley data base , i.e. "bdb"
+    public:    
       /**
        * uriInput: rdf file to parse
        * storageName : name of database store created.
        * options : option specifying the store creation. Refer to redland documentation. We use following  string : "new='no',hash-type='bdb'"
        */
-      static void initRDFParser(const char* uriInput, const char* storageName, const char *dirToStore, const char *options);       
-    }; 
+      void initRDFParser(std::string& storageName, std::string& dirToStore, bool newRepository);
+      
+      void parse(std::string& uriInput);
+      RDFParser(std::string parserName, std::string hashType);          
+      ~RDFParser();
+    };  
   }
 }
 #endif
