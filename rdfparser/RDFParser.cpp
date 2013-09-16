@@ -88,15 +88,15 @@ RDFParser::~RDFParser() {
 
 int main(int argc, char* argv[]) {
   
-  if(argc < 3) {
-    std::cout << "usage directory To Store and director to parse needs to be specified";
+  if(argc < 4) {
+    std::cout << "usage directory To Store and director to parse and repoName needs to be specified";
     return -1;
   }
 
   RDFParser rdfparser;
   bool newRepo = true;;
   std::string dirToStore(argv[2]);
-  std::string repoName = "test";
+  std::string repoName = argv[3];
   
   struct dirent *dirStruct;
   DIR *directory =  opendir(argv[1]);
@@ -106,21 +106,26 @@ int main(int argc, char* argv[]) {
   if(directory != NULL) {
     while((dirStruct = readdir(directory)) != NULL) {
       std::string fileName(dirStruct->d_name);
-      if(fileName.compare(".") ==0  || fileName.compare("..") == 0)
+      if(fileName.compare(".") ==0  || fileName.compare("..") == 0 || fileName.rfind(".nt") == std::string::npos)
         continue;   
       std::string fullName = "file://"+std::string(argv[1])+"/"+fileName;
+      
       rdfparser.parse(fullName);
-      std::cout << fileName +"\n";   
+      std::cout << "parsed file : "+fullName + "\n" ; 
+      
     } 
   }
   else {
  
-    FILE* infile = fopen(argv[1], "r");
-    if (infile != NULL)  {
-      fclose(infile);
-      std::string infile(argv[1]);
-      infile = "file://" + infile;
-      rdfparser.parse(infile); 
+    FILE* infilePtr = fopen(argv[1], "r");
+    if (infilePtr != NULL)  {
+      fclose(infilePtr);
+      std::string inFile(argv[1]);
+      if (inFile.rfind(".nt") != std::string::npos) {
+        inFile = "file://" + inFile;
+        rdfparser.parse(inFile); 
+	std::cout << "parsed file :"+ inFile + "\n";
+      }
     }
     else {
       std::cout << "cannot open input file ";
