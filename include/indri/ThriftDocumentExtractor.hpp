@@ -36,7 +36,7 @@
 #include "streamcorpus_types.h"
 #include "streamcorpus_constants.h"
 
-
+using namespace streamcorpus;
 
 #include <fstream>
 
@@ -60,8 +60,18 @@ namespace indri
     public:
       void open( const std::string& filename );
       UnparsedDocument* nextDocument();
+
+      /**
+       * dont mix call of nextStreamItem and nextDocument.
+       * Only one of them should be called.
+       */
+      StreamItem* nextStreamItem();
+      Sentence* getSentence(ContentItem& contentItem, int  sententceId, std::string taggerId);
+  
+      std::vector<Token> getMentionedTokens(Sentence* sentence, MentionID mentionid);
+      void iterateOverRelations(StreamItem& streamItem);
       void close();
-      bool init_decoder(lzma_stream *strm);
+      bool init_decoder(lzma_stream *strm); // called by open call above
       bool decompress(lzma_stream *strm);
       ~ThriftDocumentExtractor();
     };

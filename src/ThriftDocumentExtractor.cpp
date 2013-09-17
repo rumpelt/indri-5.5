@@ -115,6 +115,66 @@ bool indri::parse::ThriftDocumentExtractor::decompress(lzma_stream *strm){
     }
   }
 }
+
+
+Sentence* indri::parse::ThriftDocumentExtractor::getSentence(ContentItem& contentItem, int sentenceId, std::string taggerId = "lingpipe")  {
+  std::vector<Sentence> stmtList;
+  if(contentItem.sentences.find(taggerId) != contentItem.sentences.end())
+    stmtList = contentItem.sentences[taggerId];
+  if (stmtList.size() >= sentenceId)
+    return &stmtList[sentenceId];
+  else
+    return NULL;
+}
+
+void indri::parse::ThriftDocumentExtractor::iterateOverRelations(StreamItem& streamItem) {
+  ContentItem body = streamItem.body;
+  std::vector<Relation> relations;
+  
+
+  if (body.relations.find("lingpipe") != body.relations.end())
+    relations = body.relations["lingpipe"];
+  else if(body.relations.find("stanford") != body.relations.end())
+   relations = body.relations["stanford"];
+  for (std::vector<Relation>::iterator riter = relations.begin();   riter != relations.end(); ++riter) {
+    Relation relation = *riter;
+    Sentence* subject = indri::parse::ThriftDocumentExtractor::getSentence(body, relation.sentence_id_1);
+    std::vector<Token> subTokens  = indri::parse::ThriftDocumentExtractor::getMentionedTokens(subject, relation.mention_id_1);
+
+    Sentence* predicate = indri::parse::ThriftDocumentExtractor::getSentence(body, relation.sentence_id_2);
+    std::vector<Token> predTokens  = indri::parse::ThriftDocumentExtractor::getMentionedTokens(predicate, (MentionID)relation.mention_id_2);
+    std::string relationName = relation.relation_name;
+    std::cout << subTokens[0].lemma <<" " << relationName << " "<< predTokens[0].lemma;
+  }
+}
+
+
+std::vector<Token> indri::parse::ThriftDocumentExtractor::getMentionedTokens(Sentence* sentence, MentionID mentionId) {
+  std::vector<Token> tokens;
+  for(std::vector<Token>::iterator viter = sentence->tokens.begin(); viter != sentence->tokens.end(); ++viter) {
+    Token token = *viter;
+    if (token.mention_id == mentionId)
+      tokens.push_back(*viter);
+  }
+  return tokens;
+}
+
+StreamItem* indri::parse::ThriftDocumentExtractor::nextStreamItem() {
+  if(_memoryTransport == NULL || _protocol == NULL)
+    return NULL;
+  try {
+    _streamItem.read(_protocol.get());
+    return &_streamItem;
+  }
+  catch(apache::thrift::transport::TTransportException texception) {
+    return NULL;
+  }
+}
+
+
+
+
+
 indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocument() {
   //cout << "Inside next doc";
   if(_memoryTransport == NULL || _protocol == NULL)
