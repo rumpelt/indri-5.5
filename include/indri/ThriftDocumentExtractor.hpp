@@ -6,6 +6,7 @@
 #define INDRI_THRIFTDOCUMENTEXTRACTOR_HPP
 
 #include <stdio.h>
+#include <stdexcept>
 #include <string>
 #include "lzma.h"
 #include <boost/shared_ptr.hpp>
@@ -60,7 +61,8 @@ namespace indri
     public:
       void open( const std::string& filename );
       UnparsedDocument* nextDocument();
-
+      std::string getAnchor(StreamItem& streamItem);
+      std::string getTitle(StreamItem& streamItem);
       /**
        * dont mix call of nextStreamItem and nextDocument.
        * Only one of them should be called.
@@ -69,6 +71,8 @@ namespace indri
       Sentence* getSentence(ContentItem& contentItem, int  sententceId, std::string taggerId);
   
       std::vector<Token> getMentionedTokens(Sentence* sentence, MentionID mentionid);
+      void iterateOverSentence(StreamItem& streamItem, std::string& taggerId);
+ 
       void iterateOverRelations(StreamItem& streamItem);
       void close();
       bool init_decoder(lzma_stream *strm); // called by open call above

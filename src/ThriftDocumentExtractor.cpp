@@ -117,7 +117,7 @@ bool indri::parse::ThriftDocumentExtractor::decompress(lzma_stream *strm){
 }
 
 
-Sentence* indri::parse::ThriftDocumentExtractor::getSentence(ContentItem& contentItem, int sentenceId, std::string taggerId = "lingpipe")  {
+Sentence* indri::parse::ThriftDocumentExtractor::getSentence(ContentItem& contentItem, int sentenceId, std::string taggerId="lingpipe")  {
   std::vector<Sentence> stmtList;
   if(contentItem.sentences.find(taggerId) != contentItem.sentences.end())
     stmtList = contentItem.sentences[taggerId];
@@ -126,7 +126,21 @@ Sentence* indri::parse::ThriftDocumentExtractor::getSentence(ContentItem& conten
   else
     return NULL;
 }
-
+void indri::parse::ThriftDocumentExtractor::iterateOverSentence(StreamItem& streamItem, std::string& taggerId) {
+  ContentItem body = streamItem.body;
+  std::vector<Sentence> sentences;
+  if (body.sentences.count(taggerId) > 0)
+    sentences = body.sentences[taggerId]; 
+  for(std::vector<Sentence>::iterator sentit = sentences.begin(); sentit != sentences.end(); sentit++) {
+    Sentence  sentence = *sentit;
+    for (std::vector<Token>::iterator tokit = sentence.tokens.begin(); tokit != sentence.tokens.end(); tokit++) {
+      Token token =  *tokit;
+      std::cout << "Token: "<< token.token << " Lemma: " << token.lemma << " EntityType: " << token.entity_type << " MentionId : " << token.mention_id ;
+      std::cout <<" || ";
+    }
+    std::cout <<"\n";
+  }
+}
 void indri::parse::ThriftDocumentExtractor::iterateOverRelations(StreamItem& streamItem) {
   ContentItem body = streamItem.body;
   std::vector<Relation> relations;
@@ -173,7 +187,37 @@ StreamItem* indri::parse::ThriftDocumentExtractor::nextStreamItem() {
 
 
 
+std::string indri::parse::ThriftDocumentExtractor::getTitle(StreamItem& streamItem) {
+  std::string title;
+  try { 
+    ContentItem content;
+    content = streamItem.other_content.at("title");
+    title  = content.raw;
+    std::cout << "title raw : " << content.raw << "\n";
+    std::cout << "clean visible : " << content.clean_visible << "\n";
+    std::cout << "#num sentence : "<< content.sentences.at("lingpipe").size(); 
+    return title;
+  }
+  catch(const std::out_of_range& orexpt) {
+    return title;
+  }
+}
 
+std::string indri::parse::ThriftDocumentExtractor::getAnchor(StreamItem& streamItem) {
+  std::string anchor;
+  try { 
+    ContentItem content;
+    content = streamItem.other_content.at("anchor");
+    anchor = content.raw;
+    std::cout << "anchor raw : " << content.raw << "\n";
+    std::cout << "anchor clean visible : " << content.clean_visible << "\n";
+    std::cout << "#num sentence in anchor : "<< content.sentences.at("lingpipe").size(); 
+    return anchor;
+  }
+  catch(const std::out_of_range& orexpt) {
+    return anchor;
+  }
+}
 
 indri::parse::UnparsedDocument* indri::parse::ThriftDocumentExtractor::nextDocument() {
   //cout << "Inside next doc";

@@ -1,7 +1,7 @@
-SHARED=
+ SHARED=
 INCPATH=-I../include -I../include/thrift
 LIBPATH=-L../obj -L.
-LIBS=-lindri -llzma -lthrift
+LIBS= -lboost_program_options -lindri -llzma -lthrift
 APP=KbaProcessing
 CXX = g++
 CXXFLAGS = -Wall -g 
