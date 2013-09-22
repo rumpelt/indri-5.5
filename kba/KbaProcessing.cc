@@ -5,61 +5,12 @@
 #include "boost/program_options/variables_map.hpp"
 #include "boost/program_options/parsers.hpp"
 #include "boost/tokenizer.hpp"
+#include "tokenize.hpp"
+
 #include <fstream>
 
 namespace cmndOp = boost::program_options;
 
-
-std::set<std::string> getStopSet(std::string stopFile) {
-  std::set<std::string> stopwords;
-  std::ifstream stopWordFile(stopFile.c_str()i);
-  if(stopWordFile.is_open()) {
-    std::string line;
-    while(std::getline(stopWordFile, line)){
-      stopwords.insert(line);
-    }
-  }
-  else {
-    std::cout << "cannot open the stop word file";
-  }
-  return stopwords;
-}
-
-std::vector<string> filterStopWords(std::vector<string> inputTokens, std::set<std::string> stopwords) 
-{
-  std::vector<std::string> filterWords;
-  for(std::vector<string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
-    std::string token = *tokIt;
-    if(token.size() > 1 && stopwords.find(token) != stopwords.end()) {
-      filterWords.push_back(token);
-    }
-  }
-  return filterWords;
-}
-
-std::vector<string> getPhrases(std::string& inputSource) {
-  boost::tokenizer<> tokens(inputSource);
-  std::vector<string> phrases;
-  std::vector<string>::iterator phraseIt;
-  int index = 0;
-  bool prevCaseUpper = false;
-  for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
-    std::string token = *tokIt;
-    bool upperCase = isupper(token[0]);
-    if(!upperCase || !prevCaseUpper) {
-      phrases.push_back(token); 
-    }
-    else {
-      std::string lastElement = phrases.back();
-      lastElement = lastElement + " "+token;
-      phrases.pop_back();
-      phrases.push_back(lastElement);
-    }
-    prevCaseUpper = upperCase;
-  }
-
-  return phrases;
-}
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
   indri::parse::ThriftDocumentExtractor docExtractor;   
