@@ -1,4 +1,4 @@
-#include "tokenize.hpp"
+#include "Tokenize.hpp"
 #include <fstream>
 std::set<std::string> Tokenize::getStopSet(std::string& stopFile) {
   std::set<std::string> stopwords;

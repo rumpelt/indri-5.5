@@ -6,9 +6,12 @@ APP=KbaProcessing
 CXX = g++
 CXXFLAGS = -Wall -g  -c
 OBJECTS = $(patsubst %.cc,%.o,$(wildcard *.cc))
+OBJECTLIB = libkbacommon.a
+%.o : %.cc
+	$(CXX) $(CXXFLAGS) $? -o $@  $(INCPATH)
 
 all: $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $(OBJECTS) $(INCPATH) $(LIBPATH) $(LIBS) $(RUNDIRFLAGS)
+	$(AR) -rs $(OBJECTLIB) $(OBJECTS)
 install:
 	$(INSTALL_PROGRAM) $(APP) $(bindir)
 

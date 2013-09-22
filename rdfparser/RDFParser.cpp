@@ -14,6 +14,8 @@ extern "C" {
 #ifdef _cplusplus
 }
 #endif
+
+#include "Tokenize.hpp"
   
 using namespace indri::parser; 
 namespace cmdArg = boost::program_options;
@@ -246,8 +248,9 @@ int main(int argc, char* argv[]) {
   else {
     std::cout << "repository path or repository name not specified, use --repo-name and --repo\n";
   }
-
-  
+  std::string test("aswani rao");
+  std::vector<std::string> testTokens = Tokenize::tokenize(test) ;
+   
   struct dirent *dirStruct;
   DIR *directory =  opendir(parsePath.c_str());
   
