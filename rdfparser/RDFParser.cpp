@@ -248,9 +248,12 @@ int main(int argc, char* argv[]) {
   else {
     std::cout << "repository path or repository name not specified, use --repo-name and --repo\n";
   }
-  std::string test("aswani rao");
+  std::string test("Ndty person of the-year award www.TimesOfIndia.com    ");
   std::vector<std::string> testTokens = Tokenize::tokenize(test) ;
-   
+  for(std::vector<std::string>::iterator testIt= testTokens.begin(); testIt != testTokens.end(); testIt++) {
+    std::cout << "\n" << *testIt;
+  }   
+
   struct dirent *dirStruct;
   DIR *directory =  opendir(parsePath.c_str());
   
