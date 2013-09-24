@@ -15,12 +15,39 @@ std::set<std::string> Tokenize::getStopSet(std::string& stopFile) {
   return stopwords;
 }
 
+std::vector<std::string> Tokenize::toLower(std::vector<std::string> inVector) {
+  std::vector<std::string> lowerVector;
+  for(std::vector<std::string>::iterator vecIt = inVector.begin(); vecIt != inVector.end(); vecIt++) {
+    std::string lowerString = *vecIt;
+    
+    std::transform(lowerString.begin(), lowerString.end(), lowerString.begin(), ::tolower); 
+    lowerVector.push_back(lowerString);
+  }
+  return lowerVector;
+}
+
+std::vector<std::string> Tokenize::ngrams(std::vector<std::string> inVector, int ngram) {
+  std::vector<std::string> gramVector;
+  if(ngram <= 1) 
+    return inVector;
+  int upLimit = inVector.size() - ngram + 1;
+
+  for(int index = 0; index < upLimit ; index++) {
+    std::string grams = inVector[index];
+    for(int count = 1; count < ngram;count++) {
+      grams = grams+ " "+ inVector[index + count];
+    }
+    gramVector.push_back(grams);
+  }
+  return gramVector;
+}
+
 std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string> inputTokens, std::set<std::string>& stopwords) 
 {
   std::vector<std::string> filterWords;
   for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
     std::string token = *tokIt;
-    if(token.size() > 1 && stopwords.find(token) != stopwords.end()) {
+    if(token.size() > 1 && stopwords.find(token) == stopwords.end()) {
       filterWords.push_back(token);
     }
   }

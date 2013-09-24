@@ -20,6 +20,18 @@ extern "C" {
 using namespace indri::parser; 
 namespace cmdArg = boost::program_options;
 
+librdf_model* RDFParser::getModel() {
+  return RDFParser::_model;
+}
+
+librdf_world* RDFParser::getWorld() {
+  return RDFParser::_world;
+}
+
+librdf_parser* RDFParser::getParser() {
+  return RDFParser::_parser;
+}
+
 /**
  * The uriInput should be in the URI naming convention.
  */
@@ -54,7 +66,7 @@ void indri::parser::RDFParser::initRDFParser(std::string& storageName, std::stri
   std::string optionFmt = "new='%s',hash-type='%s',dir='%s'";
   int preLength = optionFmt.size()-6; // -6  for the three %s
   int allowedPathLength = bufsize - preLength;
-  if (dirToStore.size() > allowedPathLength+1) {
+  if ((int)dirToStore.size() > allowedPathLength+1) {
     std::cout << "\nPath name of the rdf file is too long";
   }
   if(newRepository)
@@ -126,7 +138,7 @@ void RDFParser::iterateOnRDFStream(librdf_stream *stream) {
 
     std::cout << "subject : " << nodeText;
 
-    librdf_node* predicate = librdf_statement_get_predicate(statement);
+    //    librdf_node* predicate = librdf_statement_get_predicate(statement);
     
 
     librdf_node* object = librdf_statement_get_object(statement);
@@ -207,10 +219,91 @@ RDFParser::~RDFParser() {
     librdf_free_model(RDFParser::_model);
 }
 
-static void iterationTest(RDFParser rdfparser, std::string inFileUri) {
-  librdf_parser* parser = rdfparser.initParser("ntriples");
-  librdf_stream* stream = rdfparser.returnStreamFromRDFFile(parser, inFileUri, NULL);
-  rdfparser.iterateOnRDFStream(stream);
+static void generateAliases(RDFParser rdfparser, std::string fileName, std::string stopFileName) {
+  //  librdf_parser* parser = rdfparser.initParser("ntriples");
+  librdf_stream* stream = rdfparser.returnStreamFromRDFFile(rdfparser.getParser(), fileName, NULL);
+  std::set<std::string> stopSet = Tokenize::getStopSet(stopFileName);
+  if(stopSet.size() <= 0)
+    std::cout << "cout not creat the stopSet \n";
+  
+  const char* unigram_string = "http://dbpedia.org/unigramtoken";
+  librdf_uri* uniPredUri = librdf_new_uri(rdfparser.getWorld(), (const unsigned char*)unigram_string);
+  librdf_node* uniPredNode = librdf_new_node_from_uri(rdfparser.getWorld(), uniPredUri);
+ 
+  const char* bigram_string = "http://dbpedia.org/bigramtoken";
+  librdf_uri* biPredUri = librdf_new_uri(rdfparser.getWorld(), (const unsigned char*)bigram_string);
+  librdf_node* biPredNode = librdf_new_node_from_uri(rdfparser.getWorld(), biPredUri);
+ 
+  const char* trigram_string = "http://dbpedia.org/trigramtoken";
+  librdf_uri* triPredUri = librdf_new_uri(rdfparser.getWorld(), (const unsigned char*)trigram_string);
+  librdf_node* triPredNode = librdf_new_node_from_uri(rdfparser.getWorld(), triPredUri);
+ 
+ 
+  while(librdf_stream_end(stream) == 0) {
+    librdf_statement* statement = librdf_stream_get_object(stream); // this call return a shared pointer and so we need not worry about it as we use this only in this scope
+    
+    librdf_node* subject = librdf_statement_get_subject(statement);   //returns a shared pointer  and must be copier by caller ifneeded and so we must make a duplicate
+ 
+    librdf_node* object = librdf_statement_get_object(statement); // this again must be coppied if wer are goint to use it
+    if (librdf_node_is_literal(object)) {
+      std::string nodeText = rdfparser.convertNodeToString(object);
+      //      std::cout << "Entity : "<< nodeText <<"\n";
+      std::vector<std::string> unigrams = Tokenize::tokenize(nodeText);
+      //      std::cout << "toeknized " << unigrams.size() <<"\n";
+      unigrams = Tokenize::toLower(unigrams);
+      //      std::cout << "lowerized "<< unigrams.size() << "\n";
+      unigrams = Tokenize::filterStopWords(unigrams, stopSet);
+      //      std::cout << "filtered "<< unigrams.size() << "\n";  
+
+      for(std::vector<std::string>::iterator uniIt = unigrams.begin(); uniIt != unigrams.end(); uniIt++) {
+        const unsigned char* unigram = (const unsigned char*)((*uniIt).c_str());
+	//        std::cout << "unigram : "<< *uniIt <<"\n";
+        librdf_node* uniLiteral  = librdf_new_node_from_literal(rdfparser.getWorld(), unigram, NULL,0);
+        librdf_node* currentSub = librdf_new_node_from_node(subject);
+        librdf_node* currentPred = librdf_new_node_from_node(uniPredNode);
+        librdf_statement* toadd = librdf_new_statement_from_nodes(rdfparser.getWorld(), currentSub, currentPred, uniLiteral); // nodes get owned by the statemnt, so we should not free it
+        int err = librdf_model_add_statement(rdfparser.getModel(), toadd);
+	std::cout << "\n error re : " << err;
+        librdf_free_statement(toadd);
+      }
+
+      std::vector<std::string> bigrams = Tokenize::ngrams(unigrams,2);
+      for(std::vector<std::string>::iterator bgIt = bigrams.begin(); bgIt != bigrams.end(); bgIt++) {
+        //std::cout << "bigram : "<< *bgIt <<"\n"; 
+        const unsigned char* bigram = (const unsigned char*)((*bgIt).c_str()); 
+        librdf_node* biLiteral  = librdf_new_node_from_literal(rdfparser.getWorld(), bigram, NULL,0);
+        librdf_node* currentSub = librdf_new_node_from_node(subject);
+        librdf_node* currentPred = librdf_new_node_from_node(biPredNode);
+        librdf_statement* toadd = librdf_new_statement_from_nodes(rdfparser.getWorld(), currentSub, currentPred, biLiteral);
+        librdf_model_add_statement(rdfparser.getModel(),  toadd);
+
+        librdf_free_statement(toadd);
+      }
+
+      //  std::cout << "size of unigram : "<<unigrams.size(); 
+      std::vector<std::string> trigrams = Tokenize::ngrams(unigrams,3);
+      for(std::vector<std::string>::iterator triIt = trigrams.begin(); triIt != trigrams.end(); triIt++) {
+	//  std::cout << "trigram : "<< *triIt <<"\n";
+        const unsigned char* trigram = (const unsigned char*)((*triIt).c_str());
+        librdf_node* triLiteral  = librdf_new_node_from_literal(rdfparser.getWorld(), trigram, NULL,0);
+        librdf_node* currentSub = librdf_new_node_from_node(subject);
+        librdf_node* currentPred = librdf_new_node_from_node(triPredNode); 
+        librdf_statement* toadd = librdf_new_statement_from_nodes(rdfparser.getWorld(), currentSub, currentPred, triLiteral);
+        librdf_model_add_statement(rdfparser.getModel(), toadd);
+
+        librdf_free_statement(toadd);
+      } 
+      
+    }
+    librdf_stream_next(stream);
+  }
+
+  librdf_free_uri(uniPredUri);
+  librdf_free_uri(biPredUri);
+  librdf_free_uri(triPredUri);
+  librdf_free_node(uniPredNode);
+  librdf_free_node(biPredNode);
+  librdf_free_node(triPredNode);
 }
 
 int main(int argc, char* argv[]) {
@@ -220,6 +313,7 @@ int main(int argc, char* argv[]) {
   cmdDesc.add_options()
     ("help","the help message")
     ("parse",cmdArg::value<std::string>(),"the file or base dir to parse")
+    ("stop-file",cmdArg::value<std::string>(),"the file containing the stop words")
     ("query",cmdArg::value<std::string>(),"query file or string to process")
     ("repo",cmdArg::value<std::string>(),"Repository to query/store data")
     ("repo-name",cmdArg::value<std::string>(),"Name of the repository..the files in repo will be created with this name")
@@ -234,10 +328,18 @@ int main(int argc, char* argv[]) {
   std::string dirToStore;
   std::string parsePath;
   std::string repoName;
-
+  std::string stopFile;
+  
+  if(cmdMap.count("new-repo")) {
+    newRepo = cmdMap["new-repo"].as<bool>();
+  }  
   if(cmdMap.count("parse")) {
     parsePath = cmdMap["parse"].as<std::string>();   // You need to remove the last character / from path
     
+  }
+  
+  if(cmdMap.count("stop-file")) {
+    stopFile = cmdMap["stop-file"].as<std::string>();
   }
   
   if(cmdMap.count("repo") && cmdMap.count("repo-name")) {
@@ -248,11 +350,8 @@ int main(int argc, char* argv[]) {
   else {
     std::cout << "repository path or repository name not specified, use --repo-name and --repo\n";
   }
-  std::string test("Ndty person of the-year award www.TimesOfIndia.com    ");
-  std::vector<std::string> testTokens = Tokenize::tokenize(test) ;
-  for(std::vector<std::string>::iterator testIt= testTokens.begin(); testIt != testTokens.end(); testIt++) {
-    std::cout << "\n" << *testIt;
-  }   
+ 
+
 
   struct dirent *dirStruct;
   DIR *directory =  opendir(parsePath.c_str());
@@ -266,7 +365,8 @@ int main(int argc, char* argv[]) {
         continue;   
       std::string fullName = "file://"+parsePath+"/"+fileName;
       
-      rdfparser.parse(fullName);
+      //      rdfparser.parse(fullName);
+      generateAliases(rdfparser, parsePath+"/"+fileName, stopFile);
       std::cout << "parsed file : "+fullName + "\n" ; 
       
     } 
@@ -279,7 +379,7 @@ int main(int argc, char* argv[]) {
       if (parsePath.rfind(".nt") != std::string::npos) {
         inFile = "file://" + parsePath;
 	//        rdfparser.parse(inFile); 
-        iterationTest(rdfparser, parsePath);
+        generateAliases(rdfparser, parsePath, stopFile);
 	std::cout << "parsed file :"+ inFile + "\n";
       }
     }
@@ -288,3 +388,4 @@ int main(int argc, char* argv[]) {
     }
   } 
 }
+

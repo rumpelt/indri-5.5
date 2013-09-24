@@ -18,4 +18,6 @@ public:
    * Tokenize a  string on whitespace, non alpha numeric characters and upper case letters;
    */
   static std::vector<std::string> tokenize(std::string& inputSource);
+  static std::vector<std::string> ngrams(std::vector<std::string> inVector, int ngram);
+  static std::vector<std::string> toLower(std::vector<std::string> inVector);
 };

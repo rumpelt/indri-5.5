@@ -1,6 +1,7 @@
- /**
+/**
  * Ashwani : Redland library for parsing data stored in rdf format.
  */
+
 #ifndef INDRI_RDFPARSER_HPP
 #define INDRI_RDFPARSER_HPP
 #include "indri/DirectoryIterator.hpp"
@@ -36,6 +37,9 @@ namespace indri
       std::string _parserName; // By default we set to "ntriples", other valid values "rdfxml", "turtle"
       std::string _hashType; // The format of the datastore, by defailt it is berkley data base , i.e. "bdb"
     public:    
+      librdf_model* getModel();
+      librdf_world* getWorld();
+      librdf_parser* getParser();
       /**
        * uriInput: rdf file to parse
        * storageName : name of database store created.
