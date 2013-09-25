@@ -135,10 +135,10 @@ void indri::parse::ThriftDocumentExtractor::iterateOverSentence(StreamItem& stre
     Sentence  sentence = *sentit;
     for (std::vector<Token>::iterator tokit = sentence.tokens.begin(); tokit != sentence.tokens.end(); tokit++) {
       Token token =  *tokit;
-      std::cout << "Token: "<< token.token << " Lemma: " << token.lemma << " EntityType: " << token.entity_type << " MentionId : " << token.mention_id ;
-      std::cout <<" || ";
+      std::cout << "\nToken: "<< token.token << "\nLemma: " << token.lemma << "\nEntityType: " << token.entity_type << "\nMentionId : " << token.mention_id ;
+      std::cout << "\n\n";
     }
-    std::cout <<"\n";
+    std::cout <<"\n**********Next Sentence*********";
   }
 }
 void indri::parse::ThriftDocumentExtractor::iterateOverRelations(StreamItem& streamItem) {
@@ -195,7 +195,7 @@ std::string indri::parse::ThriftDocumentExtractor::getTitle(StreamItem& streamIt
     title  = content.raw;
     std::cout << "title raw : " << content.raw << "\n";
     std::cout << "clean visible : " << content.clean_visible << "\n";
-    std::cout << "#num sentence : "<< content.sentences.at("lingpipe").size(); 
+    //   std::cout << "#num sentence : "<< content.sentences.at("lingpipe").size(); 
     return title;
   }
   catch(const std::out_of_range& orexpt) {
@@ -211,7 +211,7 @@ std::string indri::parse::ThriftDocumentExtractor::getAnchor(StreamItem& streamI
     anchor = content.raw;
     std::cout << "anchor raw : " << content.raw << "\n";
     std::cout << "anchor clean visible : " << content.clean_visible << "\n";
-    std::cout << "#num sentence in anchor : "<< content.sentences.at("lingpipe").size(); 
+    //std::cout << "#num sentence in anchor : "<< content.sentences.at("lingpipe").size() <<"\n"; 
     return anchor;
   }
   catch(const std::out_of_range& orexpt) {

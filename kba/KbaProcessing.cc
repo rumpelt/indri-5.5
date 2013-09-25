@@ -5,7 +5,7 @@
 #include "boost/program_options/variables_map.hpp"
 #include "boost/program_options/parsers.hpp"
 #include "boost/tokenizer.hpp"
-#include "tokenize.hpp"
+#include "Tokenize.hpp"
 
 #include <fstream>
 
@@ -21,11 +21,7 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
     if(cmndMap.count("anchor"))
         docExtractor.getAnchor(*streamItem);
     if(cmndMap.count("title"))
-      
-
-
-
-docExtractor.getTitle(*streamItem); 
+      docExtractor.getTitle(*streamItem); 
     if(cmndMap.count("sentence")) {
       docExtractor.iterateOverSentence(*streamItem, taggerId); 
     }
