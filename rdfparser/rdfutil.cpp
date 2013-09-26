@@ -18,7 +18,7 @@ extern "C" {
 
 #include "Tokenize.hpp"
   
-using namespace indri::parser; 
+
 namespace cmdArg = boost::program_options;
 
 

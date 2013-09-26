@@ -18,8 +18,6 @@ extern "C" {
 
 #include "Tokenize.hpp"
   
-using namespace indri::parser; 
-
 
 librdf_model* RDFParser::getModel() {
   return RDFParser::_model;
@@ -36,7 +34,7 @@ librdf_parser* RDFParser::getParser() {
 /**
  * The uriInput should be in the URI naming convention.
  */
-void indri::parser::RDFParser::parse(std::string& uriInput) {
+void RDFParser::parse(std::string& uriInput) {
   librdf_uri *uriToParse = librdf_new_uri(RDFParser::_world, (const unsigned char*)uriInput.data());
   if(!uriToParse) {
     fprintf(stderr, "%s: Failed to create Uri \n", uriInput.c_str());
@@ -48,7 +46,7 @@ void indri::parser::RDFParser::parse(std::string& uriInput) {
   librdf_free_uri(uriToParse);
 }
 
-librdf_parser* indri::parser::RDFParser::initParser(std::string parserName) {
+librdf_parser* RDFParser::initParser(std::string parserName) {
 
   if(RDFParser::_parser != NULL) {
     librdf_free_parser(RDFParser::_parser);
@@ -60,7 +58,7 @@ librdf_parser* indri::parser::RDFParser::initParser(std::string parserName) {
   return RDFParser::_parser;
 }
 
-void indri::parser::RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore, bool newRepository) {
+void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore, bool newRepository) {
    
   int bufsize = 4096;
   char options[bufsize]; // buff to manufacture the options for creating the repository.
