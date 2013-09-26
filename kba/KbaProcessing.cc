@@ -50,14 +50,18 @@ int main(int argc, char *argv[]){
   cmndOp::store(cmndOp::parse_command_line(argc, argv,cmndDesc), cmndMap);
   cmndOp::notify(cmndMap);  
  
-  RDFParser rdfparser; 
+  RDFParser* rdfparser = NULL; 
   if(cmndMap.count("repo") && cmndMap.count("repo-name")) {
     rdfparser = new RDFParser();   
-    rdfparser.initRDFParser();
-    RDFQuery rdfquery = new RDFQuery(rdfparser.getModel(), rdfparser.getWorld());
+    std::string repoName = cmndMap["repo-name"].as<std::string>();
+    std::string repo = cmndMap["repo"].as<std::string>();
+    rdfparser->initRDFParser(repoName, repo);
+    RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
     if(cmndMap.count("equery")) {
       std::string equery = cmndMap["equery"].as<std::string>();
-      std::vector< boost::shared_ptr<unsigned char> >  nodes = rdfquery.getSourceNodes((const unsigned char*)"http://dbpedia.org/uniGramToken", (const unsigned char*)equery.c_str());
+ 
+      std::cout << "Executing : " << equery <<"\n";
+      std::vector< boost::shared_ptr<unsigned char> >  nodes = rdfquery->getSourceNodes((const unsigned char*)"http://xmlns.com/foaf/0.1/homepage", (const unsigned char*)equery.c_str(), false);
       for(std::vector<boost::shared_ptr<unsigned char> >::iterator nodeIt = nodes.begin(); nodeIt != nodes.end(); nodeIt++) {
 	boost::shared_ptr<unsigned char> nodeValue = *nodeIt;
         cout << "\n found nodes are "<< nodeValue.get(); 

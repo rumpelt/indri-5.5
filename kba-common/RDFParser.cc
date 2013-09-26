@@ -43,6 +43,8 @@ void RDFParser::parse(std::string& uriInput) {
   if(librdf_parser_parse_into_model(RDFParser::_parser, uriToParse, NULL, RDFParser::_model)) {
     fprintf(stderr, "%s: Failed to parse RDF into model\n", uriInput.c_str());
   }
+  librdf_model_sync(RDFParser::_model);
+  librdf_model_transaction_commit(RDFParser::_model);
   librdf_free_uri(uriToParse);
 }
 
@@ -208,13 +210,13 @@ RDFParser::RDFParser(std::string parserName, std::string hashType) {
 }
  
 RDFParser::~RDFParser() {
-  if (!_world)
-    librdf_free_world(RDFParser::_world);
   if (!_storage)
     librdf_free_storage(RDFParser::_storage);
   if(!_parser)
     librdf_free_parser(RDFParser::_parser);
   if(! _model)
     librdf_free_model(RDFParser::_model);
+  if (!_world)
+    librdf_free_world(RDFParser::_world);
 }
 

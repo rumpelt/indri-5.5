@@ -4,6 +4,17 @@ std::vector< boost::shared_ptr<unsigned char> > RDFQuery::getSourceNodes(const u
   std::vector< boost::shared_ptr<unsigned char > > sources;
   librdf_node* predicateNode  = librdf_new_node_from_uri_string(RDFQuery::_world, predicate);
   librdf_node* objectNode;
+
+  /**
+   std::cout <<"printing model : "<< librdf_model_sync(RDFQuery::_model) << " : " << librdf_model_size(RDFQuery::_model)<<"\n";  
+  raptor_iostream* iostr;
+  raptor_world *raptor_world_ptr;
+  raptor_world_ptr = librdf_world_get_raptor(RDFQuery::_world);
+  iostr = raptor_new_iostream_to_file_handle(raptor_world_ptr, stdout);
+  librdf_model_write(RDFQuery::_model, iostr);
+  raptor_free_iostream(iostr);
+  */
+
   if(isObjectLiteral)
     objectNode = librdf_new_node_from_literal(RDFQuery::_world, object, NULL, 0);
   else 
@@ -24,7 +35,9 @@ std::vector< boost::shared_ptr<unsigned char> > RDFQuery::getSourceNodes(const u
       }
       librdf_free_iterator(iterator);
     }
+
   }
+
   if(objectNode != NULL)
     librdf_free_node(objectNode);
   if(predicateNode != NULL)

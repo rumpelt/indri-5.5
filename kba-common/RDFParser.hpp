@@ -33,6 +33,7 @@ public:
   librdf_model* getModel();
   librdf_world* getWorld();
   librdf_parser* getParser();
+
   /**
   * uriInput: rdf file to parse
   * storageName : name of database store created.
