@@ -2,6 +2,7 @@
 //#include <cstdio>
 #include <iostream>
 #include <vector>
+#include <cstring>
 #include <boost/shared_ptr.hpp>
 #ifdef _cplusplus
 extern "C" { 
@@ -20,6 +21,8 @@ public:
   void setWorld(librdf_model* model);
 
   std::vector< boost::shared_ptr<unsigned char> > getSourceNodes(const unsigned char* predicate, const unsigned char* object, bool isObjectLiteral=true);
+
+  std::vector< boost::shared_ptr<unsigned char> > getTargetNodes(const unsigned char* subject, const unsigned char* predicate);
  
   RDFQuery(librdf_model* model, librdf_world* world);
 };

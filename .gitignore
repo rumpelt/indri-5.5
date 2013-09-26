@@ -17,3 +17,4 @@ obj
 
 #backup files created by emacs
 ^#
+*#
