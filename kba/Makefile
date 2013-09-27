@@ -5,14 +5,16 @@ LIBPATH=-L../obj  -L../kba-common
 LIBS= -lkbacommon -lboost_program_options -lindri -llzma -lthrift -lrdf -lraptor2 -lrasqal
 APP=KbaProcessing
 CXX = g++
-CXXFLAGS = -Wall -g 
-
+CXXFLAGS = -Wall -g -c
+OBJECTS = $(patsubst %.cc,%.o,$(wildcard *.cc))
 
 RUNDIRFLAGS = -Wl,-R,'$$ORIGIN/../kba-common'
 
- 
-all:
-	$(CXX) $(CXXFLAGS)  $(APP).cc  -o $(APP) $(INCPATH) $(LIBPATH) $(LIBS) $(RUNDIRFLAGS)
+%.o : %.cc
+	$(CXX) $(CXXFLAGS) $? -o $@  $(INCPATH) 
+
+all:  $(OBJECTS)
+	$(CXX) -Wall -g  -o $(APP) $(OBJECTS)    $(LIBPATH) $(LIBS) $(RUNDIRFLAGS)
 
 
 install:

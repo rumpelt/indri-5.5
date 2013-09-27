@@ -31,6 +31,8 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
   }
 }
 
+void scoreBaseLine(std::string fileName) {
+}
 int main(int argc, char *argv[]){
   std::string taggerId;
   cmndOp::options_description cmndDesc("Allowed command line options");
