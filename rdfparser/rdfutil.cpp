@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
           continue;   
         std::string fullName = "file://"+path+"/"+fileName;
       
-        rdfparser.parse(fullName);
+	rdfparser.parse(fullName);
 	//    generateAliases(rdfparser, path+"/"+fileName, stopFile);
         std::cout << "parsed file : "+fullName + "\n" ; 
       }

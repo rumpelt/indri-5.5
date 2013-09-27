@@ -31,6 +31,17 @@ librdf_parser* RDFParser::getParser() {
   return RDFParser::_parser;
 }
 
+
+void RDFParser::streamModel(FILE* fp) {
+  raptor_iostream* iostr;
+  raptor_world *raptor_world_ptr;
+  raptor_world_ptr = librdf_world_get_raptor(RDFParser::_world);
+  iostr = raptor_new_iostream_to_file_handle(raptor_world_ptr, fp);
+  librdf_model_write(RDFParser::_model, iostr);
+  raptor_free_iostream(iostr);
+
+}
+
 /**
  * The uriInput should be in the URI naming convention.
  */
@@ -64,7 +75,7 @@ void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore,
    
   int bufsize = 4096;
   char options[bufsize]; // buff to manufacture the options for creating the repository.
-  std::string optionFmt = "new='%s',hash-type='%s',dir='%s'";
+  std::string optionFmt = "contexts='yes',write='yes',new='%s',hash-type='%s',dir='%s'";
   int preLength = optionFmt.size()-6; // -6  for the three %s
   int allowedPathLength = bufsize - preLength;
   if ((int)dirToStore.size() > allowedPathLength+1) {
@@ -73,7 +84,7 @@ void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore,
   if(newRepository)
     snprintf(options,bufsize,optionFmt.c_str(), "yes", _hashType.c_str(),dirToStore.c_str());
   else {
-    optionFmt = "hash-type='%s',dir='%s'";
+    optionFmt = "hash-type='%s',new='no',dir='%s'";
     snprintf(options,bufsize,optionFmt.c_str(), _hashType.c_str(),dirToStore.c_str());
   }
   

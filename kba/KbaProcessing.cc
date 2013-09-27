@@ -42,7 +42,7 @@ int main(int argc, char *argv[]){
     ("sentence"," print sentences ")
     ("repo",cmndOp::value<std::string>(), "Repository path of the rdfs store")
     ("repo-name", cmndOp::value<std::string>(), "The name of repository in the repository path") 
- 
+    ("print-model", "print the model")
     ("equery",cmndOp::value<std::string>(), "Look up an entity")
     ("taggerId",cmndOp::value<std::string>(&taggerId)->default_value("lingpipe")," print anchor text");
 
@@ -56,6 +56,11 @@ int main(int argc, char *argv[]){
     std::string repoName = cmndMap["repo-name"].as<std::string>();
     std::string repo = cmndMap["repo"].as<std::string>();
     rdfparser->initRDFParser(repoName, repo);
+
+    if(cmndMap.count("print-model")) {
+      rdfparser->streamModel(stdout);   
+    }
+
     RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
     if(cmndMap.count("equery")) {
       std::string equery = cmndMap["equery"].as<std::string>();

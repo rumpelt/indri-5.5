@@ -30,6 +30,7 @@ private:
   std::string _parserName; // By default we set to "ntriples", other valid values "rdfxml", "turtle"
   std::string _hashType; // The format of the datastore, by defailt it is berkley data base , i.e. "bdb"
 public:    
+  void  streamModel(FILE* fp);
   librdf_model* getModel();
   librdf_world* getWorld();
   librdf_parser* getParser();
