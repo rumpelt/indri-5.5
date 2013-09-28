@@ -65,7 +65,10 @@ public:
   librdf_query_results* executeQuery( const std::string& query_string, const std::string& queryLanguage);      
   void parse(std::string& uriInput);
 
-  RDFParser(std::string parserName="ntriples", std::string hashType="bdb");          
+  RDFParser(std::string parserName="ntriples", std::string hashType="bdb");
+  RDFParser(std::string dirToStore, std::string repoName, std::string parserName, std::string hashType, bool newRepository);
+
+  
   ~RDFParser();
 };
 

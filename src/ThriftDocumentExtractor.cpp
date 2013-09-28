@@ -126,6 +126,7 @@ Sentence* indri::parse::ThriftDocumentExtractor::getSentence(ContentItem& conten
   else
     return NULL;
 }
+
 void indri::parse::ThriftDocumentExtractor::iterateOverSentence(StreamItem& streamItem, std::string& taggerId) {
   ContentItem body = streamItem.body;
   std::vector<Sentence> sentences;

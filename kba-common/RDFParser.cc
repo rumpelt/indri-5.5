@@ -75,7 +75,7 @@ void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore,
    
   int bufsize = 4096;
   char options[bufsize]; // buff to manufacture the options for creating the repository.
-  std::string optionFmt = "contexts='yes',write='yes',new='%s',hash-type='%s',dir='%s'";
+  std::string optionFmt = "index-predicates='no',contexts='no',write='yes',new='%s',hash-type='%s',dir='%s'";
   int preLength = optionFmt.size()-6; // -6  for the three %s
   int allowedPathLength = bufsize - preLength;
   if ((int)dirToStore.size() > allowedPathLength+1) {
@@ -218,6 +218,13 @@ RDFParser::RDFParser(std::string parserName, std::string hashType) {
   _parser = NULL;
   _model = NULL;
   _hashType =  hashType;
+}
+
+RDFParser::RDFParser(std::string dirToStore, std::string repoName, std::string parserName, std::string hashType, bool newRepository) {
+  RDFParser::_world = librdf_new_world();
+  librdf_world_open(RDFParser::_world);
+  RDFParser::initRDFParser(repoName, dirToStore, newRepository);
+  RDFParser::initParser(parserName);
 }
  
 RDFParser::~RDFParser() {
