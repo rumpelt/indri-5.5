@@ -175,13 +175,13 @@ std::vector<Token> kba::thrift::ThriftDocumentExtractor::getMentionedTokens(Sent
 
 StreamItem* kba::thrift::ThriftDocumentExtractor::nextStreamItem() {
   if(_memoryTransport == NULL || _protocol == NULL)
-    return NULL;
+    return 0;
   try {
     _streamItem.read(_protocol.get());
     return &_streamItem;
   }
   catch(apache::thrift::transport::TTransportException texception) {
-    return NULL;
+    return 0;
   }
 }
 
@@ -220,12 +220,34 @@ std::string kba::thrift::ThriftDocumentExtractor::getAnchor(StreamItem& streamIt
 }
 
 void kba::thrift::ThriftDocumentExtractor::close() {
-  fclose(_file);
-//  int a;
+  if(_file != 0)
+    fclose(_file);
 }
 
 kba::thrift::ThriftDocumentExtractor::~ThriftDocumentExtractor()
 {
   _thriftContent.clear();
   kba::thrift::ThriftDocumentExtractor::close();
+}
+
+kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor()
+{
+  _file = 0;
+}
+
+
+kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor(std::string fileName)
+{
+  _file = std::fopen(fileName.c_str(), "rb");   
+  if (_file != 0) {
+    kba::thrift::ThriftDocumentExtractor::init_decoder(&kba::thrift::ThriftDocumentExtractor::_lzmaStream);
+  
+    if(kba::thrift::ThriftDocumentExtractor::decompress(&kba::thrift::ThriftDocumentExtractor::_lzmaStream)) {
+      lzma_end(&kba::thrift::ThriftDocumentExtractor::_lzmaStream);
+
+      _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
+
+      _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));
+    }
+  }
 }

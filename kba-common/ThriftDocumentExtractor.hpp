@@ -52,6 +52,9 @@ namespace kba
       void close();
       bool init_decoder(lzma_stream *strm); // called by open call above
       bool decompress(lzma_stream *strm);
+      
+      ThriftDocumentExtractor();
+      ThriftDocumentExtractor(std::string fileName);
       ~ThriftDocumentExtractor();
     };
   }
