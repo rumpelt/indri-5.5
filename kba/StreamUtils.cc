@@ -1,6 +1,6 @@
 #include "StreamUtils.hpp"
-/*
-std::string streamcorpus::utils::getTitle(StreamItem& streamItem) {
+#include "stdexcept"
+std::string streamcorpus::utils::getTitle(streamcorpus::StreamItem& streamItem) {
   std::string title;
   try { 
     ContentItem content;
@@ -12,7 +12,7 @@ std::string streamcorpus::utils::getTitle(StreamItem& streamItem) {
     return title;
   }
 }
-*/
+
 std::string streamcorpus::utils::getAnchor(streamcorpus::StreamItem& streamItem) {
   std::string anchor;
   try { 

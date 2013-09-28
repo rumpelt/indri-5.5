@@ -1,10 +1,10 @@
-#include "streamcorpus_types.h"
-#include "streamcorpus_constants.h"
-
+#include "Scorer.hpp"
 namespace kba
 {
   namespace scorer
   {
-    int baseScoreStream(StreamItem* stream, Entity* entity);
+    class BaseLineScorer : Scorer {
+      int score(streamcorpus::StreamItem* stream, Entity* entity, int maxScore);
+    };
   }
 }
