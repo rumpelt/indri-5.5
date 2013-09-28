@@ -1,8 +1,6 @@
 #include "ThriftDocumentExtractor.hpp"
 #include <iostream>
 
-lzma_stream kba::thrift::ThriftDocumentExtractor::_lzmaStream = LZMA_STREAM_INIT;
-
 void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
 
   _filename = filename;
@@ -12,14 +10,14 @@ void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
   if(_file == NULL) {
     std::cout << "could not open the thrift file : " << _filename.c_str() << "\n";
   }
+  kba::thrift::ThriftDocumentExtractor::_lzmaStream = LZMA_STREAM_INIT;  
+  kba::thrift::ThriftDocumentExtractor::init_decoder(&_lzmaStream);
   
-  kba::thrift::ThriftDocumentExtractor::init_decoder(&kba::thrift::ThriftDocumentExtractor::_lzmaStream);
-  
-  if(!kba::thrift::ThriftDocumentExtractor::decompress(&kba::thrift::ThriftDocumentExtractor::_lzmaStream)) {
+  if(!kba::thrift::ThriftDocumentExtractor::decompress(&_lzmaStream)) {
     std::cout << "Could not decmpress xz file :"+filename+"\n";
     return;
   }
-  lzma_end(&kba::thrift::ThriftDocumentExtractor::_lzmaStream);
+  lzma_end(&_lzmaStream);
 
   _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
 
@@ -235,16 +233,18 @@ kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor()
   _file = 0;
 }
 
-
+/**
+ * the file must be in xz format
+ */
 kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor(std::string fileName)
 {
   _file = std::fopen(fileName.c_str(), "rb");   
   if (_file != 0) {
-    kba::thrift::ThriftDocumentExtractor::init_decoder(&kba::thrift::ThriftDocumentExtractor::_lzmaStream);
+    kba::thrift::ThriftDocumentExtractor::_lzmaStream = LZMA_STREAM_INIT;
+    kba::thrift::ThriftDocumentExtractor::init_decoder(&_lzmaStream);
   
-    if(kba::thrift::ThriftDocumentExtractor::decompress(&kba::thrift::ThriftDocumentExtractor::_lzmaStream)) {
-      lzma_end(&kba::thrift::ThriftDocumentExtractor::_lzmaStream);
-
+    if(kba::thrift::ThriftDocumentExtractor::decompress(&_lzmaStream)) {
+      lzma_end(&_lzmaStream);
       _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
 
       _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));

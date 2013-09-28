@@ -27,7 +27,7 @@ namespace kba
     private:
       std::string _filename;
       std::vector<uint8_t> _thriftContent;
-      static lzma_stream _lzmaStream;
+      lzma_stream _lzmaStream;
       boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>  _memoryTransport;
       boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol> _protocol;
       streamcorpus::StreamItem _streamItem;
@@ -54,6 +54,11 @@ namespace kba
       bool decompress(lzma_stream *strm);
       
       ThriftDocumentExtractor();
+      /**
+       * the file must be in xz format.
+       * If file not present or xz corrupted then this method construct does not initializes 
+       * members of this class and fail silently
+       */
       ThriftDocumentExtractor(std::string fileName);
       ~ThriftDocumentExtractor();
     };
