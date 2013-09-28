@@ -1,4 +1,4 @@
-#include "indri/ThriftDocumentExtractor.hpp"
+#include "ThriftDocumentExtractor.hpp"
 #include "indri/FileTreeIterator.hpp"
 #include "indri/Path.hpp"
 #include "boost/program_options/options_description.hpp"
@@ -11,12 +11,12 @@
 #include "RDFQuery.hpp"
 #include <fstream>
 #include <vector>
-
+#include <iostream>
 namespace cmndOp = boost::program_options;
 
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
-  indri::parse::ThriftDocumentExtractor docExtractor;   
+  kba::thrift::ThriftDocumentExtractor docExtractor;   
 
   docExtractor.open(fileName);
   StreamItem *streamItem;
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
       std::vector< boost::shared_ptr<unsigned char> >  nodes = rdfquery->getSourceNodes((const unsigned char*)"http://xmlns.com/foaf/0.1/homepage", (const unsigned char*)equery.c_str(), false);
       for(std::vector<boost::shared_ptr<unsigned char> >::iterator nodeIt = nodes.begin(); nodeIt != nodes.end(); nodeIt++) {
 	boost::shared_ptr<unsigned char> nodeValue = *nodeIt;
-        cout << "\n found nodes are "<< nodeValue.get(); 
+	std::cout << "\n found nodes are "<< nodeValue.get(); 
       }
     }
   }

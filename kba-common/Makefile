@@ -1,5 +1,5 @@
 SHARED=
-INCPATH=-I../include -I../include/thrift -Iinclude/ -I/usa/arao/projects/redlandlib/include -I/usa/arao/projects/redlandlib/include/raptor2 -I/usa/arao/projects/redlandlib/include/rasqal
+INCPATH=-I.   -I/usa/arao/projects/redlandlib/include -I/usa/arao/projects/redlandlib/include/raptor2 -I/usa/arao/projects/redlandlib/include/rasqal
 
 LIBPATH=-L../obj -Lobj -Llib
 LIBS= -lboost_program_options -lindri -llzma -lthrift -lrdf -lraptor2 -lrasqal
