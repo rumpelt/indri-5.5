@@ -5,10 +5,9 @@
 namespace kba {
   namespace scorer {
     class Scorer {
-    private:
-      std::vector<Entity*> _entityList;
     public:
-      virtual int score(streamcorpus::StreamItem* streamItem, int maxScore)=0;
+      virtual std::vector<Entity*> getEntityList() = 0;
+      virtual int score(streamcorpus::StreamItem* streamItem,Entity* entity, int maxScore)=0;
     };
   }
 }

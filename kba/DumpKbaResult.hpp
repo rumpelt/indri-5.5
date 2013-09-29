@@ -4,7 +4,6 @@
 
 namespace kba {
   namespace dump {
-    const std::string ResultHeader = "#{\"run_type\": \"automatic\", \"poc_email\": \"ashwani@udel.edu\", \"team_id\": \"UdelCis\", \"topic_set_id\": \"kba-2013-ccr-and-ssf\", \"corpus_id\": \"kba-streamcorpus-2013-v0_2_0\", \"$schema\": \"http://trec-kba.org/schemas/v1.1/filter-run.json\", \"team_name\": \"BlueHen\", \"system_description_short\": \"Not for the kab run yet\", \"system_description\": \"Not for kba run yet\", \"task_id\": \"kba-ccr-2013\", \"poc_name\": \"UDEL CIS-Ashwani\",  \"system_id\": \"Udelcis\"}";
 
     struct ResultRow {
       std::string teamId;
@@ -21,14 +20,16 @@ namespace kba {
       ResultRow() : teamId("udel"), slot("NULL"), equivalent("-1"), byteRange("1-1") {};
     };
 
-    std::vector<ResultRow> RESULTROWS;
-    std::string _DUMPFILE;
+    //   extern std::vector<ResultRow> RESULTROWS;
+    //    std::string _DUMPFILE;
     
     ResultRow makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
-    void addToResultRows(std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
-    
-    void flushToDumpFile(std::vector<ResultRow>& rows);
-    
+    void addToResultRows(std::string dumpFile, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
+          
+    void flushToDumpFile(std::vector<ResultRow>& rows, std::string& dumpFile);
+    void writeHeader(std::string dumpFile);
+    std::string&  rowHeader(); 
+    std::vector<ResultRow>&  resultRows(); 
   }
   
   
