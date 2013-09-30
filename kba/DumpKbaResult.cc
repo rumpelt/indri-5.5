@@ -15,17 +15,15 @@ kba::dump::ResultRow kba::dump::makeCCRResultRow(std::string streamId, std::stri
 }
 
 
-void kba::dump::addToResultRows(std::string fileName, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevance, bool mention) {
+void kba::dump::addToResultRows(std::vector<kba::dump::ResultRow>* rows, std::string fileName, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevance, bool mention) {
   ResultRow row = kba::dump::makeCCRResultRow(streamId, entityURL, score, dateHour,relevance, mention);
-  std::vector<ResultRow>& rows = kba::dump::resultRows();
-  rows.push_back(row);
-  std::cout << "adding \n";
-  if(kba::dump::resultRows().size() > 100) {
-    kba::dump::flushToDumpFile(kba::dump::resultRows(), fileName);
-    kba::dump::resultRows().clear();
-  }
-}
 
+  rows->push_back(row);
+  
+}
+/**
+ * should be synchronized if you are writing multiple times.
+ */
 void kba::dump::writeHeader(std::string dumpFile) {
   std::fstream dumpstream;
   dumpstream.open(dumpFile.c_str(), std::fstream::out| std::fstream::app);
@@ -38,20 +36,18 @@ void kba::dump::writeHeader(std::string dumpFile) {
 /**
  * access must be synchronized
  */
-void kba::dump::flushToDumpFile(std::vector<ResultRow>& rows, std::string& fileName) {
-  std::fstream dumpstream;
-  std::cout << "flushing \n";
-  dumpstream.open(fileName.c_str(), std::fstream::out| std::fstream::app);
-  if (dumpstream.is_open()) {
+void kba::dump::flushToDumpFile(std::vector<ResultRow>& rows, std::fstream* dumpStream) {
+
+  if (dumpStream->is_open()) {
     for(std::vector<ResultRow>::iterator rowIt = rows.begin(); rowIt != rows.end(); rowIt++) {
       ResultRow row = *rowIt;
-      std::cout << "Row id : " << row.streamId << "\n";
-      dumpstream << row.teamId << " " << row.systemId << " " << row.streamId << " " << row.entityURL << " "<< row.score << " " << row.relevant << " " << row.mention << " " << row.dateHour << " " << row.slot << " " << row.equivalent << " " << row.byteRange << "\n";
+      //      std::cout << "Row id : " << row.streamId << "\n";
+      *dumpStream << row.teamId << " " << row.systemId << " " << row.streamId << " " << row.entityURL << " "<< row.score << " " << row.relevant << " " << row.mention << " " << row.dateHour << " " << row.slot << " " << row.equivalent << " " << row.byteRange << "\n";
     }
-    dumpstream.close();
+    dumpStream->flush();
   }
   else
-    std::cout << "\n Could not dump to file : " << fileName << "\n";
+    std::cout << "\n Could not dump to file :\n ";
 }
 
 std::string&  kba::dump::rowHeader() {
@@ -59,7 +55,7 @@ std::string&  kba::dump::rowHeader() {
   return rowheader;
 }
 
-std::vector<kba::dump::ResultRow>& kba::dump::resultRows() {
-  static std::vector<kba::dump::ResultRow> rowscollection;
+std::vector<kba::dump::ResultRow> kba::dump::resultRows() {
+  std::vector<kba::dump::ResultRow> rowscollection;
   return rowscollection;
 }

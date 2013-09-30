@@ -74,8 +74,10 @@ bool kba::thrift::ThriftDocumentExtractor::decompress(lzma_stream *strm){
     lzma_ret ret = lzma_code(strm, action);
     if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
       size_t write_size = sizeof(outbuf) - strm->avail_out;
-      for(size_t idx = 0 ; idx < write_size; idx++)
+      //      std::cout << "total ize: " << _thriftContent.max_size() << " : " << _thriftContent.size() << "\n";
+      for(size_t idx = 0 ; idx < write_size; idx++) 
         _thriftContent.push_back(outbuf[idx]);
+
       //      cout <<"\n" +_thriftContent.size();
       strm->next_out = outbuf;
       strm->avail_out = sizeof(outbuf);    

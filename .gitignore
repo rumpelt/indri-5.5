@@ -14,7 +14,7 @@
 library
 lib
 obj
-
+help
 #backup files created by emacs
 ^#
 *#

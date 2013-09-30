@@ -26,12 +26,12 @@ namespace kba {
     //    std::string _DUMPFILE;
     
     ResultRow makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
-    void addToResultRows(std::string dumpFile, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
+    void addToResultRows(std::vector<kba::dump::ResultRow>* rows, std::string dumpFile, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
           
-    void flushToDumpFile(std::vector<ResultRow>& rows, std::string& dumpFile);
+    void flushToDumpFile(std::vector<ResultRow>& rows, std::fstream* dumpStream);
     void writeHeader(std::string dumpFile);
     std::string&  rowHeader(); 
-    std::vector<ResultRow>&  resultRows(); 
+    std::vector<ResultRow>  resultRows(); 
   }
 }
 #endif

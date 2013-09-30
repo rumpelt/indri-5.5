@@ -15,6 +15,7 @@
 #include "BaseLineScorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
+#include <boost/thread.hpp>
 
 namespace cmndOp = boost::program_options;
 
@@ -39,13 +40,7 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
   }
 }
 
-void launchStreamThread(std::vector<kba::entity::Entity*> entities, std::string fileName, std::string dumpFileName) {
-  // std::cout << "total enti : " << entities.size() << (entities[0])->wikiURL << "\n"; 
-  kba::scorer::BaseLineScorer bscorer(entities); 
-  kba::StreamThread st(fileName, dumpFileName, &bscorer);
-  st.parseFile();
- 
-}
+
 
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump) {
    
@@ -55,16 +50,46 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
  
   indri::file::FileTreeIterator files(pathToProcess);
   kba::dump::writeHeader(fileToDump);
-  
-  if(!isDirectory)
-    launchStreamThread(ENTITY_SET, pathToProcess, fileToDump);
-  else {
-    for(; files != indri::file::FileTreeIterator::end() ;files++) {
-      
-      std::string fileName(*files);
-      launchStreamThread(ENTITY_SET, fileName, fileToDump);
-    }
+  std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
+
+  if(!isDirectory) {
+        kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+        kba::StreamThread st(pathToProcess, dumpStream, &bscorer, 0);
+        st.parseFile();
   }
+  else {
+    int index = 0;
+    boost::thread_group threadGroup;
+    boost::mutex* lockMutex = new boost::mutex;
+    for(; files != indri::file::FileTreeIterator::end() ;files++) {
+      if( index > 3) {
+        std::cout << "waiting for threads to finish\n";
+        threadGroup.join_all();
+        std::cout << "Fiinish\n";
+        index = 0;
+      }
+        
+      std::string fileName(*files);
+      kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+      std::cout << "process : " << fileName << "\n";   
+      kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
+      std::cout << "creating thread \n";
+      //     st.parseFile();
+         threadGroup.create_thread(st);
+      //st.parseFile();
+      index++;
+
+    }
+    
+    if(index > 0) {
+     threadGroup.join_all();
+     } 
+     
+    delete lockMutex;
+  }
+  
+  dumpStream->close(); 
+  delete dumpStream;
 }
 
 int main(int argc, char *argv[]){

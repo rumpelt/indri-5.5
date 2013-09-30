@@ -3,14 +3,18 @@
 #include "StreamUtils.hpp"
 #include "DumpKbaResult.hpp"
 #include <iostream>
+
+
 void kba::StreamThread::operator()() {
-  // do nothing
+  //std::cout << "processing Stream thread \n";
+  kba::StreamThread::parseFile();
 }
 
-kba::StreamThread::StreamThread(std::string path, std::string dumpFileName, kba::scorer::Scorer* scorer) {
+kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *lockMutex) {
   kba::StreamThread::_fileName = path;
-  _dumpFileName = dumpFileName;
+  _dumpStream = dumpStream;
   _scorer = scorer;
+  _lockMutex = lockMutex;
 }
 
 /**
@@ -30,9 +34,12 @@ std::string kba::StreamThread::extractDirectoryName(std::string absoluteName) {
 }
 
 void kba::StreamThread::parseFile() {
-  kba::thrift::ThriftDocumentExtractor tdextractor(StreamThread::_fileName);
+  std::cout << "parsing file " << _fileName << "\n";
+  kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
+  tdextractor->open(StreamThread::_fileName);
   streamcorpus::StreamItem* streamItem = 0;
-  while((streamItem = tdextractor.nextStreamItem()) != 0) {
+  std::vector<kba::dump::ResultRow> rows;
+  while((streamItem = tdextractor->nextStreamItem()) != 0) {
     std::string title = streamcorpus::utils::getTitle(*streamItem);
     std::string id = streamItem->stream_id;
     //std::cout << "id :: "<< id << "\n";
@@ -42,9 +49,20 @@ void kba::StreamThread::parseFile() {
       kba::entity::Entity* entity = *entIt;
       //std::cout << "scoring : " << entity->wikiURL << "\n";
       int score = kba::StreamThread::_scorer->score(streamItem, entity, 600);
-      kba::dump::addToResultRows(kba::StreamThread::_dumpFileName, streamItem->stream_id, entity->wikiURL, score, kba::StreamThread::extractDirectoryName(kba::StreamThread::_fileName));
+      std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
+      kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
+
+      rows.push_back(row);  
+      if(rows.size() > 1000 && _lockMutex != 0) {
+        boost::lock_guard<boost::mutex> lockg(*_lockMutex); 
+        kba::dump::flushToDumpFile(rows, _dumpStream);
+        rows.clear();
+      }
     }
   }
+  delete tdextractor;
+  //  std::cout << "Acquiring lock :"<< StreamThread::_fileName << "\n";
+  
 }
 
 kba::StreamThread::StreamThread() {
