@@ -1,3 +1,6 @@
+#ifndef RDFQUERY_HPP
+#define RDFQUERY_HPP
+
 #include <string>
 //#include <cstdio>
 #include <iostream>
@@ -26,3 +29,5 @@ public:
  
   RDFQuery(librdf_model* model, librdf_world* world);
 };
+
+#endif

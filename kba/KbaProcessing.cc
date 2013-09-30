@@ -12,8 +12,16 @@
 #include <fstream>
 #include <vector>
 #include <iostream>
+#include "BaseLineScorer.hpp"
+#include "DumpKbaResult.hpp"
+#include "StreamThread.hpp"
+
 namespace cmndOp = boost::program_options;
 
+std::vector<kba::entity::Entity*> ENTITY_SET;
+
+void runScoring(std::string entityfile, std::string ) {
+}
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
   kba::thrift::ThriftDocumentExtractor docExtractor;   
@@ -31,14 +39,42 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
   }
 }
 
-void scoreBaseLine(std::string fileName) {
+void launchStreamThread(std::vector<kba::entity::Entity*> entities, std::string fileName, std::string dumpFileName) {
+  // std::cout << "total enti : " << entities.size() << (entities[0])->wikiURL << "\n"; 
+  kba::scorer::BaseLineScorer bscorer(entities); 
+  kba::StreamThread st(fileName, dumpFileName, &bscorer);
+  st.parseFile();
+ 
 }
+
+void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump) {
+   
+  kba::entity::populateEntityList(ENTITY_SET, entityfile);
+  std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
+  bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
+ 
+  indri::file::FileTreeIterator files(pathToProcess);
+  kba::dump::writeHeader(fileToDump);
+  
+  if(!isDirectory)
+    launchStreamThread(ENTITY_SET, pathToProcess, fileToDump);
+  else {
+    for(; files != indri::file::FileTreeIterator::end() ;files++) {
+      
+      std::string fileName(*files);
+      launchStreamThread(ENTITY_SET, fileName, fileToDump);
+    }
+  }
+}
+
 int main(int argc, char *argv[]){
   std::string taggerId;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("help","the help message")
     ("file",cmndOp::value<std::string>(),"the file or base dir to process")
+    ("efile",cmndOp::value<std::string>(),"The full path of the entity json file")
+    ("dfile",cmndOp::value<std::string>(),"The dump file")
     ("anchor"," print anchor text")
     ("title"," print title text")
     ("sentence"," print sentences ")
@@ -51,6 +87,7 @@ int main(int argc, char *argv[]){
   cmndOp::variables_map cmndMap;
   cmndOp::store(cmndOp::parse_command_line(argc, argv,cmndDesc), cmndMap);
   cmndOp::notify(cmndMap);  
+ 
  
   RDFParser* rdfparser = NULL; 
   if(cmndMap.count("repo") && cmndMap.count("repo-name")) {
@@ -74,6 +111,13 @@ int main(int argc, char *argv[]){
 	std::cout << "\n found nodes are "<< nodeValue.get(); 
       }
     }
+  }
+  
+  if(cmndMap.count("efile") && cmndMap.count("dfile") && cmndMap.count("file")) {
+    std::string entityFile = cmndMap["efile"].as<std::string>();
+    std::string dumpFile = cmndMap["dfile"].as<std::string>();
+    std::string pathToProcess = cmndMap["file"].as<std::string>();
+    performCCRTask(entityFile, pathToProcess, dumpFile);
   }
 
   if (!cmndMap.count("file")) {

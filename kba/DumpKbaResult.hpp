@@ -1,3 +1,5 @@
+#ifndef DUMPKBARESULT_HPP
+#define DUMPKBARESULT_HPP
 #include <string>
 #include <cstdio>
 #include <vector>
@@ -31,6 +33,5 @@ namespace kba {
     std::string&  rowHeader(); 
     std::vector<ResultRow>&  resultRows(); 
   }
-  
-  
 }
+#endif

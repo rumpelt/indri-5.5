@@ -1,3 +1,5 @@
+#ifndef STREAMTHREAD_HPP
+#define STREAMTHREAD_HPP
 #include <cstdio>
 #include <string>
 #include "Scorer.hpp"
@@ -16,8 +18,9 @@ namespace kba {
     void operator()(); // operator over loading , potential use as thread functor
     std::string extractDirectoryName(std::string absoluteName);
     void parseFile();
-    StreamThread(std::string path,  std::string dumpFileName);
+    StreamThread(std::string path,  std::string dumpFileName, kba::scorer::Scorer* scorer);
     StreamThread();
 
   };
 }
+#endif

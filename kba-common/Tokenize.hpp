@@ -1,3 +1,6 @@
+#ifndef TOKENIZE_HPP
+#define TOKENIZE_HPP
+
 #include <stdio.h>
 #include <set>
 #include <string>
@@ -21,3 +24,4 @@ public:
   static std::vector<std::string> ngrams(std::vector<std::string> inVector, int ngram);
   static std::vector<std::string> toLower(std::vector<std::string> inVector);
 };
+#endif

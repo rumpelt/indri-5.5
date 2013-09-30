@@ -5,23 +5,25 @@
 #include "cassert"
 #include "Tokenize.hpp"
 
-void populateEntityList(std::vector<Entity*>& entityList, std::string fileName) {
+void kba::entity::populateEntityList(std::vector<kba::entity::Entity*>& entityList, std::string fileName) {
   std::ifstream entityFile(fileName.c_str());
   if(entityFile.is_open()) {
     std::string line;
     bool definationStart = false;
-    Entity* entity = 0;
+    kba::entity::Entity* entity = 0;
     while(getline(entityFile, line)) {
       boost::algorithm::trim(line);
       if(line[0] == '{') {
         definationStart = true;
-        entity  = (Entity*)malloc(sizeof(Entity));
+        entity  = new kba::entity::Entity();
         continue;
       }
       else if(line[0] == '}') {
-        if(entity != 0)
+        if(entity != 0) {
           entityList.push_back(entity);
-        entity = 0; //set it null now    
+	  //	  std::cout <<  "Freeing up entuty at deination end \n";
+          entity=0;
+        }  
         definationStart  = false;
         continue;
       }
@@ -29,20 +31,42 @@ void populateEntityList(std::vector<Entity*>& entityList, std::string fileName) 
         size_t index = line.find(':');
 	std::string key = line.substr(0,index);
 	boost::algorithm::trim(key);
-	std::string value = line.substr(index+1);
+ 
+	std::string value;
+        if(line.size() > index)
+         value = line.substr(index+1);
 	boost::algorithm::trim(value);
-        if(key.compare((const char*)"\"entity_type\"")) {
-          entity->entityType = value.substr(1,value.size() -1);
+
+        if(!key.compare((const char*)"\"entity_type\"")) {
+	  //std::cout << " Key : " << key << " value : " << value << " and line : "<< line << "\n";   
+	  //std::cout << " Entut : " << entity << "\n";
+          size_t first = value.find_first_of('\"');
+          size_t last = value.find_last_of('\"');
+	  value = value.substr(first+1, last - first -1);
+           (*entity).entityType = value;
+
 	}
-        else if(key.compare((const char*)"\"group\"")) {
-          entity->group = value.substr(1,value.size() -1);
+        else if(!key.compare((const char*)"\"group\"")) {
+	  //          std::cout << " Key : " << key << " value : " << value << " and line : "<< entity << "\n";  
+          
+          size_t first = value.find_first_of('\"');
+          size_t last = value.find_last_of('\"');
+	  value = value.substr(first+1, last - first -1);
+	  (*entity).group = value;
+	  //std::cout << " Entity gropu is : " << entity << "\n";
 	}
-        else if(key.compare((const char*)"\"target_id\"")) {
-          entity->wikiURL = value.substr(1,value.size() -1);
+        else if(!key.compare((const char*)"\"target_id\"")) {
+          //std::cout << " Key : " << key << " value : " << value << " and line : "<< line << "\n";  
+          size_t first = value.find_first_of('\"');
+          size_t last = value.find_last_of('\"');
+	  value = value.substr(first+1, last - first -1);
+          (*entity).wikiURL = value;
+	  //std::cout << "Assinge \n";
 	}
         else {
-          free(entity);
-          entity=0;
+	  //	  std::cout << "freeing entity : " << line << "\n";
+          delete entity;
+          entity = 0;
           definationStart = false;
 	}
       }
@@ -55,11 +79,11 @@ void populateEntityList(std::vector<Entity*>& entityList, std::string fileName) 
 
 
 
-void updateEntityWithDbpedia(std::vector<Entity*>& entityList, std::string storageDir, std::string repoName) {
+void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName) {
   RDFParser* rdfparser = new RDFParser(storageDir, repoName, std::string("ntriples"),std::string( "bdb"), false);
   RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
-  for(std::vector<Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
-    Entity* entity = *entityIt;
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
+    kba::entity::Entity* entity = *entityIt;
     const unsigned char* subject = (const unsigned char*)((entity->wikiURL).c_str());
     const unsigned char* predicate = (const unsigned char*)"http://xmlns.com/foaf/0.1/primaryTopic";
     std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
@@ -71,15 +95,15 @@ void updateEntityWithDbpedia(std::vector<Entity*>& entityList, std::string stora
     }
   }
   
-  free(rdfquery);
-  free(rdfparser);
+  delete rdfquery;
+  delete rdfparser;
 }
 
-void updateEntityWithLabels(std::vector<Entity*>& entityList, std::string storageDir, std::string repoName) {
+void updateEntityWithLabels(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName) {
   RDFParser* rdfparser = new RDFParser(storageDir, repoName, std::string("ntriples"),std::string( "bdb"), false);
   RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
-  for(std::vector<Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
-    Entity* entity = *entityIt;
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
+    kba::entity::Entity* entity = *entityIt;
     const unsigned char* predicate  = (const unsigned char*)"http://www.w3.org/2000/01/rdf-schema#label";
     for(std::vector<boost::shared_ptr<unsigned char> >::iterator urlIt = (entity->dbpediaURLs).begin(); urlIt != (entity->dbpediaURLs).end(); urlIt++) {
       boost::shared_ptr<unsigned char>  url = *urlIt;
@@ -102,7 +126,7 @@ void updateEntityWithLabels(std::vector<Entity*>& entityList, std::string storag
       }
     }
   }
-  free(rdfquery);
-  free(rdfparser);
+  delete rdfquery;
+  delete rdfparser;
   
 }

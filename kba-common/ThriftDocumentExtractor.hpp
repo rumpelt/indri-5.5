@@ -2,7 +2,8 @@
  *@author : ashwani
 */
 
-
+#ifndef THRIFTDOCUMENTEXTRACTOR_HPP
+#define THRIFTDOCUMENTEXTRACTOR_HPP
 #include <stdio.h>
 #include <stdexcept>
 #include <string>
@@ -65,3 +66,4 @@ namespace kba
   }
 }
 
+#endif

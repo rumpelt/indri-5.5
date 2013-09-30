@@ -19,6 +19,7 @@ void kba::dump::addToResultRows(std::string fileName, std::string streamId, std:
   ResultRow row = kba::dump::makeCCRResultRow(streamId, entityURL, score, dateHour,relevance, mention);
   std::vector<ResultRow> rows = kba::dump::resultRows();
   rows.push_back(row);
+  //  std::cout << "adding \n";
   if(kba::dump::resultRows().size() > 100) {
     kba::dump::flushToDumpFile(kba::dump::resultRows(), fileName);
     kba::dump::resultRows().clear();

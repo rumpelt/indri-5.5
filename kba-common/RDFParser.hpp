@@ -1,6 +1,8 @@
 /**
  * Ashwani : Redland library for parsing data stored in rdf format.
  */
+#ifndef RDFPARSER_HPP
+#define RDFPARSER_HPP
 
 #include "indri/DirectoryIterator.hpp"
 
@@ -72,3 +74,4 @@ public:
   ~RDFParser();
 };
 
+#endif
