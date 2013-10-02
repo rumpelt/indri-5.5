@@ -54,20 +54,36 @@ std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inp
   return filterWords;
 }
 
+std::vector<std::string> Tokenize::filterShortWords(std::vector<std::string>& inputTokens, int lengthToReject) 
+{
+  std::vector<std::string> filterWords;
+  for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
+    std::string token = *tokIt;
+    if(token.size() > lengthToReject) {
+      filterWords.push_back(token);
+    }
+  }
+  return filterWords;
+}
+
+
 std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
   std::vector<std::string> tokens;
   char phrase[4096];
   int phraseIndex=0;
+  bool prevUpperCase = false;
   for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); charIt++) {
     char thisChar = *charIt;
-    if(!isspace(thisChar)) {
-      if(isupper(thisChar)) {
+    if(!isspace(thisChar)) { // If this case is not upper then we process it
+      if(!prevUpperCase && isupper(thisChar)) { // IF the previous character was also upper case then it might be some abbreviation and so we just append it to previous
+
 	std::string content((const char*) &phrase, phraseIndex);
         if(content.size() > 0)
           tokens.push_back(content);
         phraseIndex = 0;
         phrase[phraseIndex] = thisChar;
         phraseIndex++;  
+
       }
       else if(!isalnum(thisChar)) {
         std::string content((const char*) &phrase, phraseIndex);
@@ -95,6 +111,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
         tokens.push_back(content);
       phraseIndex = 0;
     }
+    prevUpperCase = isupper(thisChar);
   }
   
   if(phraseIndex > 0) {
@@ -105,6 +122,9 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
   return tokens;
 }
 
+/**
+ * use the boost tokenizer.
+ */
 std::vector<std::string> Tokenize::getPhrases(std::string& inputSource) {
   boost::tokenizer<> tokens(inputSource);
   std::vector<std::string> phrases;

@@ -19,10 +19,22 @@ int kba::scorer::BaseLineScorer::score(streamcorpus::StreamItem* stream, kba::en
   
   
   std::vector<std::string> entityTokens = Tokenize::tokenize(entityLabel);
-  entityTokens = Tokenize::toLower(entityTokens);
+  entityTokens = Tokenize::filterShortWords(entityTokens);
   assert(entityTokens.size() > 0);  
+  entityTokens = Tokenize::toLower(entityTokens);
+
+  /**
+  for (std::vector<std::string>::iterator tkIt=  entityTokens.begin(); tkIt != entityTokens.end(); tkIt++) {
+    std::cout << "tok: " <<  *tkIt << " ^^";
+  } 
+  std::cout << "\n"; 
+  */
+  
+
+  
 
   std::vector<std::string> titlePhrases = Tokenize::getPhrases(title);
+  titlePhrases = Tokenize::filterShortWords(titlePhrases);
   titlePhrases = Tokenize::toLower(titlePhrases);
   
   int score = 0;
@@ -31,8 +43,10 @@ int kba::scorer::BaseLineScorer::score(streamcorpus::StreamItem* stream, kba::en
     std::string tok = *entTokIt;
     for (std::vector<std::string>::iterator titTokIt = titlePhrases.begin(); titTokIt != titlePhrases.end(); titTokIt++) {
       std::string titTok = *titTokIt;
-      if(titTok.find(tok) != std::string::npos)
+      if(titTok.find(tok) != std::string::npos) {
         score  = score + step;
+        break;
+      }
     }
   }     
  

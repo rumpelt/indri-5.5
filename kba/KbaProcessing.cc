@@ -40,6 +40,19 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
   }
 }
 
+void findStreamId(std::string& fileName, std::string streamId) {
+  kba::thrift::ThriftDocumentExtractor docExtractor;   
+
+  docExtractor.open(fileName);
+  StreamItem *streamItem;
+  while((streamItem = docExtractor.nextStreamItem()) != NULL) {
+    if(!(streamItem->stream_id).compare(streamId)) {
+      std::cout << "*********Stream Content***********\n";
+      std::cout << (streamItem->body).clean_visible;
+    }     
+  }
+}
+
 
 
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump) {
@@ -112,18 +125,23 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 
 int main(int argc, char *argv[]){
   std::string taggerId;
+  std::string corpusPath;
+  std::string topicFile;
+  bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("help","the help message")
-    ("file",cmndOp::value<std::string>(),"the file or base dir to process")
-    ("efile",cmndOp::value<std::string>(),"The full path of the entity json file")
+    ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
+    ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"The full path of the entity json file")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
+    ("stream-id",cmndOp::value<std::string>(),"The stream id to search") 
     ("anchor"," print anchor text")
     ("title"," print title text")
     ("sentence"," print sentences ")
     ("repo",cmndOp::value<std::string>(), "Repository path of the rdfs store")
     ("repo-name", cmndOp::value<std::string>(), "The name of repository in the repository path") 
     ("print-model", "print the model")
+    ("print-stream", cmndOp::value<bool>(&printStream)->default_value(false), "print the stream")
     ("equery",cmndOp::value<std::string>(), "Look up an entity")
     ("taggerId",cmndOp::value<std::string>(&taggerId)->default_value("lingpipe")," print anchor text");
 
@@ -142,30 +160,54 @@ int main(int argc, char *argv[]){
     if(cmndMap.count("print-model")) {
       rdfparser->streamModel(stdout);   
     }
+    if(cmndMap.count("equery")) {
+      RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
+
+      std::vector< boost::shared_ptr<unsigned char> > sources = rdfquery->getSourceNodes((unsigned char*)"http://dbpedia.org/unigramtoken",(unsigned char*)(cmndMap["equery"].as<std::string>().c_str()));
+      for(int index=0; index < sources.size() ; index++) {
+        unsigned char* node  = sources[index].get();
+	std::cout << node << "\n";
+      }
+      //rdfparser->streamModel(stdout);   
+      
+    }
   }
   
-  if(cmndMap.count("efile") && cmndMap.count("dfile") && cmndMap.count("file")) {
-    std::string entityFile = cmndMap["efile"].as<std::string>();
-    std::string dumpFile = cmndMap["dfile"].as<std::string>();
-    std::string pathToProcess = cmndMap["file"].as<std::string>();
-    performCCRTask(entityFile, pathToProcess, dumpFile);
-  }
+  std::cout << "processed rdfs related\n";
 
-  if (!cmndMap.count("file")) {
+  if(corpusPath.size() > 0  && topicFile.size() > 0 && cmndMap.count("dfile")) {
+    std::string dumpFile = cmndMap["dfile"].as<std::string>();
+    performCCRTask(topicFile, corpusPath, dumpFile);
+  }
+   
+
+  if (!cmndMap.count("file") ) {
     std::cout <<  "no input file specified use --file \n";
     return -1;
   }
  
+  if(!printStream || !cmndMap.count("stream-id")) {
+    std::cout << "Neither print-stream -- nor stream-id option\n";
+  }
   std::string basePath = cmndMap["file"].as<std::string>();
   bool isDirectory = indri::file::Path::isDirectory(basePath );   
   indri::file::FileTreeIterator files(basePath);
-  if(!isDirectory)
-    iterateOnStream(basePath, cmndMap, taggerId);
+  if(!isDirectory) {
+    if(cmndMap.count("stream-id")) {
+      findStreamId(basePath, cmndMap["stream-id"].as<std::string>());
+    }
+    else if(printStream)
+     iterateOnStream(basePath, cmndMap, taggerId);
+  }
   else {
     for(; files != indri::file::FileTreeIterator::end() ;files++) {
       
       std::string fileName(*files);
-      iterateOnStream(fileName, cmndMap, taggerId);
+      if(cmndMap.count("stream-id")) {
+        findStreamId(fileName, cmndMap["stream-id"].as<std::string>());
+      }
+      else if(printStream)
+        iterateOnStream(fileName, cmndMap, taggerId);
     }
   }
   return 0;

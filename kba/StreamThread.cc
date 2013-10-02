@@ -50,7 +50,7 @@ void kba::StreamThread::parseFile() {
       kba::entity::Entity* entity = *entIt;
       //std::cout << "scoring : " << entity->wikiURL << "\n";
       int score = kba::StreamThread::_scorer->score(streamItem, entity, 600);
-      if (score > 0) {
+      if (score >= 200) {
         std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
         kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
       
