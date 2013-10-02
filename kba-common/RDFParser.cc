@@ -61,7 +61,7 @@ void RDFParser::parse(std::string& uriInput) {
 
 librdf_parser* RDFParser::initParser(std::string parserName) {
 
-  if(RDFParser::_parser != NULL) {
+  if(RDFParser::_parser != 0) {
     librdf_free_parser(RDFParser::_parser);
   }
   RDFParser::_parser=librdf_new_parser(RDFParser::_world, parserName.c_str(), NULL, NULL); //  
@@ -75,7 +75,7 @@ void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore,
    
   int bufsize = 4096;
   char options[bufsize]; // buff to manufacture the options for creating the repository.
-  std::string optionFmt = "index-predicates='no',contexts='no',write='yes',new='%s',hash-type='%s',dir='%s'";
+  std::string optionFmt = "index-predicates='no',contexts='no',new='%s',hash-type='%s',dir='%s'";
   int preLength = optionFmt.size()-6; // -6  for the three %s
   int allowedPathLength = bufsize - preLength;
   if ((int)dirToStore.size() > allowedPathLength+1) {
@@ -90,7 +90,7 @@ void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore,
   
   RDFParser::_storage = librdf_new_storage(RDFParser::_world, "hashes", storageName.c_str(), options);
   if(!RDFParser::_storage) {
-    fprintf(stderr,"%s: Failed to create new storage for rdf data\n", dirToStore.c_str());
+    fprintf(stderr,"%s: Failed to create new storage for rdf data and storage name %s\n", dirToStore.c_str(), storageName.c_str());
     return;
   }
 
@@ -214,13 +214,13 @@ RDFParser::RDFParser(std::string parserName, std::string hashType) {
   RDFParser::_world = librdf_new_world();
   librdf_world_open(RDFParser::_world);
   _parserName = parserName;
-  _storage = NULL; 
-  _parser = NULL;
-  _model = NULL;
+  _storage = 0; 
+  _parser = 0;
+  _model = 0;
   _hashType =  hashType;
 }
 
-RDFParser::RDFParser(std::string dirToStore, std::string repoName, std::string parserName, std::string hashType, bool newRepository) {
+RDFParser::RDFParser(std::string dirToStore, std::string repoName, std::string parserName, std::string hashType, bool newRepository) : _world(0), _storage(0),_parser(0), _model(0){
   RDFParser::_world = librdf_new_world();
   librdf_world_open(RDFParser::_world);
   RDFParser::initRDFParser(repoName, dirToStore, newRepository);

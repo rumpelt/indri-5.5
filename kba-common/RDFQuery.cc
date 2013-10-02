@@ -81,7 +81,6 @@ std::vector< boost::shared_ptr<unsigned char> > RDFQuery::getSourceNodes(const u
 
 
 
-RDFQuery::RDFQuery(librdf_model* model, librdf_world* world) {
-  _model = model;
-  _world = world;
+RDFQuery::RDFQuery(librdf_model* model, librdf_world* world): _model(model), _world(world) {
+  
 }

@@ -168,8 +168,8 @@ int main(int argc, char* argv[]) {
           continue;   
         std::string fullName = "file://"+path+"/"+fileName;
       
-	rdfparser.parse(fullName);
-	//   generateAliases(rdfparser, path+"/"+fileName, stopFile);
+	//rdfparser.parse(fullName);
+	   generateAliases(rdfparser, path+"/"+fileName, stopFile);
         std::cout << "parsed file : "+fullName + "\n" ; 
       }
     }
@@ -180,8 +180,8 @@ int main(int argc, char* argv[]) {
         std::string inFile;  
         if (path.rfind(".nt") != std::string::npos) {
           inFile = "file://" + path;
-	  rdfparser.parse(inFile); 
-	  //	            generateAliases(rdfparser, path, stopFile);
+	  //	  rdfparser.parse(inFile); 
+	  	            generateAliases(rdfparser, path, stopFile);
 	  std::cout << "parsed file :"+ inFile + "\n";
         }
       }

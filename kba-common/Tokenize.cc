@@ -15,7 +15,7 @@ std::set<std::string> Tokenize::getStopSet(std::string& stopFile) {
   return stopwords;
 }
 
-std::vector<std::string> Tokenize::toLower(std::vector<std::string> inVector) {
+std::vector<std::string> Tokenize::toLower(std::vector<std::string>& inVector) {
   std::vector<std::string> lowerVector;
   for(std::vector<std::string>::iterator vecIt = inVector.begin(); vecIt != inVector.end(); vecIt++) {
     std::string lowerString = *vecIt;
@@ -26,7 +26,7 @@ std::vector<std::string> Tokenize::toLower(std::vector<std::string> inVector) {
   return lowerVector;
 }
 
-std::vector<std::string> Tokenize::ngrams(std::vector<std::string> inVector, int ngram) {
+std::vector<std::string> Tokenize::ngrams(std::vector<std::string>& inVector, int ngram) {
   std::vector<std::string> gramVector;
   if(ngram <= 1) 
     return inVector;
@@ -42,7 +42,7 @@ std::vector<std::string> Tokenize::ngrams(std::vector<std::string> inVector, int
   return gramVector;
 }
 
-std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string> inputTokens, std::set<std::string>& stopwords) 
+std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inputTokens, std::set<std::string>& stopwords) 
 {
   std::vector<std::string> filterWords;
   for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
@@ -105,7 +105,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
   return tokens;
 }
 
-std::vector<std::string> getPhrases(std::string& inputSource) {
+std::vector<std::string> Tokenize::getPhrases(std::string& inputSource) {
   boost::tokenizer<> tokens(inputSource);
   std::vector<std::string> phrases;
   std::vector<std::string>::iterator phraseIt;

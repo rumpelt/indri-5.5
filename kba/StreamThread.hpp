@@ -13,7 +13,7 @@ namespace kba {
     std::string _fileName; // a path can be directory to process or file to process//
     std::fstream*  _dumpStream; // some kind of buffer to dump the contents;
     kba::scorer::Scorer* _scorer;
-    boost::mutex* _lockMutex; // To be used for exclusive locking     
+    boost::mutex* _lockMutex; // To be used for exclusive locking    , do not fee this at the end of StreamThread because it might be used by other thread.
   public:
     void operator()(); // operator over loading , potential use as thread functor
     std::string extractDirectoryName(std::string absoluteName);

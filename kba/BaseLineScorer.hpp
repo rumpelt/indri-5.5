@@ -1,6 +1,7 @@
 #ifndef BASELINESCORER_HPP
 #define BASELINESCORER_HPP
 #include "Scorer.hpp"
+
 //#include <vector>
 namespace kba
 {

@@ -45,41 +45,59 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump) {
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
+  kba::entity::updateEntityWithDbpedia(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "wikiToDb");
+  kba::entity::updateEntityWithLabels(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "labels");
+  std::vector<kba::entity::Entity*> filterSet;
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
+    kba::entity::Entity* entity =  *entityIt;
+    if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
+      filterSet.push_back(entity);
+  } 
+  
+  ENTITY_SET = filterSet;
   std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
-  indri::file::FileTreeIterator files(pathToProcess);
+  
   kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
 
   if(!isDirectory) {
         kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-        kba::StreamThread st(pathToProcess, dumpStream, &bscorer, 0);
-        st.parseFile();
+	std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
+        if(!fileExtension.compare(".xz")) {
+          kba::StreamThread st(pathToProcess, dumpStream, &bscorer, 0);
+          st.parseFile();
+	}
   }
   else {
     int index = 0;
     boost::thread_group threadGroup;
     boost::mutex* lockMutex = new boost::mutex;
+    kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+    indri::file::FileTreeIterator files(pathToProcess);
     for(; files != indri::file::FileTreeIterator::end() ;files++) {
       if( index > 3) {
-        std::cout << "waiting for threads to finish\n";
+	//    std::cout << "waiting for threads to finish\n";
         threadGroup.join_all();
-        std::cout << "Fiinish\n";
+        //std::cout << "Fiinish\n";
         index = 0;
       }
         
       std::string fileName(*files);
-      kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-      std::cout << "process : " << fileName << "\n";   
-      kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
-      std::cout << "creating thread \n";
-      //     st.parseFile();
+      std::string fileExtension = fileName.substr(fileName.size() - 3);
+      
+      if(!fileExtension.compare(".xz")) {
+        
+	//  std::cout << "process : " << fileName << "\n";   
+        kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
+	//        std::cout << "creating thread \n";
+	//  st.parseFile();
          threadGroup.create_thread(st);
-      //st.parseFile();
-      index++;
-
+        index++;
+      }
     }
+
     
     if(index > 0) {
      threadGroup.join_all();
@@ -123,18 +141,6 @@ int main(int argc, char *argv[]){
 
     if(cmndMap.count("print-model")) {
       rdfparser->streamModel(stdout);   
-    }
-
-    RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
-    if(cmndMap.count("equery")) {
-      std::string equery = cmndMap["equery"].as<std::string>();
- 
-      std::cout << "Executing : " << equery <<"\n";
-      std::vector< boost::shared_ptr<unsigned char> >  nodes = rdfquery->getSourceNodes((const unsigned char*)"http://xmlns.com/foaf/0.1/homepage", (const unsigned char*)equery.c_str(), false);
-      for(std::vector<boost::shared_ptr<unsigned char> >::iterator nodeIt = nodes.begin(); nodeIt != nodes.end(); nodeIt++) {
-	boost::shared_ptr<unsigned char> nodeValue = *nodeIt;
-	std::cout << "\n found nodes are "<< nodeValue.get(); 
-      }
     }
   }
   

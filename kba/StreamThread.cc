@@ -34,11 +34,12 @@ std::string kba::StreamThread::extractDirectoryName(std::string absoluteName) {
 }
 
 void kba::StreamThread::parseFile() {
-  std::cout << "parsing file " << _fileName << "\n";
+
   kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
   tdextractor->open(StreamThread::_fileName);
   streamcorpus::StreamItem* streamItem = 0;
   std::vector<kba::dump::ResultRow> rows;
+
   while((streamItem = tdextractor->nextStreamItem()) != 0) {
     std::string title = streamcorpus::utils::getTitle(*streamItem);
     std::string id = streamItem->stream_id;
@@ -49,10 +50,12 @@ void kba::StreamThread::parseFile() {
       kba::entity::Entity* entity = *entIt;
       //std::cout << "scoring : " << entity->wikiURL << "\n";
       int score = kba::StreamThread::_scorer->score(streamItem, entity, 600);
-      std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
-      kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
-
-      rows.push_back(row);  
+      if (score > 0) {
+        std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
+        kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
+      
+        rows.push_back(row);  
+      }
       if(rows.size() > 1000 && _lockMutex != 0) {
         boost::lock_guard<boost::mutex> lockg(*_lockMutex); 
         kba::dump::flushToDumpFile(rows, _dumpStream);
@@ -60,6 +63,13 @@ void kba::StreamThread::parseFile() {
       }
     }
   }
+
+  if(rows.size() > 0 && _lockMutex != 0) {
+    boost::lock_guard<boost::mutex> lockg(*_lockMutex); 
+    kba::dump::flushToDumpFile(rows, _dumpStream);
+    rows.clear();
+  } 
+
   delete tdextractor;
   //  std::cout << "Acquiring lock :"<< StreamThread::_fileName << "\n";
   

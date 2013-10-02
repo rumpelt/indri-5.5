@@ -10,7 +10,7 @@ namespace kba {
   namespace entity {
 
   struct Entity {
-    std::vector<std::string> unigrams;
+    std::string label;
     std::string wikiURL;
     std::string entityType; // may be later conver to enum
     std::string group; // as defined in topic file released by kba

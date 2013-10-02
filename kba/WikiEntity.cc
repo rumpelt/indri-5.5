@@ -80,7 +80,8 @@ void kba::entity::populateEntityList(std::vector<kba::entity::Entity*>& entityLi
 
 
 void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName) {
-  RDFParser* rdfparser = new RDFParser(storageDir, repoName, std::string("ntriples"),std::string( "bdb"), false);
+  RDFParser* rdfparser = new RDFParser();
+  rdfparser->initRDFParser(repoName, storageDir);
   RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
   for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
     kba::entity::Entity* entity = *entityIt;
@@ -91,6 +92,8 @@ void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& ent
       std::cout <<"\nCould not find the dbpedia resource for : "<< entity->wikiURL << "\n";
     }
     else {
+      if(dbResourceList.size() > 1)
+	 std::cout << "More than one dbpedia resource for " << entity->wikiURL << "\n";
       entity->dbpediaURLs = dbResourceList;
     }
   }
@@ -99,8 +102,12 @@ void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& ent
   delete rdfparser;
 }
 
-void updateEntityWithLabels(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName) {
-  RDFParser* rdfparser = new RDFParser(storageDir, repoName, std::string("ntriples"),std::string( "bdb"), false);
+
+
+  
+void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName) {
+  RDFParser* rdfparser = new RDFParser();
+  rdfparser->initRDFParser(repoName, storageDir);
   RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
   for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
     kba::entity::Entity* entity = *entityIt;
@@ -117,12 +124,8 @@ void updateEntityWithLabels(std::vector<kba::entity::Entity*>& entityList, std::
       }
       else {
 	boost::shared_ptr<unsigned char> label = labelList[0];
-	std::string inputSource = (const char*)label.get(); 
-	std::vector<std::string> tokens = Tokenize::tokenize(inputSource);
-        tokens = Tokenize::toLower(tokens);
-        for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
-	  (entity->unigrams).push_back(*tokIt);
-	}
+	entity->label = (const char*)label.get(); 
+	
       }
     }
   }
