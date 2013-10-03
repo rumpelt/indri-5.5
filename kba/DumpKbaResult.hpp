@@ -19,7 +19,7 @@ namespace kba {
       std::string slot; // To be used for the ssf runs
       std::string equivalent; // The equivalence class to be used for the SSF run.
       std::string byteRange; // The byte range to be used for the SSF run
-      ResultRow() : teamId("udel"), slot("NULL"), equivalent("-1"), byteRange("1-1") {};
+      ResultRow() : teamId("udel"), systemId("CCR-ASD"),slot("NULL"), equivalent("-1"), byteRange("1-1") {};
     };
 
     //   extern std::vector<ResultRow> RESULTROWS;

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <string>
 #include "Scorer.hpp"
+#include "DumpKbaResult.hpp"
 #include <boost/thread.hpp>
 namespace kba {
   /**
@@ -17,6 +18,7 @@ namespace kba {
   public:
     void operator()(); // operator over loading , potential use as thread functor
     std::string extractDirectoryName(std::string absoluteName);
+    void updateScore(std::vector<kba::dump::ResultRow>& rows, std::string& id, int& score);
     void parseFile();
     StreamThread(std::string path,  std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *locMutex);
     StreamThread();

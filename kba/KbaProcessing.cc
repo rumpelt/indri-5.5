@@ -9,19 +9,24 @@
 #include "Tokenize.hpp"
 #include "RDFParser.hpp"
 #include "RDFQuery.hpp"
-#include <fstream>
+#include <iostream>
 #include <vector>
+#include <algorithm>
 #include <iostream>
 #include "BaseLineScorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
 #include <boost/thread.hpp>
-
+#include <time.h>
 namespace cmndOp = boost::program_options;
 
 std::vector<kba::entity::Entity*> ENTITY_SET;
 
-void runScoring(std::string entityfile, std::string ) {
+
+bool compareString(std::string firstStr, std::string secondStr) {
+  if(firstStr.compare(secondStr) < 0) 
+    return true;
+  return false;
 }
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
@@ -55,7 +60,7 @@ void findStreamId(std::string& fileName, std::string streamId) {
 
 
 
-void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump) {
+void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList) {
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
   kba::entity::updateEntityWithDbpedia(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "wikiToDb");
@@ -74,6 +79,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   
   kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
+  time_t startTime;
+  time(&startTime);
 
   if(!isDirectory) {
         kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
@@ -88,51 +95,70 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     boost::thread_group threadGroup;
     boost::mutex* lockMutex = new boost::mutex;
     kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-    indri::file::FileTreeIterator files(pathToProcess);
-    for(; files != indri::file::FileTreeIterator::end() ;files++) {
-      if( index > 3) {
-	//    std::cout << "waiting for threads to finish\n";
-        threadGroup.join_all();
-        //std::cout << "Fiinish\n";
-        index = 0;
-      }
-        
-      std::string fileName(*files);
-      std::string fileExtension = fileName.substr(fileName.size() - 3);
-      
-      if(!fileExtension.compare(".xz")) {
-        
-	//  std::cout << "process : " << fileName << "\n";   
-        kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
-	//        std::cout << "creating thread \n";
-	//  st.parseFile();
-         threadGroup.create_thread(st);
-        index++;
+    std::vector<std::string> pathList;
+
+    if(dirList.size() <= 0) 
+      pathList.push_back(pathToProcess);
+    else {
+      for(int index=0; index < dirList.size(); index++) {
+	std::string subdir = dirList[index];
+        pathList.push_back(pathToProcess + "/"+ subdir); 
       }
     }
 
+    for(std::vector<std::string>::iterator pathIt = pathList.begin(); pathIt != pathList.end(); pathIt++) {
+      pathToProcess = *pathIt; 
+      indri::file::FileTreeIterator files(pathToProcess);
+      for(; files != indri::file::FileTreeIterator::end() ;files++) {
+        if( index > 3) {
+	  //    std::cout << "waiting for threads to finish\n";
+          threadGroup.join_all();
+          //std::cout << "Fiinish\n";
+          index = 0;
+        }
+        
+        std::string fileName(*files);
+        std::string fileExtension = fileName.substr(fileName.size() - 3);
+      
+        if(!fileExtension.compare(".xz")) {
+        
+	  //    std::cout << "process : " << fileName << "\n";   
+          kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
+	  //        std::cout << "creating thread \n";
+	  //  st.parseFile();
+          threadGroup.create_thread(st);
+          index++;
+        }
+      }
+    }
     
     if(index > 0) {
-     threadGroup.join_all();
-     } 
-     
+      threadGroup.join_all();
+    } 
     delete lockMutex;
-  }
   
+  }
+
   dumpStream->close(); 
   delete dumpStream;
+  time_t endTime;
+  time(&endTime);
+  double seconds = difftime(endTime,startTime);
+  std::cout << "Total time in seconds :: "<< seconds << "\n";
 }
 
 int main(int argc, char *argv[]){
   std::string taggerId;
   std::string corpusPath;
   std::string topicFile;
+  std::string dirList;
   bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("help","the help message")
     ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
-    ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"The full path of the entity json file")
+    ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
+    ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
     ("stream-id",cmndOp::value<std::string>(),"The stream id to search") 
     ("anchor"," print anchor text")
@@ -168,16 +194,26 @@ int main(int argc, char *argv[]){
         unsigned char* node  = sources[index].get();
 	std::cout << node << "\n";
       }
-      //rdfparser->streamModel(stdout);   
-      
+      //rdfparser->streamModel(stdout);  
     }
   }
   
-  std::cout << "processed rdfs related\n";
+
 
   if(corpusPath.size() > 0  && topicFile.size() > 0 && cmndMap.count("dfile")) {
     std::string dumpFile = cmndMap["dfile"].as<std::string>();
-    performCCRTask(topicFile, corpusPath, dumpFile);
+    std::vector<std::string> directories; 
+    if(cmndMap.count("dir-list")) {
+      std::cout << "dir list set\n";
+      std::ifstream inputFile(cmndMap["dir-list"].as<std::string>().c_str());
+      for(std::string line;getline(inputFile, line);) {
+        directories.push_back(line);
+      }
+      inputFile.close();
+      std::sort(directories.begin(), directories.end(), compareString);
+        
+    } 
+    performCCRTask(topicFile, corpusPath, dumpFile, directories);
   }
    
 
@@ -188,6 +224,7 @@ int main(int argc, char *argv[]){
  
   if(!printStream || !cmndMap.count("stream-id")) {
     std::cout << "Neither print-stream -- nor stream-id option\n";
+    return -1;
   }
   std::string basePath = cmndMap["file"].as<std::string>();
   bool isDirectory = indri::file::Path::isDirectory(basePath );   
