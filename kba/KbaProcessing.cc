@@ -61,7 +61,7 @@ void findStreamId(std::string& fileName, std::string streamId) {
 
 
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList) {
-   
+  int cutOffScore=500; 
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
   kba::entity::updateEntityWithDbpedia(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "wikiToDb");
   kba::entity::updateEntityWithLabels(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "labels");
@@ -87,7 +87,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 	std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
         if(!fileExtension.compare(".xz")) {
           kba::StreamThread st(pathToProcess, dumpStream, &bscorer, 0);
-          st.parseFile();
+          st.parseFile(cutOffScore);
 	}
   }
   else {
@@ -96,6 +96,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     boost::mutex* lockMutex = new boost::mutex;
     kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
     std::vector<std::string> pathList;
+    std::vector<boost::thread*> aliveThreads;
+    int maxThreads = 4;
 
     if(dirList.size() <= 0) 
       pathList.push_back(pathToProcess);
@@ -110,10 +112,13 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       pathToProcess = *pathIt; 
       indri::file::FileTreeIterator files(pathToProcess);
       for(; files != indri::file::FileTreeIterator::end() ;files++) {
-        if( index > 3) {
+        if( index >= maxThreads) {
 	  //    std::cout << "waiting for threads to finish\n";
           threadGroup.join_all();
-          //std::cout << "Fiinish\n";
+	  //          for(int idx=0; idx < maxThreads ; idx++) {
+	  // delete aliveThreads[idx];
+	  // }
+          aliveThreads.clear();
           index = 0;
         }
         
@@ -126,7 +131,9 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
           kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
 	  //        std::cout << "creating thread \n";
 	  //  st.parseFile();
-          threadGroup.create_thread(st);
+	  boost::thread *streamThread = new boost::thread(st, cutOffScore); 
+	  aliveThreads.push_back(streamThread);
+          threadGroup.add_thread(streamThread);
           index++;
         }
       }
@@ -226,6 +233,7 @@ int main(int argc, char *argv[]){
     std::cout << "Neither print-stream -- nor stream-id option\n";
     return -1;
   }
+
   std::string basePath = cmndMap["file"].as<std::string>();
   bool isDirectory = indri::file::Path::isDirectory(basePath );   
   indri::file::FileTreeIterator files(basePath);

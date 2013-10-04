@@ -16,10 +16,10 @@ namespace kba {
     kba::scorer::Scorer* _scorer;
     boost::mutex* _lockMutex; // To be used for exclusive locking    , do not fee this at the end of StreamThread because it might be used by other thread.
   public:
-    void operator()(); // operator over loading , potential use as thread functor
+    void operator()(int cutOffScore); // operator over loading , potential use as thread functor
     std::string extractDirectoryName(std::string absoluteName);
     void updateScore(std::vector<kba::dump::ResultRow>& rows, std::string& id, int& score);
-    void parseFile();
+    void parseFile(int cutOffScore);
     StreamThread(std::string path,  std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *locMutex);
     StreamThread();
 

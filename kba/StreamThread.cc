@@ -5,9 +5,9 @@
 #include <iostream>
 #include <map>
 
-void kba::StreamThread::operator()() {
+void kba::StreamThread::operator()(int cutOffScore) {
   //std::cout << "processing Stream thread \n";
-  kba::StreamThread::parseFile();
+  kba::StreamThread::parseFile(cutOffScore);
 }
 
 kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *lockMutex) {
@@ -44,7 +44,7 @@ void kba::StreamThread::updateScore(std::vector<kba::dump::ResultRow>& rows, std
 
 }
 
-void kba::StreamThread::parseFile() {
+void kba::StreamThread::parseFile(int cutOffScore) {
 
   kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
   tdextractor->open(StreamThread::_fileName);
@@ -67,23 +67,25 @@ void kba::StreamThread::parseFile() {
  
       kba::entity::Entity* entity = *entIt;
       //std::cout << "scoring : " << entity->wikiURL << "\n";
-      int score = kba::StreamThread::_scorer->score(streamItem, entity, 600);
+      int score = kba::StreamThread::_scorer->score(streamItem, entity, 1000);
       if(prevStreamScore > -1 && score > prevStreamScore) {
 	kba::StreamThread::updateScore(rows, id, score);  
         streamScores.erase(id);
         streamScores[id]= score;
       }
-      else if (prevStreamScore < 0 && score >= 300) {
+      else if (prevStreamScore < 0 && score >= cutOffScore) {
         std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
         kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
         streamScores[id] = score;
         rows.push_back(row);  
       }
+      /**
       if(rows.size() > 1000 && _lockMutex != 0) {
         boost::lock_guard<boost::mutex> lockg(*_lockMutex); 
         kba::dump::flushToDumpFile(rows, _dumpStream);
         rows.clear();
       }
+      */
       streamScores.clear(); // clear the map to be used for next iteartion of Entity 
     }
     
