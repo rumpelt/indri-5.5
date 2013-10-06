@@ -32,6 +32,7 @@ void kba::scorer::RelatedEntityScorer::populateRelatedMap() {
 
   for (std::vector<kba::entity::Entity*>::iterator entIt = _entitySet.begin(); entIt != _entitySet.end(); ++entIt) {
     Entity* entity = *entIt;
+    std::vector<shared_ptr<Entity> > relatedEntities;
     if((entity->labelTokens).size() <= 0 ) {
       std::vector<std::string> tokens = Tokenize::tokenize(entity->label);
       tokens = Tokenize::filterShortWords(tokens);
@@ -43,30 +44,34 @@ void kba::scorer::RelatedEntityScorer::populateRelatedMap() {
       const uchar* source = (entity->dbpediaURLs).at(0).get();
       std::vector<shared_ptr<unsigned char> > targets = entityQuery.getTargetNodes(source, relatedPredicate);
       
-      for(int index=0; index < targets.size(); index++) {
-        const uchar* node = targets[index].get();
-        std::vector<shared_ptr<uchar> > labels = labelQuery.getTargetNodes(node, labelPredicate);   
+      for(size_t index=0; index < targets.size(); index++) {
+	std::string node((const char*)(targets[index].get()));
+	
+	if(node.find("http://dbpedia.org/resource/Category:") != std::string::npos)  {
+          continue; 
+	}
+
+        std::vector<shared_ptr<uchar> > labels = labelQuery.getTargetNodes((const uchar*)(node.c_str()), labelPredicate);   
                 
         if(labels.size() > 0) {
           std::string label((const char*)(labels.at(0).get()));
-          if(label.find("http://dbpedia.org/resource/Category:") == std::string::npos)  {
-            shared_ptr<Entity> rEntity(new Entity());
-	    kba::entity::Entity* entPtr = rEntity.get();
-	    std::string targetDbURL((const char*)node);
-            entPtr->mainDbURL = targetDbURL;
-            std::vector<shared_ptr<Entity> > relatedEntities = _relatedMap[entity->wikiURL];
-            relatedEntities.push_back(rEntity);     
-	    entPtr->label = label;
-	    std::vector<std::string> tokens = Tokenize::tokenize(label);
-            tokens = Tokenize::filterShortWords(tokens);
-            tokens = Tokenize::toLower(tokens);
-            entPtr->labelTokens = tokens;
-	  }
-	}   
+	  
+          shared_ptr<Entity> rEntity(new Entity());
+          kba::entity::Entity* entPtr = rEntity.get();
+	  //          std::string targetDbURL(node);
+          entPtr->mainDbURL = node;
+          relatedEntities.push_back(rEntity);     
+          entPtr->label = label;
+          std::vector<std::string> tokens = Tokenize::tokenize(label);
+          tokens = Tokenize::filterShortWords(tokens);
+          tokens = Tokenize::toLower(tokens);
+          entPtr->labelTokens = tokens;
+	}    
       }
     } catch(const std::out_of_range& orerror) {
       std::cout << "RelatedEntityScorer : populateRelatedMap " << orerror.what() << "\n";
     }
+    _relatedMap.insert(std::pair<std::string, std::vector<boost::shared_ptr<kba::entity::Entity> > >(entity->wikiURL, relatedEntities));
   }
 
 }
@@ -88,17 +93,17 @@ int kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStr
   try {
     relatedEntities = _relatedMap.at(entity->wikiURL);
   } catch (std::out_of_range& oorexpt) {
-     
+    std::cout << "Cannot find related entities for " << entity->wikiURL;
   }
 
   
-  int score = 0;
-  int mainMaxScore = maxScore * 70 / 100;
-  int relatedMaxScore = maxScore - mainMaxScore;
+  float score = 0;
+  float mainMaxScore = (float)maxScore * 70.0 / 100.0;
+  float relatedMaxScore = maxScore - mainMaxScore;
   
-  int mainScoreStep = mainMaxScore / (entity->labelTokens).size();
+  float mainScoreStep = mainMaxScore / (entity->labelTokens).size();
   
-  int scorePerEntity = 0;
+  float scorePerEntity = 0;
   if(relatedEntities.size() > 0)
     scorePerEntity = relatedMaxScore / relatedEntities.size();
 
@@ -110,19 +115,20 @@ int kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStr
 
   if(score > mainMaxScore)
     score = mainMaxScore;
-  
+
+
   for(int idx=0; idx < relatedEntities.size(); idx++) {
     kba::entity::Entity* relatedEnt = relatedEntities[idx].get();
-    int step = scorePerEntity / (relatedEnt->labelTokens).size();    
+    float step = scorePerEntity / (relatedEnt->labelTokens).size();    
 
     for (int index=0; index < (relatedEnt->labelTokens).size() ; index++) {
-      std::string token = (entity->labelTokens)[index];
+      std::string token = (relatedEnt->labelTokens)[index];
       if ((parsedStream->tokenSet).count(token) > 0)
         score = score + step;
     }
   }
- 
-  return score > maxScore? maxScore : score;
+
+  return (int)score > maxScore? maxScore : (int)score;
 }
 
 std::vector<kba::entity::Entity*> kba::scorer::RelatedEntityScorer::getEntityList() {
