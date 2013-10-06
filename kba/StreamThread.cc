@@ -10,11 +10,8 @@ void kba::StreamThread::operator()(int cutOffScore) {
   kba::StreamThread::parseFile(cutOffScore);
 }
 
-kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *lockMutex) {
-  kba::StreamThread::_fileName = path;
-  _dumpStream = dumpStream;
-  _scorer = scorer;
-  _lockMutex = lockMutex;
+kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *lockMutex, std::unordered_set<std::string>& stopSet) :
+              _fileName(path), _dumpStream(dumpStream), _scorer(scorer), _lockMutex(lockMutex), _stopSet(stopSet) {
 }
 
 /**
@@ -52,7 +49,10 @@ void kba::StreamThread::parseFile(int cutOffScore) {
   std::vector<kba::dump::ResultRow> rows;
 
   while((streamItem = tdextractor->nextStreamItem()) != 0) {
+    kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createParsedStream(streamItem,_stopSet);
+ 
     std::string title = streamcorpus::utils::getTitle(*streamItem);
+  
     std::string id = streamItem->stream_id;
     std::map<std::string, int> streamScores; //required because a stream contain duplicates id..This map is defined here to avoid object creation at the start of new iteration of entity;
     int prevStreamScore;
@@ -64,10 +64,15 @@ void kba::StreamThread::parseFile(int cutOffScore) {
       prevStreamScore = -1;
       if(streamScores.find(id) != streamScores.end())
         prevStreamScore = streamScores[id];
- 
+        
       kba::entity::Entity* entity = *entIt;
-      //std::cout << "scoring : " << entity->wikiURL << "\n";
-      int score = kba::StreamThread::_scorer->score(streamItem, entity, 1000);
+
+      int score = kba::StreamThread::_scorer->score(parsedStream, entity, 1000); // first check we have implemented the parsedStreamMethod or not
+      
+      if(score == -1) {
+          score = kba::StreamThread::_scorer->score(streamItem, entity, 1000);
+      }
+
       if(prevStreamScore > -1 && score > prevStreamScore) {
 	kba::StreamThread::updateScore(rows, id, score);  
         streamScores.erase(id);
@@ -79,16 +84,10 @@ void kba::StreamThread::parseFile(int cutOffScore) {
         streamScores[id] = score;
         rows.push_back(row);  
       }
-      /**
-      if(rows.size() > 1000 && _lockMutex != 0) {
-        boost::lock_guard<boost::mutex> lockg(*_lockMutex); 
-        kba::dump::flushToDumpFile(rows, _dumpStream);
-        rows.clear();
-      }
-      */
       streamScores.clear(); // clear the map to be used for next iteartion of Entity 
     }
-    
+
+    delete parsedStream; 
   }
 
   if(rows.size() > 0 && _lockMutex != 0) {

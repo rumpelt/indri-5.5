@@ -1,7 +1,8 @@
 #include "Tokenize.hpp"
 #include <fstream>
-std::set<std::string> Tokenize::getStopSet(std::string& stopFile) {
-  std::set<std::string> stopwords;
+
+std::unordered_set<std::string> Tokenize::getStopSet(std::string& stopFile) {
+  std::unordered_set<std::string> stopwords;
   std::ifstream stopWordFile(stopFile.c_str(),std::ifstream::in);
   if(stopWordFile.is_open()) {
     std::string line;
@@ -42,7 +43,7 @@ std::vector<std::string> Tokenize::ngrams(std::vector<std::string>& inVector, in
   return gramVector;
 }
 
-std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inputTokens, std::set<std::string>& stopwords) 
+std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inputTokens, std::unordered_set<std::string>& stopwords) 
 {
   std::vector<std::string> filterWords;
   for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
@@ -105,10 +106,10 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
       phraseIndex = 0;
     }
     if(phraseIndex >= 4096) {
-      std::cout << "Tokenize.cc : function tokenize, we have used insufficenet array storage, fix this with dynamic memory allocation \n";
-      std::string content((const char*) &phrase, 4096);
-      if(content.size() > 0)
-        tokens.push_back(content);
+      //      std::cout << "Tokenize.cc : function tokenize, we have used insufficenet array storage, fix this with dynamic memory allocation= inputString :" << inputSource << "\n";
+      //std::string content((const char*) &phrase, 4096);
+      //if(content.size() > 0)
+      //  tokens.push_back(content);
       phraseIndex = 0;
     }
     prevUpperCase = isupper(thisChar);

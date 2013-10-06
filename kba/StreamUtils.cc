@@ -1,5 +1,7 @@
 #include "StreamUtils.hpp"
 #include "stdexcept"
+#include "Tokenize.hpp"
+
 std::string streamcorpus::utils::getTitle(streamcorpus::StreamItem& streamItem) {
   std::string title;
   try { 
@@ -26,3 +28,18 @@ std::string streamcorpus::utils::getAnchor(streamcorpus::StreamItem& streamItem)
   }
 }
 
+kba::stream::ParsedStream* streamcorpus::utils::createParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopwords) {
+  std::string title = streamcorpus::utils::getTitle(*streamItem);
+  std::string anchor = streamcorpus::utils::getAnchor(*streamItem);
+  std::string body = (streamItem->body).clean_visible;
+  std::string fullContent = title + anchor + body;
+  std::vector<std::string> tokens = Tokenize::tokenize(fullContent);
+  tokens = Tokenize::toLower(tokens);
+  tokens = Tokenize::filterStopWords(tokens, stopwords);
+  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
+  for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
+    std::string token = *tokIt;
+    (parsedStream->tokenSet).insert(token);
+  }
+  return parsedStream;
+}

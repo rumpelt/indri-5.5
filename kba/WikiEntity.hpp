@@ -11,7 +11,9 @@ namespace kba {
 
   struct Entity {
     std::string label;
+    std::vector<std::string> labelTokens; // tokens of the label.
     std::string wikiURL;
+    std::string mainDbURL;
     std::string entityType; // may be later conver to enum
     std::string group; // as defined in topic file released by kba
     std::vector<boost::shared_ptr<unsigned char> > dbpediaURLs;

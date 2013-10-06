@@ -2,12 +2,16 @@
 #define STREAMUTILS_HPP
 #include "streamcorpus_types.h"
 #include "streamcorpus_constants.h"
+#include "ParsedStream.hpp"
+#include <unordered_set>
+#include <string>
 #include <cstdio>
 
 namespace streamcorpus {
   namespace utils {
     std::string getTitle(streamcorpus::StreamItem& streamItem);
     std::string getAnchor(streamcorpus::StreamItem& streamItem);
+    kba::stream::ParsedStream* createParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopSet);
   }
 }
 #endif

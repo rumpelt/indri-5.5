@@ -5,7 +5,7 @@ LIBPATH=-L../obj  -L../kba-common
 LIBS= -lkbacommon -lboost_thread-mt -lboost_program_options -lindri -llzma -lthrift -lrdf -lraptor2 -lrasqal
 APP=KbaProcessing
 CXX = g++
-CXXFLAGS = -Wall -g -c
+CXXFLAGS = -Wall -g -c -std=c++0x
 OBJECTS = $(patsubst %.cc,%.o,$(wildcard *.cc))
 
 RUNDIRFLAGS = -Wl,-R,'$$ORIGIN/../kba-common'

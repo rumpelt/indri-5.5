@@ -53,7 +53,7 @@ void kba::entity::populateEntityList(std::vector<kba::entity::Entity*>& entityLi
           size_t last = value.find_last_of('\"');
 	  value = value.substr(first+1, last - first -1);
 	  (*entity).group = value;
-	  //std::cout << " Entity gropu is : " << entity << "\n";
+
 	}
         else if(!key.compare((const char*)"\"target_id\"")) {
           //std::cout << " Key : " << key << " value : " << value << " and line : "<< line << "\n";  
@@ -61,10 +61,12 @@ void kba::entity::populateEntityList(std::vector<kba::entity::Entity*>& entityLi
           size_t last = value.find_last_of('\"');
 	  value = value.substr(first+1, last - first -1);
           (*entity).wikiURL = value;
-	  //std::cout << "Assinge \n";
+
 	}
         else {
-	  //	  std::cout << "freeing entity : " << line << "\n";
+	  //	  std::cout << "key : " << key << "\n";
+          //if(entity != 0)
+          assert(entity != 0);
           delete entity;
           entity = 0;
           definationStart = false;

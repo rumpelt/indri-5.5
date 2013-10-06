@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <iostream>
 #include "BaseLineScorer.hpp"
+#include "RelatedEntityScorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
 #include <boost/thread.hpp>
@@ -21,7 +22,7 @@
 namespace cmndOp = boost::program_options;
 
 std::vector<kba::entity::Entity*> ENTITY_SET;
-
+std::unordered_set<std::string> STOP_SET;
 
 bool compareString(std::string firstStr, std::string secondStr) {
   if(firstStr.compare(secondStr) < 0) 
@@ -60,12 +61,17 @@ void findStreamId(std::string& fileName, std::string streamId) {
 
 
 
-void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList) {
-  int cutOffScore=500; 
+void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
+  int cutOffScore=600; 
+  std::map<std::string, std::string> repoMap;
+  repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
+  repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
   kba::entity::updateEntityWithDbpedia(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "wikiToDb");
   kba::entity::updateEntityWithLabels(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "labels");
+  
   std::vector<kba::entity::Entity*> filterSet;
+  
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
     if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
@@ -73,20 +79,22 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   } 
   
   ENTITY_SET = filterSet;
-  std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
+  // std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
-  
+  //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+  kba::scorer::RelatedEntityScorer rscorer(ENTITY_SET, repoMap);
+  rscorer.populateRelatedMap();
   kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
   time(&startTime);
 
   if(!isDirectory) {
-        kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+        
 	std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
         if(!fileExtension.compare(".xz")) {
-          kba::StreamThread st(pathToProcess, dumpStream, &bscorer, 0);
+          kba::StreamThread st(pathToProcess, dumpStream, &rscorer, 0, stopSet);
           st.parseFile(cutOffScore);
 	}
   }
@@ -94,7 +102,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     int index = 0;
     boost::thread_group threadGroup;
     boost::mutex* lockMutex = new boost::mutex;
-    kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+ 
     std::vector<std::string> pathList;
     std::vector<boost::thread*> aliveThreads;
     int maxThreads = 4;
@@ -128,7 +136,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
         if(!fileExtension.compare(".xz")) {
         
 	  //    std::cout << "process : " << fileName << "\n";   
-          kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
+          kba::StreamThread st(fileName, dumpStream, &rscorer, lockMutex, stopSet);
 	  //        std::cout << "creating thread \n";
 	  //  st.parseFile();
 	  boost::thread *streamThread = new boost::thread(st, cutOffScore); 
@@ -159,6 +167,7 @@ int main(int argc, char *argv[]){
   std::string corpusPath;
   std::string topicFile;
   std::string dirList;
+  std::string stopFile;
   bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
@@ -167,6 +176,7 @@ int main(int argc, char *argv[]){
     ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
     ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
+    ("stop-file,SF",cmndOp::value<std::string>(&stopFile)->default_value("../help/sql40stoplist"),"the file containing the stop words") 
     ("stream-id",cmndOp::value<std::string>(),"The stream id to search") 
     ("anchor"," print anchor text")
     ("title"," print title text")
@@ -181,8 +191,9 @@ int main(int argc, char *argv[]){
   cmndOp::variables_map cmndMap;
   cmndOp::store(cmndOp::parse_command_line(argc, argv,cmndDesc), cmndMap);
   cmndOp::notify(cmndMap);  
- 
- 
+  
+  STOP_SET  = Tokenize::getStopSet(stopFile);
+
   RDFParser* rdfparser = NULL; 
   if(cmndMap.count("repo") && cmndMap.count("repo-name")) {
     rdfparser = new RDFParser();   
@@ -220,7 +231,7 @@ int main(int argc, char *argv[]){
       std::sort(directories.begin(), directories.end(), compareString);
         
     } 
-    performCCRTask(topicFile, corpusPath, dumpFile, directories);
+    performCCRTask(topicFile, corpusPath, dumpFile, directories, STOP_SET);
   }
    
 
@@ -229,7 +240,7 @@ int main(int argc, char *argv[]){
     return -1;
   }
  
-  if(!printStream || !cmndMap.count("stream-id")) {
+  if(!printStream && !cmndMap.count("stream-id")) {
     std::cout << "Neither print-stream -- nor stream-id option\n";
     return -1;
   }
