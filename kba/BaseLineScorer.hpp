@@ -13,7 +13,7 @@ namespace kba
     public:
       std::vector<kba::entity::Entity* > getEntityList();
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
-      int score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);  
+      float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);  
       BaseLineScorer(std::vector<kba::entity::Entity*> entityset);
     };
   }

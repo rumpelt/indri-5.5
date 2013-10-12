@@ -91,7 +91,8 @@ void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& ent
     const unsigned char* predicate = (const unsigned char*)"http://xmlns.com/foaf/0.1/primaryTopic";
     std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
     if(dbResourceList.size() <= 0) {
-      std::cout <<"\nCould not find the dbpedia resource for : "<< entity->wikiURL << "\n";
+      std::cout <<"\nCould not find the dbpedia resource for, Updating its label frm url : "<< entity->wikiURL << "\n";
+      
     }
     else {
       if(dbResourceList.size() > 1)
@@ -113,7 +114,13 @@ void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& enti
   RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
   for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
     kba::entity::Entity* entity = *entityIt;
+    if((entity->dbpediaURLs).size() <= 0) {
+      std::string wikiURL = "http://en.wikipedia.org/wiki/";
+      std::string label = (entity->wikiURL).substr(wikiURL.size());
+      entity->label = label.c_str();                  
+    }
     const unsigned char* predicate  = (const unsigned char*)"http://www.w3.org/2000/01/rdf-schema#label";
+    
     for(std::vector<boost::shared_ptr<unsigned char> >::iterator urlIt = (entity->dbpediaURLs).begin(); urlIt != (entity->dbpediaURLs).end(); urlIt++) {
       boost::shared_ptr<unsigned char>  url = *urlIt;
       const unsigned char* subject = (const unsigned char*)url.get();
@@ -134,4 +141,89 @@ void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& enti
   delete rdfquery;
   delete rdfparser;
   
+}
+
+std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEntities(kba::entity::Entity* entity, std::map<std::string, std::string> repoMap) {
+  
+  RDFParser labelParser;
+  RDFParser relatedParser;
+  using namespace boost;
+  using namespace kba::entity;
+  typedef unsigned char uchar;
+  std::vector<shared_ptr<Entity> > relatedEntities;
+  try {
+    std::string labelKey = "labels";
+    std::string relatedLabel = "internalentity";
+    labelParser.initRDFParser(labelKey, repoMap.at(labelKey));
+    relatedParser.initRDFParser(relatedLabel, repoMap.at(relatedLabel));
+    if(!labelParser.getModel() || !relatedParser.getModel())
+      throw std::out_of_range("RDF models not created");
+  } catch(const std::out_of_range& orerror) {
+    std::cout << "RelatedEntityScorer: method populateRelatedMap: failed get Repository location for labels or internalentity: "<< orerror.what() << "\n";
+    return relatedEntities;
+  }
+     
+  RDFQuery labelQuery(labelParser.getModel(), labelParser.getWorld());
+  RDFQuery entityQuery(relatedParser.getModel(), relatedParser.getWorld()); 
+  const uchar* relatedPredicate = (const unsigned char*)"http://dbpedia.org/ontology/wikiPageWikiLink";
+  const uchar* labelPredicate  = (const unsigned char*)"http://www.w3.org/2000/01/rdf-schema#label";
+
+  
+  try {
+    const uchar* source = (entity->dbpediaURLs).at(0).get();
+    std::vector<shared_ptr<unsigned char> > targets = entityQuery.getTargetNodes(source, relatedPredicate);
+    for(std::vector<shared_ptr<unsigned char> >::iterator targetIt = targets.begin(); targetIt != targets.end(); ++targetIt) {
+      shared_ptr<unsigned char> target = *targetIt;
+      std::string node((const char*)(target.get()));
+	
+      if(node.find("http://dbpedia.org/resource/Category:") != std::string::npos)  {
+        continue; 
+      }
+
+      std::vector<shared_ptr<uchar> > labels = labelQuery.getTargetNodes((const uchar*)(node.c_str()), labelPredicate);   
+                
+      if(labels.size() > 0) {
+        std::string label((const char*)(labels.at(0).get()));
+	  
+        shared_ptr<Entity> rEntity(new Entity());
+        kba::entity::Entity* entPtr = rEntity.get();
+	  //          std::string targetDbURL(node);
+        entPtr->mainDbURL = node;
+        relatedEntities.push_back(rEntity);     
+        entPtr->label = label;
+        std::vector<std::string> tokens = Tokenize::tokenize(label);
+        tokens = Tokenize::filterShortWords(tokens);
+        tokens = Tokenize::toLower(tokens);
+        entPtr->labelTokens = tokens;
+        for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
+	  std::string tok = *tokIt;
+          (entPtr->tokenSet).insert(tok);      
+        }
+      
+      }    
+    }
+  } catch(const std::out_of_range& orerror){
+  
+  }
+  return relatedEntities;
+}
+
+void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entityList, std::map<std::string, std::string> repoMap) {
+  try {
+    kba::entity::updateEntityWithDbpedia(entityList, repoMap.at("wikiToDb"), "wikiToDb" );
+    kba::entity::updateEntityWithLabels(entityList, repoMap.at("labels"), "labels" );
+    for(std::vector<kba::entity::Entity*>::iterator entIt = entityList.begin(); entIt != entityList.end(); entIt++) {
+      kba::entity::Entity* entity = *entIt;
+      std::vector<std::string> tokens = Tokenize::tokenize(entity->label);
+      tokens = Tokenize::filterShortWords(tokens);
+      tokens = Tokenize::toLower(tokens);
+      entity->labelTokens = tokens;
+      for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
+	std::string tok = *tokIt;
+        (entity->tokenSet).insert(tok);      
+      }
+      entity->relatedEntities = kba::entity::getRelatedEntities(entity, repoMap);
+    }
+  } catch (const std::out_of_range& oor) {
+  }
 }

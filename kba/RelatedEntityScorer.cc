@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include "Tokenize.hpp"
  
+/**
 void kba::scorer::RelatedEntityScorer::populateRelatedMap() {
   RDFParser labelParser;
   RDFParser relatedParser;
@@ -75,13 +76,13 @@ void kba::scorer::RelatedEntityScorer::populateRelatedMap() {
   }
 
 }
-
+*/
 int kba::scorer::RelatedEntityScorer::score(streamcorpus::StreamItem* streamItem, kba::entity::Entity* entity, int maxScore) {
   return -1;
 }
 
 
-int kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
+float kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   
   
   if ((entity->labelTokens).size() <= 0) {
@@ -89,13 +90,7 @@ int kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStr
     return 0;
   }
 
-  std::vector<boost::shared_ptr<kba::entity::Entity> > relatedEntities;
-  try {
-    relatedEntities = _relatedMap.at(entity->wikiURL);
-  } catch (std::out_of_range& oorexpt) {
-    std::cout << "Cannot find related entities for " << entity->wikiURL;
-  }
-
+  std::vector<boost::shared_ptr<kba::entity::Entity> > relatedEntities = entity->relatedEntities;
   
   float score = 0;
   float mainMaxScore = (float)maxScore * 70.0 / 100.0;
@@ -128,7 +123,7 @@ int kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStr
     }
   }
 
-  return (int)score > maxScore? maxScore : (int)score;
+  return score > (float)maxScore  ? (float)maxScore : score;
 }
 
 std::vector<kba::entity::Entity*> kba::scorer::RelatedEntityScorer::getEntityList() {

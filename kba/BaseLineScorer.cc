@@ -2,9 +2,8 @@
 #include "StreamUtils.hpp"
 #include "Tokenize.hpp"
 #include <cassert>
-
-int kba::scorer::BaseLineScorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-  return -1;
+float kba::scorer::BaseLineScorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
+  return -1.0;
 }                           
 int kba::scorer::BaseLineScorer::score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore) {
   std::string entityLabel = entity->label;

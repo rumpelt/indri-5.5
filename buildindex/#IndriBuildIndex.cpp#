@@ -592,6 +592,7 @@ are specified for the currently indexing document ID.</dd>
 #include <vector>
 #include <map>
 #include "indri/IndriTimer.hpp"
+
 #include "indri/QueryEnvironment.hpp"
 #include "indri/Thread.hpp"
 #include "indri/SequentialWriteBuffer.hpp"
@@ -1102,7 +1103,7 @@ int main(int argc, char * argv[]) {
 	      // cout << "\nopening: "+*files;
 	      indri::parse::ThriftDocumentExtractor thriftext;
 	      thriftext.open(*files);
-               indri::parse::UnparsedDocument *doc;
+              indri::parse::UnparsedDocument *doc;
                  
               while((doc = thriftext.nextDocument()) != NULL) {
                 // must initialize doc->text to 0 before populating it with chars

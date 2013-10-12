@@ -10,7 +10,7 @@ namespace kba {
     public:
       virtual std::vector<kba::entity::Entity*> getEntityList() = 0;
       virtual int score(streamcorpus::StreamItem* streamItem,kba::entity::Entity* entity, int maxScore)=0;
-      virtual int score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore)=0;    
+      virtual float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore)=0;    
     };
   }
 }

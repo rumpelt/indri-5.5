@@ -64,17 +64,25 @@ void findStreamId(std::string& fileName, std::string streamId) {
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
   int cutOffScore=600; 
   std::map<std::string, std::string> repoMap;
+  repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
   repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
   repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
+
+   
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
+  /**
   kba::entity::updateEntityWithDbpedia(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "wikiToDb");
   kba::entity::updateEntityWithLabels(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "labels");
-  
+  */
+  kba::entity::populateEntityStruct(ENTITY_SET, repoMap);
+
   std::vector<kba::entity::Entity*> filterSet;
   
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
-    if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
+    //  if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
+    //  filterSet.push_back(entity);
+    if((entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)
       filterSet.push_back(entity);
   } 
   
@@ -84,7 +92,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
  
   //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
   kba::scorer::RelatedEntityScorer rscorer(ENTITY_SET, repoMap);
-  rscorer.populateRelatedMap();
+  //  rscorer.populateRelatedMap();
   kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;

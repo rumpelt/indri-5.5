@@ -36,10 +36,10 @@ namespace kba
       /**
        * Populate the map _realtedMap;
        */
-      void populateRelatedMap();
+      //      void populateRelatedMap();
 
       std::vector<kba::entity::Entity* > getEntityList();
-      int score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int cutOffScore);       
+      float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int cutOffScore);       
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int cutOffScore);       
       RelatedEntityScorer(std::vector<kba::entity::Entity*> entitySet, std::map<std::string, std::string> repoMap, int maxScore=1000);  
     };

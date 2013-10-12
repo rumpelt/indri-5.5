@@ -67,10 +67,10 @@ void kba::StreamThread::parseFile(int cutOffScore) {
         
       kba::entity::Entity* entity = *entIt;
 
-      int score = kba::StreamThread::_scorer->score(parsedStream, entity, 1000); // first check we have implemented the parsedStreamMethod or not
+      int score = (int) (kba::StreamThread::_scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not
       
-      if(score == -1) {
-          score = kba::StreamThread::_scorer->score(streamItem, entity, 1000);
+      if(score < 0) {
+	score = kba::StreamThread::_scorer->score(streamItem, entity, 1000); // we can remove this altogether.
       }
 
       if(prevStreamScore > -1 && score > prevStreamScore) {
