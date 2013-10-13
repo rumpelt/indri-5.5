@@ -86,7 +86,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
         phraseIndex++;  
 
       }
-      else if(!isalnum(thisChar)) {
+      else if(Tokenize::isSpecialChar(thisChar)) {
         std::string content((const char*) &phrase, phraseIndex);
         if(content.size() > 0)
           tokens.push_back(content);
