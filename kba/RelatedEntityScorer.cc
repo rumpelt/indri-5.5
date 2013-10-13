@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stdexcept>
 #include "Tokenize.hpp"
+#include "cassert"
  
 /**
 void kba::scorer::RelatedEntityScorer::populateRelatedMap() {
@@ -84,11 +85,8 @@ int kba::scorer::RelatedEntityScorer::score(streamcorpus::StreamItem* streamItem
 
 float kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   
-  
-  if ((entity->labelTokens).size() <= 0) {
-    std::cout << "Not a vailid entiy " << entity->wikiURL << "\n";
-    return 0;
-  }
+  assert((entity->labelTokens).size() > 0);
+
 
   std::vector<boost::shared_ptr<kba::entity::Entity> > relatedEntities = entity->relatedEntities;
   
@@ -122,7 +120,7 @@ float kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedS
         score = score + step;
     }
   }
-
+  //  std::cout << score << "\n"; 
   return score > (float)maxScore  ? (float)maxScore : score;
 }
 

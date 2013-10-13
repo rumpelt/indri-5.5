@@ -82,12 +82,12 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     kba::entity::Entity* entity =  *entityIt;
     //  if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
     //  filterSet.push_back(entity);
-    if((entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)
+    if((entity->label).size() > 0 && (entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)
       filterSet.push_back(entity);
   } 
   
   ENTITY_SET = filterSet;
-  // std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
+  std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
   //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 

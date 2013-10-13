@@ -54,16 +54,12 @@ void kba::StreamThread::parseFile(int cutOffScore) {
     std::string title = streamcorpus::utils::getTitle(*streamItem);
   
     std::string id = streamItem->stream_id;
-    std::map<std::string, int> streamScores; //required because a stream contain duplicates id..This map is defined here to avoid object creation at the start of new iteration of entity;
-    int prevStreamScore;
+ 
+ 
     //std::cout << "id :: "<< id << "\n";
     std::vector<kba::entity::Entity*> entities = kba::StreamThread::_scorer->getEntityList();
     for(std::vector<kba::entity::Entity*>::iterator entIt = entities.begin(); entIt != entities.end(); entIt++) {
       
-      
-      prevStreamScore = -1;
-      if(streamScores.find(id) != streamScores.end())
-        prevStreamScore = streamScores[id];
         
       kba::entity::Entity* entity = *entIt;
 
@@ -73,18 +69,11 @@ void kba::StreamThread::parseFile(int cutOffScore) {
 	score = kba::StreamThread::_scorer->score(streamItem, entity, 1000); // we can remove this altogether.
       }
 
-      if(prevStreamScore > -1 && score > prevStreamScore) {
-	kba::StreamThread::updateScore(rows, id, score);  
-        streamScores.erase(id);
-        streamScores[id]= score;
-      }
-      else if (prevStreamScore < 0 && score >= cutOffScore) {
+      if (score >= cutOffScore) {
         std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
         kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
-        streamScores[id] = score;
         rows.push_back(row);  
       }
-      streamScores.clear(); // clear the map to be used for next iteartion of Entity 
     }
 
     delete parsedStream; 

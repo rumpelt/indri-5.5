@@ -91,7 +91,7 @@ void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& ent
     const unsigned char* predicate = (const unsigned char*)"http://xmlns.com/foaf/0.1/primaryTopic";
     std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
     if(dbResourceList.size() <= 0) {
-      std::cout <<"\nCould not find the dbpedia resource for, Updating its label frm url : "<< entity->wikiURL << "\n";
+      std::cout <<"\nCould not find the dbpedia resource for : "<< entity->wikiURL << "\n";
       
     }
     else {
@@ -116,8 +116,11 @@ void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& enti
     kba::entity::Entity* entity = *entityIt;
     if((entity->dbpediaURLs).size() <= 0) {
       std::string wikiURL = "http://en.wikipedia.org/wiki/";
-      std::string label = (entity->wikiURL).substr(wikiURL.size());
-      entity->label = label.c_str();                  
+      if((entity->wikiURL).find(wikiURL) != std::string::npos) {
+        entity->label = (entity->wikiURL).substr(wikiURL.size());
+        std::cout << "Set the label from wikiurl to : " << entity->label <<  ":" <<entity->wikiURL <<"\n";
+      }
+      continue;
     }
     const unsigned char* predicate  = (const unsigned char*)"http://www.w3.org/2000/01/rdf-schema#label";
     
@@ -218,6 +221,9 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
       tokens = Tokenize::filterShortWords(tokens);
       tokens = Tokenize::toLower(tokens);
       entity->labelTokens = tokens;
+      std::cout <<  "Tokens of :" << entity->label << " " << entity->wikiURL << "\n";
+      for(int idx = 0; idx < tokens.size(); ++idx)
+	std::cout << tokens[idx] << "\n";
       for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	std::string tok = *tokIt;
         (entity->tokenSet).insert(tok);      
