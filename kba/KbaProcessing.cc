@@ -82,8 +82,18 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     kba::entity::Entity* entity =  *entityIt;
     //  if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
     //  filterSet.push_back(entity);
-    if((entity->label).size() > 0 && (entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)
+    std::string label = entity->label;
+    bool run = false;
+    for(int idx =0 ; idx < label.size() ; ++idx) {
+      if(!isprint(label[idx])) {
+	 run = true;
+         break;
+	}
+    }
+    if(run || ((entity->label).size() > 0 && (entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)) {
+      std::cout << "Adding " << entity->wikiURL << "\n";
       filterSet.push_back(entity);
+    }
   } 
   
   ENTITY_SET = filterSet;

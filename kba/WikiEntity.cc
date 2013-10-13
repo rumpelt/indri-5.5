@@ -118,7 +118,7 @@ void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& enti
       std::string wikiURL = "http://en.wikipedia.org/wiki/";
       if((entity->wikiURL).find(wikiURL) != std::string::npos) {
         entity->label = (entity->wikiURL).substr(wikiURL.size());
-        std::cout << "Set the label from wikiurl to : " << entity->label <<  ":" <<entity->wikiURL <<"\n";
+	//        std::cout << "Set the label from wikiurl to : " << entity->label <<  ":" <<entity->wikiURL <<"\n";
       }
       continue;
     }
@@ -221,9 +221,6 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
       tokens = Tokenize::filterShortWords(tokens);
       tokens = Tokenize::toLower(tokens);
       entity->labelTokens = tokens;
-      std::cout <<  "Tokens of :" << entity->label << " " << entity->wikiURL << "\n";
-      for(int idx = 0; idx < tokens.size(); ++idx)
-	std::cout << tokens[idx] << "\n";
       for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	std::string tok = *tokIt;
         (entity->tokenSet).insert(tok);      
@@ -233,3 +230,4 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
   } catch (const std::out_of_range& oor) {
   }
 }
+
