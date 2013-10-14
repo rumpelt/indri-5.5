@@ -19,6 +19,8 @@
 #include "StreamThread.hpp"
 #include <boost/thread.hpp>
 #include <time.h>
+#include "Logging.hpp"
+  
 namespace cmndOp = boost::program_options;
 
 std::vector<kba::entity::Entity*> ENTITY_SET;
@@ -80,8 +82,9 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
-    //  if((entity->label).size() > 0 || entity->dbpediaURLs.size() > 0)
-    //  filterSet.push_back(entity);
+    if((entity->label).size() > 0)
+      filterSet.push_back(entity);
+      /**
     std::string label = entity->label;
     bool run = false;
     for(int idx =0 ; idx < label.size() ; ++idx) {
@@ -94,6 +97,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       std::cout << "Adding " << entity->wikiURL << "\n";
       filterSet.push_back(entity);
     }
+      */
   } 
   
   ENTITY_SET = filterSet;
@@ -163,6 +167,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
           index++;
         }
       }
+      Logger::LOG_MSG("KbaProcess.cc", "performCCRTask", "processed file :"+*pathIt);
     }
     
     if(index > 0) {
@@ -186,10 +191,12 @@ int main(int argc, char *argv[]){
   std::string topicFile;
   std::string dirList;
   std::string stopFile;
+  std::string logFile;
   bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("help","the help message")
+    ("log", cmndOp::value<std::string>(&logFile), "Log file to write msg to")
     ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
     ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
     ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
@@ -206,10 +213,14 @@ int main(int argc, char *argv[]){
     ("equery",cmndOp::value<std::string>(), "Look up an entity")
     ("taggerId",cmndOp::value<std::string>(&taggerId)->default_value("lingpipe")," print anchor text");
 
+  
   cmndOp::variables_map cmndMap;
   cmndOp::store(cmndOp::parse_command_line(argc, argv,cmndDesc), cmndMap);
   cmndOp::notify(cmndMap);  
   
+  assert(logFile.size() > 0);  
+  Logger::LOGGER(logFile);
+
   STOP_SET  = Tokenize::getStopSet(stopFile);
 
   RDFParser* rdfparser = NULL; 
@@ -240,7 +251,7 @@ int main(int argc, char *argv[]){
     std::string dumpFile = cmndMap["dfile"].as<std::string>();
     std::vector<std::string> directories; 
     if(cmndMap.count("dir-list")) {
-      std::cout << "dir list set\n";
+   
       std::ifstream inputFile(cmndMap["dir-list"].as<std::string>().c_str());
       for(std::string line;getline(inputFile, line);) {
         directories.push_back(line);
@@ -252,14 +263,16 @@ int main(int argc, char *argv[]){
     performCCRTask(topicFile, corpusPath, dumpFile, directories, STOP_SET);
   }
    
-
+  
   if (!cmndMap.count("file") ) {
     std::cout <<  "no input file specified use --file \n";
+    Logger::CLOSE_LOGGER();
     return -1;
   }
  
   if(!printStream && !cmndMap.count("stream-id")) {
     std::cout << "Neither print-stream -- nor stream-id option\n";
+    Logger::CLOSE_LOGGER();
     return -1;
   }
 
@@ -284,5 +297,7 @@ int main(int argc, char *argv[]){
         iterateOnStream(fileName, cmndMap, taggerId);
     }
   }
+
+  Logger::CLOSE_LOGGER();
   return 0;
 }

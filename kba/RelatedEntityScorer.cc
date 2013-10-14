@@ -120,7 +120,7 @@ float kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedS
         score = score + step;
     }
   }
-  //  std::cout << score << "\n"; 
+
   return score > (float)maxScore  ? (float)maxScore : score;
 }
 
