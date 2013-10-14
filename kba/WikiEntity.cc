@@ -231,3 +231,4 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
   }
 }
 
+

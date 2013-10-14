@@ -11,7 +11,7 @@ void kba::StreamThread::operator()(int cutOffScore) {
 }
 
 kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *lockMutex, std::unordered_set<std::string>& stopSet) :
-              _fileName(path), _dumpStream(dumpStream), _scorer(scorer), _lockMutex(lockMutex), _stopSet(stopSet) {
+  _fileName(path), _dumpStream(dumpStream), _scorer(scorer), _lockMutex(lockMutex), _stopSet(stopSet), _termBase(0) {
 }
 
 /**
@@ -30,16 +30,7 @@ std::string kba::StreamThread::extractDirectoryName(std::string absoluteName) {
   return dirName;
 }
 
-void kba::StreamThread::updateScore(std::vector<kba::dump::ResultRow>& rows, std::string& streamId, int& score) {
 
-  for (int index=0; index < rows.size(); index++) {
-    kba::dump::ResultRow row = rows[index];
-    if(!row.streamId.compare(streamId)) {
-      row.score = score;
-    }
-  }
-
-}
 
 void kba::StreamThread::parseFile(int cutOffScore) {
 
@@ -76,6 +67,11 @@ void kba::StreamThread::parseFile(int cutOffScore) {
       }
     }
 
+    if(StreamThread::_termBase != 0 && StreamThread::_lockMutex != 0) {
+      boost::lock_guard<boost::mutex> lockTermBase(*_lockMutex); 
+      kba::term::updateTermBase(parsedStream, StreamThread::_termBase);
+    }
+
     delete parsedStream; 
   }
 
@@ -83,6 +79,7 @@ void kba::StreamThread::parseFile(int cutOffScore) {
     boost::lock_guard<boost::mutex> lockg(*_lockMutex); 
     kba::dump::flushToDumpFile(rows, _dumpStream);
     rows.clear();
+  
   } 
 
   delete tdextractor;
@@ -90,8 +87,7 @@ void kba::StreamThread::parseFile(int cutOffScore) {
   
 }
 
-kba::StreamThread::StreamThread() {
-  _scorer = 0;
+kba::StreamThread::StreamThread() : _scorer(0), _termBase(0){
 }
 
 

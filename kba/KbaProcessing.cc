@@ -20,6 +20,7 @@
 #include <boost/thread.hpp>
 #include <time.h>
 #include "Logging.hpp"
+#include "TermDict.hpp"
   
 namespace cmndOp = boost::program_options;
 
@@ -72,19 +73,18 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
-  /**
-  kba::entity::updateEntityWithDbpedia(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "wikiToDb");
-  kba::entity::updateEntityWithLabels(ENTITY_SET, "/usa/arao/dbpediadumps/dbpedia7bdb", "labels");
-  */
   kba::entity::populateEntityStruct(ENTITY_SET, repoMap);
 
+  
+  
   std::vector<kba::entity::Entity*> filterSet;
   
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
+    
     if((entity->label).size() > 0)
       filterSet.push_back(entity);
-      /**
+    /**
     std::string label = entity->label;
     bool run = false;
     for(int idx =0 ; idx < label.size() ; ++idx) {
@@ -97,10 +97,13 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       std::cout << "Adding " << entity->wikiURL << "\n";
       filterSet.push_back(entity);
     }
-      */
+    */
   } 
   
   ENTITY_SET = filterSet;
+
+  kba::term::TermBase* termBase = new kba::term::TermBase(ENTITY_SET);
+
   std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  

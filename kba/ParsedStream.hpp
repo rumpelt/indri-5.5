@@ -6,7 +6,7 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
-#include "TermDict.hpp"
+
 
 namespace kba {
   namespace stream {
@@ -16,7 +16,7 @@ namespace kba {
       std::unordered_map<std::string, int> tokenFreq;
     };
     void populateTokenFreq(kba::stream::ParsedStream* parsedStream);
-    void updateTermBase(kba::stream::ParsedStream* parsedStream, kba::term::TermBase* termBase, std::set<std::string> termSet);
+    
   }
   
 }

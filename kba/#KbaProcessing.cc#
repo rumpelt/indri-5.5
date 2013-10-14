@@ -9,19 +9,28 @@
 #include "Tokenize.hpp"
 #include "RDFParser.hpp"
 #include "RDFQuery.hpp"
-#include <fstream>
+#include <iostream>
 #include <vector>
+#include <algorithm>
 #include <iostream>
 #include "BaseLineScorer.hpp"
+#include "RelatedEntityScorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
 #include <boost/thread.hpp>
-
+#include <time.h>
+#include "Logging.hpp"
+#include "TermDict.hpp"
+  
 namespace cmndOp = boost::program_options;
 
 std::vector<kba::entity::Entity*> ENTITY_SET;
+std::unordered_set<std::string> STOP_SET;
 
-void runScoring(std::string entityfile, std::string ) {
+bool compareString(std::string firstStr, std::string secondStr) {
+  if(firstStr.compare(secondStr) < 0) 
+    return true;
+  return false;
 }
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
@@ -40,80 +49,183 @@ void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std:
   }
 }
 
+void findStreamId(std::string& fileName, std::string streamId) {
+  kba::thrift::ThriftDocumentExtractor docExtractor;   
+
+  docExtractor.open(fileName);
+  StreamItem *streamItem;
+  while((streamItem = docExtractor.nextStreamItem()) != NULL) {
+    if(!(streamItem->stream_id).compare(streamId)) {
+      std::cout << "*********Stream Content***********\n";
+      std::cout << (streamItem->body).clean_visible;
+    }     
+  }
+}
 
 
-void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump) {
+
+void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
+  int cutOffScore=600; 
+  std::map<std::string, std::string> repoMap;
+  repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
+  repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
+  repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
+
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
+  kba::entity::populateEntityStruct(ENTITY_SET, repoMap);
+
+  
+  
+  std::vector<kba::entity::Entity*> filterSet;
+  
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
+    kba::entity::Entity* entity =  *entityIt;
+    
+    if((entity->label).size() > 0)
+      filterSet.push_back(entity);
+    /**
+    std::string label = entity->label;
+    bool run = false;
+    for(int idx =0 ; idx < label.size() ; ++idx) {
+      if(!isprint(label[idx])) {
+	 run = true;
+         break;
+	}
+    }
+    if(run || ((entity->label).size() > 0 && (entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)) {
+      std::cout << "Adding " << entity->wikiURL << "\n";
+      filterSet.push_back(entity);
+    }
+    */
+   } 
+  
+  ENTITY_SET = filterSet;
+
+  kba::term::TermBase* termBase = new kba::term::TermBase(ENTITY_SET);
+
   std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
-  indri::file::FileTreeIterator files(pathToProcess);
+  //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
+  kba::scorer::RelatedEntityScorer rscorer(ENTITY_SET, repoMap);
+  //  rscorer.populateRelatedMap();
   kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
+  time_t startTime;
+  time(&startTime);
 
   if(!isDirectory) {
-        kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-        kba::StreamThread st(pathToProcess, dumpStream, &bscorer, 0);
-        st.parseFile();
+        
+	std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
+        if(!fileExtension.compare(".xz")) {
+          kba::StreamThread st(pathToProcess, dumpStream, &rscorer, 0, stopSet);
+          st.parseFile(cutOffScore);
+	}
   }
   else {
     int index = 0;
     boost::thread_group threadGroup;
     boost::mutex* lockMutex = new boost::mutex;
-    for(; files != indri::file::FileTreeIterator::end() ;files++) {
-      if( index    > 1) {
-        std::cout << "waiting for threads to finish\n";
-	//       threadGroup.join_all();
-        std::cout << "Fiinish\n";
-        index = 0;
-      }
-        
-      std::string fileName(*files);
-      kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-      std::cout << "process : " << fileName << "\n";   
-      kba::StreamThread st(fileName, dumpStream, &bscorer, lockMutex);
-      std::cout << "creating thread \n";
-      //     st.parseFile();
-         threadGroup.create_thread(st);
-      //st.parseFile();
-      index++;
+ 
+    std::vector<std::string> pathList;
+    std::vector<boost::thread*> aliveThreads;
+    int maxThreads = 4;
 
+    if(dirList.size() <= 0) 
+      pathList.push_back(pathToProcess);
+    else {
+      for(int index=0; index < dirList.size(); index++) {
+	std::string subdir = dirList[index];
+        pathList.push_back(pathToProcess + "/"+ subdir); 
+      }
+    }
+
+    for(std::vector<std::string>::iterator pathIt = pathList.begin(); pathIt != pathList.end(); pathIt++) {
+      pathToProcess = *pathIt; 
+      indri::file::FileTreeIterator files(pathToProcess);
+      for(; files != indri::file::FileTreeIterator::end() ;files++) {
+        if( index >= maxThreads) {
+	  //    std::cout << "waiting for threads to finish\n";
+          threadGroup.join_all();
+	  //          for(int idx=0; idx < maxThreads ; idx++) {
+	  // delete aliveThreads[idx];
+	  // }
+          aliveThreads.clear();
+          index = 0;
+        }
+        
+        std::string fileName(*files);
+        std::string fileExtension = fileName.substr(fileName.size() - 3);
+      
+        if(!fileExtension.compare(".xz")) {
+        
+	  //    std::cout << "process : " << fileName << "\n";   
+          kba::StreamThread st(fileName, dumpStream, &rscorer, lockMutex, stopSet);
+	  //        std::cout << "creating thread \n";
+	  //  st.parseFile();
+	  boost::thread *streamThread = new boost::thread(st, cutOffScore); 
+	  aliveThreads.push_back(streamThread);
+          threadGroup.add_thread(streamThread);
+          index++;
+        }
+      }
+      Logger::LOG_MSG("KbaProcess.cc", "performCCRTask", "processed file :"+*pathIt);
     }
     
     if(index > 0) {
-     threadGroup.join_all();
-     } 
-     
+      threadGroup.join_all();
+    } 
     delete lockMutex;
-  }
   
+  }
+
   dumpStream->close(); 
   delete dumpStream;
+  time_t endTime;
+  time(&endTime);
+  double seconds = difftime(endTime,startTime);
+  std::cout << "Total time in seconds :: "<< seconds << "\n";
 }
 
 int main(int argc, char *argv[]){
   std::string taggerId;
+  std::string corpusPath;
+  std::string topicFile;
+  std::string dirList;
+  std::string stopFile;
+  std::string logFile;
+  bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("help","the help message")
-    ("file",cmndOp::value<std::string>(),"the file or base dir to process")
-    ("efile",cmndOp::value<std::string>(),"The full path of the entity json file")
+    ("log", cmndOp::value<std::string>(&logFile), "Log file to write msg to")
+    ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
+    ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
+    ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
+    ("stop-file,SF",cmndOp::value<std::string>(&stopFile)->default_value("../help/sql40stoplist"),"the file containing the stop words") 
+    ("stream-id",cmndOp::value<std::string>(),"The stream id to search") 
     ("anchor"," print anchor text")
     ("title"," print title text")
     ("sentence"," print sentences ")
     ("repo",cmndOp::value<std::string>(), "Repository path of the rdfs store")
     ("repo-name", cmndOp::value<std::string>(), "The name of repository in the repository path") 
     ("print-model", "print the model")
+    ("print-stream", cmndOp::value<bool>(&printStream)->default_value(false), "print the stream")
     ("equery",cmndOp::value<std::string>(), "Look up an entity")
     ("taggerId",cmndOp::value<std::string>(&taggerId)->default_value("lingpipe")," print anchor text");
 
+  
   cmndOp::variables_map cmndMap;
   cmndOp::store(cmndOp::parse_command_line(argc, argv,cmndDesc), cmndMap);
   cmndOp::notify(cmndMap);  
- 
- 
+  
+  assert(logFile.size() > 0);  
+  Logger::LOGGER(logFile);
+
+  STOP_SET  = Tokenize::getStopSet(stopFile);
+
   RDFParser* rdfparser = NULL; 
   if(cmndMap.count("repo") && cmndMap.count("repo-name")) {
     rdfparser = new RDFParser();   
@@ -124,43 +236,71 @@ int main(int argc, char *argv[]){
     if(cmndMap.count("print-model")) {
       rdfparser->streamModel(stdout);   
     }
-
-    RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
     if(cmndMap.count("equery")) {
-      std::string equery = cmndMap["equery"].as<std::string>();
- 
-      std::cout << "Executing : " << equery <<"\n";
-      std::vector< boost::shared_ptr<unsigned char> >  nodes = rdfquery->getSourceNodes((const unsigned char*)"http://xmlns.com/foaf/0.1/homepage", (const unsigned char*)equery.c_str(), false);
-      for(std::vector<boost::shared_ptr<unsigned char> >::iterator nodeIt = nodes.begin(); nodeIt != nodes.end(); nodeIt++) {
-	boost::shared_ptr<unsigned char> nodeValue = *nodeIt;
-	std::cout << "\n found nodes are "<< nodeValue.get(); 
+      RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
+
+      std::vector< boost::shared_ptr<unsigned char> > sources = rdfquery->getSourceNodes((unsigned char*)"http://dbpedia.org/unigramtoken",(unsigned char*)(cmndMap["equery"].as<std::string>().c_str()));
+      for(int index=0; index < sources.size() ; index++) {
+        unsigned char* node  = sources[index].get();
+	std::cout << node << "\n";
       }
+      //rdfparser->streamModel(stdout);  
     }
   }
   
-  if(cmndMap.count("efile") && cmndMap.count("dfile") && cmndMap.count("file")) {
-    std::string entityFile = cmndMap["efile"].as<std::string>();
-    std::string dumpFile = cmndMap["dfile"].as<std::string>();
-    std::string pathToProcess = cmndMap["file"].as<std::string>();
-    performCCRTask(entityFile, pathToProcess, dumpFile);
-  }
 
-  if (!cmndMap.count("file")) {
+
+  if(corpusPath.size() > 0  && topicFile.size() > 0 && cmndMap.count("dfile")) {
+    std::string dumpFile = cmndMap["dfile"].as<std::string>();
+    std::vector<std::string> directories; 
+    if(cmndMap.count("dir-list")) {
+   
+      std::ifstream inputFile(cmndMap["dir-list"].as<std::string>().c_str());
+      for(std::string line;getline(inputFile, line);) {
+        directories.push_back(line);
+      }
+      inputFile.close();
+      std::sort(directories.begin(), directories.end(), compareString);
+        
+    } 
+    performCCRTask(topicFile, corpusPath, dumpFile, directories, STOP_SET);
+  }
+   
+  
+  if (!cmndMap.count("file") ) {
     std::cout <<  "no input file specified use --file \n";
+    Logger::CLOSE_LOGGER();
     return -1;
   }
  
+  if(!printStream && !cmndMap.count("stream-id")) {
+    std::cout << "Neither print-stream -- nor stream-id option\n";
+    Logger::CLOSE_LOGGER();
+    return -1;
+  }
+
   std::string basePath = cmndMap["file"].as<std::string>();
   bool isDirectory = indri::file::Path::isDirectory(basePath );   
   indri::file::FileTreeIterator files(basePath);
-  if(!isDirectory)
-    iterateOnStream(basePath, cmndMap, taggerId);
+  if(!isDirectory) {
+    if(cmndMap.count("stream-id")) {
+      findStreamId(basePath, cmndMap["stream-id"].as<std::string>());
+    }
+    else if(printStream)
+     iterateOnStream(basePath, cmndMap, taggerId);
+  }
   else {
     for(; files != indri::file::FileTreeIterator::end() ;files++) {
       
       std::string fileName(*files);
-      iterateOnStream(fileName, cmndMap, taggerId);
+      if(cmndMap.count("stream-id")) {
+        findStreamId(fileName, cmndMap["stream-id"].as<std::string>());
+      }
+      else if(printStream)
+        iterateOnStream(fileName, cmndMap, taggerId);
     }
   }
+
+  Logger::CLOSE_LOGGER();
   return 0;
 }

@@ -13,7 +13,7 @@
 
 namespace kba {
   namespace scorer {
-    class BM25Scorer {
+    class BM25Scorer : public Scorer{
     private:
       /**
       * The entity set for which we are working on
@@ -41,11 +41,14 @@ namespace kba {
 
 
       std::vector<kba::entity::Entity* > getEntityList();
-      float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int cutOffScore);
-      int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int cutOffScore);
+ 
+      float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
+      int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
       BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  boost::shared_ptr<kba::term:: TermBase>  termBase, int maxScore=1000);
     };
   }
 }
+
+inline std::vector<kba::entity::Entity* > kba::scorer::BM25Scorer::getEntityList() { return BM25Scorer::_entitySet};
 
 #endif
