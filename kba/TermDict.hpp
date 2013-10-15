@@ -4,7 +4,7 @@
 #include  <map>
 #include <string>
 #include <cmath>
-
+#include <iostream>
 
 #ifndef LOG2
 #define LOG2 LOG_OF_2()

@@ -34,12 +34,22 @@ kba::stream::ParsedStream* streamcorpus::utils::createParsedStream(streamcorpus:
   std::string body = (streamItem->body).clean_visible;
   std::string fullContent = title + anchor + body;
   std::vector<std::string> tokens = Tokenize::tokenize(fullContent);
-  tokens = Tokenize::toLower(tokens);
+  tokens = Tokenize::toLower(tokens); 
   tokens = Tokenize::filterStopWords(tokens, stopwords);
   kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
   for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
     std::string token = *tokIt;
     (parsedStream->tokenSet).insert(token);
+    (parsedStream->tokens).push_back(token);
+    try {
+      int value = (parsedStream->tokenFreq).at(token);
+      value = value + 1;
+      (parsedStream->tokenFreq).erase(token);
+      (parsedStream->tokenFreq).insert(std::pair<std::string, int>(token, value));
+    }
+    catch(std::out_of_range& oor) {
+      (parsedStream->tokenFreq).insert(std::pair<std::string, int>(token, 1));
+    }
   }
   return parsedStream;
 }

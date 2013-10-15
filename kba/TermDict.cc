@@ -1,29 +1,33 @@
 #include "TermDict.hpp"
 #include "stdexcept"
+#include <boost/shared_ptr.hpp>
 
 float& kba::term::LOG_OF_2() { static float logOf2  = log(2.0); return logOf2;}
 
 
 void kba::term::updateTermBase(kba::stream::ParsedStream* parsedStream, kba::term::TermBase* termBase) {
   size_t docSize= (parsedStream->tokens).size();
+  
   if( docSize > 0) {
     termBase->totalDocs = termBase->totalDocs + 1;
     termBase->totalDocLength = termBase->totalDocLength +  docSize;
     termBase->avgDocLength = (1.0 * termBase->totalDocLength) / termBase->totalDocs;
   }
+
   for(std::set<std::string>::iterator termIt = (termBase->vocabulary).begin(); termIt != (termBase->vocabulary).end(); ++termIt) {
     std::string term = *termIt;
     unsigned int value = 1;
     if((parsedStream->tokenSet).count(term) > 0) {
       try {
 	value  = (termBase->termDocFreq).at(term);
+        value = value + 1;
         (termBase->termDocFreq).erase(term);
-        (termBase->termDocFreq).insert(std::pair<std::string, unsigned int>(term, value+1));
+        (termBase->termDocFreq).insert(std::pair<std::string, unsigned int>(term, value));
          
       } catch(std::out_of_range& oor) {
         (termBase->termDocFreq).insert(std::pair<std::string, unsigned int>(term, value));
       }
-
+      
       float idf = log((termBase->totalDocs - value + 0.5 )/ (value + 0.5)) ;
       idf = idf/kba::term::LOG2;
       if(idf < 0.0) // In case IDF is less than zero..This can happe
@@ -39,11 +43,20 @@ void kba::term::updateTermBase(kba::stream::ParsedStream* parsedStream, kba::ter
 void kba::term::populateVocabulary(std::vector<kba::entity::Entity*> entityList, kba::term::TermBase* termBase) {
 
   using namespace kba::entity;
+  using namespace boost;
   for(std::vector<Entity*>::iterator entIt = entityList.begin(); entIt != entityList.end(); ++entIt) {
     Entity* entity = *entIt;
-    for(std::set<std::string>::iterator tokenIt = (entity->tokenSet).begin(); tokenIt != (entity->tokenSet).end(); ++tokenIt) {
+    for(std::vector<std::string>::iterator tokenIt = (entity->labelTokens).begin(); tokenIt != (entity->labelTokens).end(); ++tokenIt) {
       std::string token = *tokenIt;
       (termBase->vocabulary).insert(token);
+    }
+    
+    for (std::vector<shared_ptr<Entity> >::iterator relEntIt = (entity->relatedEntities).begin();   relEntIt != (entity->relatedEntities).end(); ++relEntIt) {
+      Entity* related = (*relEntIt).get();
+      for(std::vector<std::string>::iterator tokenIt = (related->labelTokens).begin(); tokenIt != (related->labelTokens).end(); ++tokenIt) {
+        std::string token = *tokenIt;
+        (termBase->vocabulary).insert(token);
+      } 
     }
   }
 }

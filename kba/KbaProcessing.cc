@@ -15,6 +15,7 @@
 #include <iostream>
 #include "BaseLineScorer.hpp"
 #include "RelatedEntityScorer.hpp"
+#include "BM25Scorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
 #include <boost/thread.hpp>
@@ -102,14 +103,14 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   
   ENTITY_SET = filterSet;
 
-  kba::term::TermBase* termBase = new kba::term::TermBase(ENTITY_SET);
+  boost::shared_ptr<kba::term::TermBase> termBase(new kba::term::TermBase(ENTITY_SET));
 
   std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
   //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-  kba::scorer::RelatedEntityScorer rscorer(ENTITY_SET, repoMap);
-  //  rscorer.populateRelatedMap();
+  //kba::scorer::RelatedEntityScorer rscorer(ENTITY_SET, repoMap);
+  kba::scorer::BM25Scorer scorer(ENTITY_SET, termBase);
   kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
@@ -119,7 +120,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
         
 	std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
         if(!fileExtension.compare(".xz")) {
-          kba::StreamThread st(pathToProcess, dumpStream, &rscorer, 0, stopSet);
+          kba::StreamThread st(pathToProcess, dumpStream, &scorer, 0, stopSet);
+          st.setTermBase(termBase.get());
           st.parseFile(cutOffScore);
 	}
   }
@@ -161,10 +163,12 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
         if(!fileExtension.compare(".xz")) {
         
 	  //    std::cout << "process : " << fileName << "\n";   
-          kba::StreamThread st(fileName, dumpStream, &rscorer, lockMutex, stopSet);
-	  //        std::cout << "creating thread \n";
+          kba::StreamThread st(fileName, dumpStream, &scorer, lockMutex, stopSet);
+          st.setTermBase(termBase.get());
+	
 	  //  st.parseFile();
 	  boost::thread *streamThread = new boost::thread(st, cutOffScore); 
+          
 	  aliveThreads.push_back(streamThread);
           threadGroup.add_thread(streamThread);
           index++;
@@ -184,8 +188,11 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   delete dumpStream;
   time_t endTime;
   time(&endTime);
-  double seconds = difftime(endTime,startTime);
-  std::cout << "Total time in seconds :: "<< seconds << "\n";
+  std::stringstream seconds ;
+  seconds << difftime(endTime,startTime);
+  
+  Logger::LOG_MSG("KbaProcess.cc", "performCCRTask", " Total Time in seconds  :"+seconds.str()); 
+
 }
 
 int main(int argc, char *argv[]){
