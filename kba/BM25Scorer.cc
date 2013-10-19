@@ -57,7 +57,7 @@ float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStre
       //      (parsedStream->tokenFreq).insert(std::pair<std::string, int>(term, value)); 
     }    
   }
-  //    std::cout << "Full score " << maxDocScore << " Actual Score " << docScore << "\n";
+  //  std::cout << "Full score " << maxDocScore << " Actual Score " << docScore << "\n";
   return maxDocScore > 0.0 ? docScore/maxDocScore : 0.0;
 }
 
@@ -82,7 +82,7 @@ float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStream, kb
     float relatedScore = kba::scorer::BM25Scorer::computeNormalizedDocScore(parsedStream, related->labelTokens);
     score = score + relatedScore * maxRelStep;
   }
-
+  
   return score;   
 }
 

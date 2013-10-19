@@ -36,6 +36,7 @@ void kba::StreamThread::parseFile(int cutOffScore) {
 
   kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
   tdextractor->open(StreamThread::_fileName);
+
   streamcorpus::StreamItem* streamItem = 0;
   std::vector<kba::dump::ResultRow> rows;
 

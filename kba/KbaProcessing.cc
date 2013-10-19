@@ -97,7 +97,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     if(run || ((entity->label).size() > 0 && (entity->mainDbURL).size() <= 0 && entity->dbpediaURLs.size() <= 0)) {
       std::cout << "Adding " << entity->wikiURL << "\n";
       filterSet.push_back(entity);
-    }
+    }   
     */
   } 
   
@@ -109,21 +109,20 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
   //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-  //kba::scorer::RelatedEntityScorer rscorer(ENTITY_SET, repoMap);
+  //kba::scorer::RelatedEntityScorer scorer(ENTITY_SET, repoMap);
   kba::scorer::BM25Scorer scorer(ENTITY_SET, termBase);
-  kba::dump::writeHeader(fileToDump);
+  // kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
   time(&startTime);
 
   if(!isDirectory) {
-        
-	std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
-        if(!fileExtension.compare(".xz")) {
-          kba::StreamThread st(pathToProcess, dumpStream, &scorer, 0, stopSet);
-          st.setTermBase(termBase.get());
-          st.parseFile(cutOffScore);
-	}
+    std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
+    if(!fileExtension.compare(".xz")) {
+      kba::StreamThread st(pathToProcess, dumpStream, &scorer, 0, stopSet);
+      st.setTermBase(termBase.get());
+      st.parseFile(cutOffScore);
+    }
   }
   else {
     int index = 0;
@@ -148,12 +147,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       indri::file::FileTreeIterator files(pathToProcess);
       for(; files != indri::file::FileTreeIterator::end() ;files++) {
         if( index >= maxThreads) {
-	  //    std::cout << "waiting for threads to finish\n";
-          threadGroup.join_all();
-	  //          for(int idx=0; idx < maxThreads ; idx++) {
-	  // delete aliveThreads[idx];
-	  // }
-          aliveThreads.clear();
+	  threadGroup.join_all();
+	  aliveThreads.clear();
           index = 0;
         }
         
