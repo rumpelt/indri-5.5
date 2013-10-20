@@ -15,6 +15,34 @@
 
 namespace kba {
   namespace term {
+    
+    struct TopicTermKey {
+      unsigned char* term;
+      unsigned char* topic;
+      long collectionTime;
+
+    };
+         
+    struct TopicTermValue {
+
+      unsigned int docFreq; // For calculating IDF, Not dependent on the topic
+      unsigned int judgedDocFreq; //  Number of judged doc containing term,  n_i term in the Robertson/Sprck Jones
+      unsigned int relevantDocFreq; // Number of the relevant documents containing term, r_i term in Robertosn/sprck Jones weight
+      long judgedSample; // size of the judged sample for the topic/query, term N in the Roberson/Sprck Jones wieghting
+      long relevantSetSize;  // Relevant set Size , Term R in the Robertson/Sp rck Jone weightin
+    };
+
+    struct CorpusStatKey {
+      long collectionTime;
+    };
+    
+    struct CorpusStatValue {
+      long totalDocs;
+      int averageDoSize;  // Rounded to integer value;
+    };
+
+    struct DocStatValue {
+    };
     struct TermBase { 
       std::set<std::string> vocabulary;
       std::map<std::string, unsigned int> termDocFreq;
