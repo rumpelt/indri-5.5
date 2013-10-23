@@ -1,3 +1,6 @@
+#ifndef BERKLEYDBENV_HPP
+#define BERKLEYDBENV_HPP
+
 #include <db_cxx.h>
 #include "TermDict.hpp"
 
@@ -7,15 +10,21 @@ namespace kba {
     class CorpusDb {
     private:
       std::string _baseDir;
-      Db* _termDB;
-      Db* _corpusDB;
+      Db* _termDb;
+      Db* _termTopicDb;
+      Db* _corpusDb;
+      Db* _topicDb; //Allows duplicate records with the topic name as the secondary key
       DbEnv* _dbEnv;
       u_int32_t _envFlags;
     public:
       CorpusDb(std::string baseEnvDir);
       ~CorpusDb();
-      void addTerm(kba::term::TopicTermKey* key, kba::term::TopicTermValue* value);
-      void updateCorpusStat(kba::term::CorpusStatKey* key, kba::term::CorpusStatValue* value);
+      void addTopicTerm(kba::term::TopicTermKey* key, kba::term::TopicTermValue* value);
+      void addCorpusStat(kba::term::CorpusStat* corpusStat);
+      void addTermStat(kba::term::TermStat* termStat);
+      void addTopicStat(kba::term::TopicStat* topicStat);
     };        
   }
 }
+
+#endif

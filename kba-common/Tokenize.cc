@@ -45,7 +45,10 @@ std::vector<std::string> Tokenize::ngrams(std::vector<std::string>& inVector, in
 
 std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inputTokens, std::unordered_set<std::string>& stopwords) 
 {
+  if(stopwords.size() <= 0)
+    return inputTokens;
   std::vector<std::string> filterWords;
+ 
   for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
     std::string token = *tokIt;
     if(token.size() > 1 && stopwords.find(token) == stopwords.end()) {
