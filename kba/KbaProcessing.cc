@@ -22,7 +22,8 @@
 #include <time.h>
 #include "Logging.hpp"
 #include "TermDict.hpp"
-  
+#include "BerkleyDBEnv.hpp"
+
 namespace cmndOp = boost::program_options;
 
 std::vector<kba::entity::Entity*> ENTITY_SET;
@@ -32,6 +33,33 @@ bool compareString(std::string firstStr, std::string secondStr) {
   if(firstStr.compare(secondStr) < 0) 
     return true;
   return false;
+}
+
+
+void storeEvaluationData(std::string trgFile, std::string envBaseDir) {
+  std::ifstream trgStream(trgFile.c_str());
+ 
+  kba::berkley::CorpusDb* db= new kba::berkley::CorpusDb(envBaseDir, std::string("eval.db"));
+  std::string row;
+  while(std::getline(trgStream, row)) {
+    if(row.find('#') == 0)
+      continue;
+    boost::tokenizer<> tokens(row);  
+    std::vector<std::string> rowTokens;
+    for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
+      rowTokens.push_back(*tokIt);
+    }
+    kba::term::EvaluationData* evalData = new kba::term::EvaluationData();
+    evalData->assessorId  = rowTokens.at(1);
+    evalData->stream_id = rowTokens.at(2);
+    evalData->topic = rowTokens.at(3);
+    evalData->rating = strtol(rowTokens.at(5).c_str(), NULL, 10);
+    evalData->directory = rowTokens.at(7);
+    evalData->cleanVisibleSize = strtol(rowTokens.at(11).c_str(), NULL, 10);
+    db->addEvaluationData(evalData);
+  }
+ 
+  delete db;
 }
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
@@ -197,12 +225,17 @@ int main(int argc, char *argv[]){
   std::string dirList;
   std::string stopFile;
   std::string logFile;
+  std::string trainingFile;
+  std::string berkleyDbDir;
+
   bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("help","the help message")
     ("log", cmndOp::value<std::string>(&logFile), "Log file to write msg to")
     ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
+    ("trng",cmndOp::value<std::string>(&trainingFile),"the trec kba judgement file, for this option to work bdb-dir should be specified" )
+    ("bdb-dir",cmndOp::value<std::string>(&berkleyDbDir),"The berkley base db dir where all data bases will be saved. For this option to work trng should also be specified" )
     ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
     ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
@@ -225,7 +258,10 @@ int main(int argc, char *argv[]){
   
   assert(logFile.size() > 0);  
   Logger::LOGGER(logFile);
-
+  
+  if(trainingFile.size() > 0  && berkleyDbDir.size() > 0) {
+    storeEvaluationData(trainingFile, berkleyDbDir);
+  }
   STOP_SET  = Tokenize::getStopSet(stopFile);
 
   RDFParser* rdfparser = NULL; 

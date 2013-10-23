@@ -101,9 +101,9 @@ namespace kba {
       std::string stream_id; // first part of primary key
       std::string topic; // second part of assessor key
       int16_t rating;  
-      std::string assessorId;
-      uint16_t cleanVisibleSize;
-      std::string directory;
+      u_int16_t cleanVisibleSize;     
+      std::string directory; 
+      std::string assessorId;  
       EvaluationData() : rating(-2), cleanVisibleSize(0) {}
     };
 

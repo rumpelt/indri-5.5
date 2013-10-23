@@ -132,9 +132,8 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
 std::vector<std::string> Tokenize::getPhrases(std::string& inputSource) {
   boost::tokenizer<> tokens(inputSource);
   std::vector<std::string> phrases;
-  std::vector<std::string>::iterator phraseIt;
   bool prevCaseUpper = false;
-  for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
+  for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {p
     std::string token = *tokIt;
     bool upperCase = isupper(token[0]);
     if(!upperCase || !prevCaseUpper) {
