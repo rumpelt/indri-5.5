@@ -115,8 +115,10 @@ namespace kba {
     void updateTermBase(kba::stream::ParsedStream* parsedStream, kba::term::TermBase* termBase);
     
     void populateVocabulary(std::vector<kba::entity::Entity*> entityList, kba::term::TermBase* termBase);
-    
-    
+
+    std::set<TopicStat*> topicStatSet(std::vector<kba::entity::Entity*> entitySet);    
+    std::set<TermStat*> termStatSet(std::vector<kba::entity::Entity*> entitySet);    
+    std::map<TopicTermKey*, TopicTermValue*>  topicTermMap(std::vector<kba::entity::Entity*> entitySet);    
   }
 }
 

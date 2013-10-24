@@ -3,7 +3,7 @@
 
 #include <db_cxx.h>
 #include "TermDict.hpp"
-
+#include "boost/shared_ptr.hpp"
 
 namespace kba {
   namespace berkley {
@@ -32,6 +32,8 @@ namespace kba {
       void addTermStat(kba::term::TermStat* termStat);
       void addTopicStat(kba::term::TopicStat* topicStat);
       void addEvaluationData(kba::term::EvaluationData* evalData);
+
+      std::vector<boost::shared_ptr<kba::term::EvaluationData> > getEvaluationData(std::string stream_id, std::string topic);
     };        
   }
 }

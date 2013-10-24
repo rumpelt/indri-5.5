@@ -14,7 +14,7 @@ kba::berkley::CorpusDb::CorpusDb(std::string envBaseDir, bool readOnly) {
     if(readOnly)
       dbFlags = DB_RDONLY;
     else
-      dbFlags = DB_CREATE;
+      dbFlags = DB_CREATE | DB_EXCL;
 
     _termTopicDb = new Db(_dbEnv, 0);
     _termTopicDb->open(NULL, "term-topic.db", NULL, DB_BTREE, dbFlags, 0);
@@ -30,7 +30,7 @@ kba::berkley::CorpusDb::CorpusDb(std::string envBaseDir, bool readOnly) {
 
     _evalDb = new Db(_dbEnv, 0);
     _evalDb->set_flags(DB_DUP);
-    _evalDb->open(NULL, "eval.db", NULL, DB_BTREE, dbFlags, 0);
+    _evalDb->open(NULL, "eval.db", NULL, DB_BTREE, DB_RDONLY, 0);
 
   } 
   catch(DbException &dbexpt) {
@@ -198,4 +198,53 @@ void kba::berkley::CorpusDb::addEvaluationData(kba::term::EvaluationData* evalDa
   delete keyData;
   delete valueData;
 
+}
+
+std::vector<boost::shared_ptr<kba::term::EvaluationData> > kba::berkley::CorpusDb::getEvaluationData(std::string stream_id, std::string topic) {
+  using namespace kba::term;
+  std::vector<boost::shared_ptr<kba::term::EvaluationData> > judgementData;
+
+  size_t keySize = stream_id.size() + topic.size() + 2;
+  char* keyData = new char[keySize];
+  memset(keyData,0, keySize);
+  memcpy(keyData, stream_id.c_str(),  stream_id.size() + 1);
+  memcpy(keyData + stream_id.size() + 1 , topic.c_str(),  topic.size() + 1);
+
+  Dbt dbKey(keyData, keySize);
+  Dbt dbValue;
+  dbValue.set_flags(0); //We take care of own memory managment , All data retuned by bdb is freed by berkley db itself, so we must be careful
+  try {
+    Dbc* cursor = 0;
+    _evalDb->cursor(NULL,  &cursor, 0);
+    int ret = cursor->get(&dbKey, &dbValue, DB_SET);
+    while(ret != DB_NOTFOUND) {
+      boost::shared_ptr<kba::term::EvaluationData> eval(new kba::term::EvaluationData());
+      EvaluationData* edata = eval.get();
+      edata->stream_id =  stream_id;
+      edata->topic = topic;
+
+      char* data = (char *)(dbValue.get_data());
+      edata->rating = *((int16_t *)data);
+      data = data + sizeof(int16_t);
+
+      edata->cleanVisibleSize = (*(u_int16_t*)data);
+      data = data + sizeof(u_int16_t);
+      std::string directory(data); 
+      edata->directory = directory;
+
+      judgementData.push_back(eval);
+      ret = cursor->get(&dbKey, &dbValue, DB_NEXT_DUP);
+    }
+    if(cursor != 0)
+      cursor->close();
+  }
+  catch (DbException &dbexpt) {
+    Logger::LOG_MSG("BerkleyDBEnv.cc", "getEvaluationData", dbexpt.what());
+  }
+  catch(std::exception &expt) {
+    Logger::LOG_MSG("BerkleyDBEnv.cc", "getEvaluationData", expt.what());
+  }
+  
+  delete keyData;  
+  return judgementData;
 }

@@ -38,8 +38,12 @@ namespace kba {
   public:
     static time_t secondsInDay;
     static int16_t ratingAcceptance;
-
+ 
     StreamIndex(std::vector<std::string> dirsToProcess , std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, kba::berkley::CorpusDb* corpusDb);
+    /**
+     * returns a valid rating or -2 if there was no judgement
+     */    
+    int16_t getRating(streamcorpus::StreamItem* item, std::string topic);
            
   };
 }

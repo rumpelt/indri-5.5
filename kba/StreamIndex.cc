@@ -4,6 +4,7 @@
 #include "TimeConversion.hpp"
 #include <cassert>
 #include <unordered_set>
+#include <boost/shared_ptr.hpp>
 
 time_t kba::StreamIndex::secondsInDay = (3600 * 24);
 int16_t kba::StreamIndex::ratingAcceptance = 2;
@@ -16,6 +17,20 @@ kba::StreamIndex::StreamIndex(std::vector<std::string> dirsToProcess , std::map<
     _collectionTime =  kba::time::convertDateToTime(day);  
   }
 
+
+int16_t kba::StreamIndex::getRating(streamcorpus::StreamItem* streamItem, std::string topic) {
+  using namespace boost;
+  using namespace kba::term;
+  using namespace std;
+  std::vector<boost::shared_ptr<EvaluationData> > ratings = StreamIndex::_corpusDb->getEvaluationData(streamItem->stream_id, topic);
+  int16_t rating = 3;
+  for(vector<boost::shared_ptr<EvaluationData> > ::iterator ratingIt = ratings.begin(); ratingIt != ratings.end(); ++ratingIt) {
+    EvaluationData* eval = (*ratingIt).get();
+    if(eval->rating < rating)
+      rating = eval->rating;
+  } 
+  return rating >=3 ? -2 : rating;
+}
 
 void kba::StreamIndex::assertCollectionTime() {
   assert((_corpusStat->collectionTime - _collectionTime) >= kba::StreamIndex::secondsInDay);
@@ -32,9 +47,9 @@ void kba::StreamIndex::processStream(streamcorpus::StreamItem* streamItem ) {
    
     TopicStat* topicStat = (*topicIt);
 
-    int16_t rating = 0;
-    assert(rating >= -2 && rating <= 2);
-    if(rating >= -1)
+    int16_t rating = StreamIndex::getRating(streamItem, topicStat->topic);
+
+    if(rating >= -1 && rating <= 2)
       judgedFlag = true;
 
     topicStreamRating.insert(std::pair<std::string, int16_t>((topicStat->topic), rating));
@@ -82,8 +97,21 @@ void kba::StreamIndex::flushToDb() {
   float currentAvgDocSize = _docSize/_numDoc;
   if (_corpusStat->averageDocSize > 0)
     currentAvgDocSize = (currentAvgDocSize + _corpusStat->averageDocSize) / 2.0; 
-  _corpusStat->averageDocSize = (int)(currentAvgDocSize + 0.5); // rounded or floored depedinging 
-  
+  _corpusStat->averageDocSize = (int)(currentAvgDocSize + 0.5); // rounded or floored depedinging  
   _corpusDb->addCorpusStat(_corpusStat);
-}
+  
+  for(std::set<kba::term::TopicStat*>::iterator topicIt = _topicStatSet.begin(); topicIt != _topicStatSet.end(); ++topicIt) {
+    StreamIndex::_corpusDb->addTopicStat(*topicIt);
+  }
+
+  for(std::set<TermStat*>::iterator termIt = _termStatSet.begin(); termIt != _termStatSet.end(); ++termIt  ) {
+    StreamIndex::_corpusDb->addTermStat(*termIt);
+  }
+ 
+  for(std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*>::iterator ttkIt = _termTopicMap.begin(); ttkIt != _termTopicMap.end(); ++ttkIt) {
+    TopicTermKey* topicTermKey = (*ttkIt).first;
+    TopicTermValue* topicTermVal = (*ttkIt).second;
+    StreamIndex::_corpusDb->addTopicTerm(topicTermKey, topicTermVal);
+  }
+} 
 
