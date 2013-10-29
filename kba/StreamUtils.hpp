@@ -18,6 +18,10 @@ namespace streamcorpus {
      * Create a light weight parse stream..Just contains the set of tokens. Just populated ParsedStream::tokenSet;
      */
     kba::stream::ParsedStream* createLightParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopSet);
+    /**
+     * For term freq and thus we can get anything.
+     */
+    kba::stream::ParsedStream* createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopSet);
   }
 }
 #endif

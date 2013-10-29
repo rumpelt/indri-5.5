@@ -18,11 +18,12 @@
 #include "BM25Scorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
+#include "StreamIndex.hpp"
 #include <boost/thread.hpp>
 #include <time.h>
 #include "Logging.hpp"
 #include "TermDict.hpp"
-#include "BerkleyDBEnv.hpp"
+#include "TimeConversion.hpp"
 
 namespace cmndOp = boost::program_options;
 
@@ -35,20 +36,17 @@ bool compareString(std::string firstStr, std::string secondStr) {
   return false;
 }
 
-
 void storeEvaluationData(std::string trgFile, std::string envBaseDir) {
   std::ifstream trgStream(trgFile.c_str());
- 
-  kba::berkley::CorpusDb* db= new kba::berkley::CorpusDb(envBaseDir, std::string("eval.db"));
+  std::string dbName = "eval.db"; 
+  kba::berkley::CorpusDb* db= new kba::berkley::CorpusDb(envBaseDir, dbName);
+  db->init(envBaseDir, dbName);
   std::string row;
   while(std::getline(trgStream, row)) {
     if(row.find('#') == 0)
       continue;
-    boost::tokenizer<> tokens(row);  
-    std::vector<std::string> rowTokens;
-    for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
-      rowTokens.push_back(*tokIt);
-    }
+    std::vector<std::string> rowTokens = Tokenize::split(row);
+    
     kba::term::EvaluationData* evalData = new kba::term::EvaluationData();
     evalData->assessorId  = rowTokens.at(1);
     evalData->stream_id = rowTokens.at(2);
@@ -58,7 +56,6 @@ void storeEvaluationData(std::string trgFile, std::string envBaseDir) {
     evalData->cleanVisibleSize = strtol(rowTokens.at(11).c_str(), NULL, 10);
     db->addEvaluationData(evalData);
   }
- 
   delete db;
 }
 
@@ -92,7 +89,67 @@ void findStreamId(std::string& fileName, std::string streamId) {
 }
 
 
+void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vector<std::string> dirList,   std::unordered_set<std::string> stopSet) {
+  using namespace kba::term;
+  std::map<std::string, std::string> repoMap;
+  repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
+  repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
+  repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
+   
+  kba::entity::populateEntityList(ENTITY_SET, entityfile);
+  kba::entity::populateEntityStruct(ENTITY_SET, repoMap);
+  std::vector<kba::entity::Entity*> filterSet;
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
+    kba::entity::Entity* entity =  *entityIt;
+    if((entity->label).size() > 0)
+      filterSet.push_back(entity);
+    else
+      delete entity; // I donot want to see that any more
+  } 
+  ENTITY_SET = filterSet;
+  
+  kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
+  std::set<TopicStat*> topicStatSet = kba::term::crtTopicStatSet(ENTITY_SET);
+  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, stopSet);
+  std::map<TopicTermKey*, TopicTermValue*> topicTermMap = kba::term::crtTopicTermMap(ENTITY_SET, stopSet);
 
+  //  kba::berkley::CorpusDb* corpusDb = new kba::berkley::CorpusDb(envBaseDir, false); 
+  std::cout << "TermSet size : " << termStatSet.size() << " topicTerm Size " << topicTermMap.size() << "\n";
+  StatDb* stDb = new StatDb();
+
+  stDb->crtTrmDb("/usa/arao/test/term.db", true);
+  stDb->crtCrpDb("/usa/arao/test/corpus.db", true);
+
+
+  std::vector<std::string> dirBunch;
+  std::sort(dirList.begin(), dirList.end(), compareString); 
+  std::string prevDayDate = (dirList.at(0)).substr(0, dirList.at(0).rfind('-'));
+  std::cout << "Starting with date " << prevDayDate << "\n";
+  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+    std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
+    //std::cout << "Processing day "<< dayDate << "\n";
+    if(dayDate.compare(prevDayDate)) {
+      std::cout << "Dir size "<< dirBunch.size() << "\n";
+      kba::StreamIndex* streamIndex = new kba::StreamIndex(dirBunch, topicTermMap, corpusStat, topicStatSet, termStatSet, stDb, stopSet);
+      streamIndex->processDir();
+      dirBunch.clear();
+      Logger::LOG_MSG("KbProcessing.cc", "termStatIndexer", "processed dirs :"+prevDayDate);  
+      delete streamIndex;
+    }
+    dirBunch.push_back(pathToProcess+"/"+*dirIt);
+    prevDayDate = dayDate;
+
+  }
+
+  if(dirBunch.size() > 0) {
+    kba::StreamIndex* streamIndex = new kba::StreamIndex(dirBunch, topicTermMap, corpusStat, topicStatSet, termStatSet, stDb, stopSet);
+    streamIndex->processDir();
+    dirBunch.clear();
+    delete streamIndex;
+  }
+
+  delete stDb;
+}
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
   int cutOffScore=600; 
   std::map<std::string, std::string> repoMap;
@@ -113,7 +170,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     
     if((entity->label).size() > 0)
       filterSet.push_back(entity);
- 
+    else
+      delete entity;
   } 
   
   ENTITY_SET = filterSet;
@@ -214,7 +272,14 @@ int main(int argc, char *argv[]){
   std::string logFile;
   std::string trainingFile;
   std::string berkleyDbDir;
-
+  char* tz;
+  tz = getenv("TZ");
+  if(tz) {
+    std::cout << "Setting the timezone\n";
+    setenv("TZ", "", 1);
+    tzset();
+  }
+  
   bool printStream = false;
   cmndOp::options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
@@ -222,7 +287,7 @@ int main(int argc, char *argv[]){
     ("log", cmndOp::value<std::string>(&logFile), "Log file to write msg to")
     ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
     ("trng",cmndOp::value<std::string>(&trainingFile),"the trec kba judgement file, for this option to work bdb-dir should be specified" )
-    ("bdb-dir",cmndOp::value<std::string>(&berkleyDbDir),"The berkley base db dir where all data bases will be saved. For this option to work trng should also be specified" )
+    ("stat", "Write term and corpus and topic stats")
     ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
     ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
@@ -249,6 +314,7 @@ int main(int argc, char *argv[]){
   if(trainingFile.size() > 0  && berkleyDbDir.size() > 0) {
     storeEvaluationData(trainingFile, berkleyDbDir);
   }
+
   STOP_SET  = Tokenize::getStopSet(stopFile);
 
   RDFParser* rdfparser = NULL; 
@@ -274,6 +340,17 @@ int main(int argc, char *argv[]){
   }
   
 
+  if (cmndMap.count("stat") > 0 && corpusPath.size() > 0 && topicFile.size()) {
+    if(cmndMap.count("dir-list")) {
+      std::vector<std::string> directories; 
+      std::ifstream inputFile(cmndMap["dir-list"].as<std::string>().c_str());
+      for(std::string line;getline(inputFile, line);) {
+        directories.push_back(line);
+      }
+      inputFile.close();
+      termStatIndexer(topicFile, corpusPath, directories, STOP_SET);
+    }
+  }
 
   if(corpusPath.size() > 0  && topicFile.size() > 0 && cmndMap.count("dfile")) {
     std::string dumpFile = cmndMap["dfile"].as<std::string>();
@@ -295,12 +372,20 @@ int main(int argc, char *argv[]){
   if (!cmndMap.count("file") ) {
     std::cout <<  "no input file specified use --file \n";
     Logger::CLOSE_LOGGER();
+    if(tz) {
+      setenv("TZ", tz, 1);
+      tzset();
+    }
     return -1;
   }
  
   if(!printStream && !cmndMap.count("stream-id")) {
     std::cout << "Neither print-stream -- nor stream-id option\n";
     Logger::CLOSE_LOGGER();
+    if(tz) {
+      setenv("TZ", tz, 1);
+      tzset();
+    }
     return -1;
   }
 
@@ -327,5 +412,9 @@ int main(int argc, char *argv[]){
   }
 
   Logger::CLOSE_LOGGER();
+  if(tz) {
+      setenv("TZ", tz, 1);
+      tzset();
+  }
   return 0;
 }

@@ -7,9 +7,11 @@
 namespace kba {
   namespace time {
     /**
-     * Convert a human readable date to long format.
-     * this is for kba where direcotries are date. eg. 2011-10-31 to time_t data
-     */
+     * This function returns the value according to current timze zone setting.
+     * To return current time setting as per UTC/GMT. Set the time to UTC.
+     * u must unset it to correct timezone at the end.
+     * http://man7.org/linux/man-pages/man3/timegm.3.html
+     */   
     time_t convertDateToTime(std::string kbaDate);
   }
 }

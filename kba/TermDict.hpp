@@ -45,7 +45,8 @@ namespace kba {
       int relevantSetSize;  // Relevant set Size , Term R in the Robertson/Sprck Jone weightin
       TopicStat() : collectionTime(-1), relevantSetSize(0) {};
       
-      bool operator < (const TopicStat& rhs) {
+      bool operator<(const TopicStat& rhs) {
+	
         if(topic.compare(rhs.topic) == 0)
           return false;
         if(topic.compare(rhs.topic) < 0)
@@ -67,19 +68,41 @@ namespace kba {
     struct TermStat {
       time_t collectionTime; // this is the primary key along with the term
       std::string term;
-      unsigned int docFreq; // For calculating IDF
-      TermStat() : collectionTime(-1), docFreq(0) {};
-
-      bool operator < (const TermStat& rhs) {
-        if(term.compare(rhs.term) == 0)
+      long docFreq; // For calculating IDF
+      long int collFreq; //Total frequency of the term in the corpus. this is greater than Id. This to calculate the colelection Term Frequency  
+      bool operator() (TermStat* lhs, TermStat* const rhs)  {
+        std::cout << "Calling functor\n";
+        if((lhs->term).compare(rhs->term) == 0)
           return false;
-        if(term.compare(rhs.term) < 0)
+        if((lhs->term).compare(rhs->term) < 0)
           return true;
         else
           return false;
       }
+      bool operator() (TermStat lhs, TermStat const rhs)  {
+        std::cout << "Calling functor\n";
+        if((lhs.term).compare(rhs.term) == 0)
+          return false;
+        if((lhs.term).compare(rhs.term) < 0)
+          return true;
+        else
+          return false;
+      }
+      TermStat() : collectionTime(-1), docFreq(0),  collFreq(0) {}
     };
-
+     
+    struct TermStatCmp  {
+      bool operator() (TermStat* lhs, TermStat* const rhs)  {
+        std::cout << "Calling functor\n";
+        if((lhs->term).compare(rhs->term) == 0)
+          return false;
+        if((lhs->term).compare(rhs->term) < 0)
+          return true;
+        else
+          return false;
+      } 
+    };
+    
     struct TermBase { 
       std::set<std::string> vocabulary;
       std::map<std::string, unsigned int> termDocFreq;
@@ -116,9 +139,9 @@ namespace kba {
     
     void populateVocabulary(std::vector<kba::entity::Entity*> entityList, kba::term::TermBase* termBase);
 
-    std::set<TopicStat*> topicStatSet(std::vector<kba::entity::Entity*> entitySet);    
-    std::set<TermStat*> termStatSet(std::vector<kba::entity::Entity*> entitySet);    
-    std::map<TopicTermKey*, TopicTermValue*>  topicTermMap(std::vector<kba::entity::Entity*> entitySet);    
+    std::set<TopicStat*> crtTopicStatSet(std::vector<kba::entity::Entity*> entitySet);    
+    std::set<TermStat*> crtTermStatSet(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet);    
+    std::map<TopicTermKey*, TopicTermValue*>  crtTopicTermMap(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet);    
   }
 }
 

@@ -65,7 +65,7 @@ kba::term::TermBase::TermBase(std::vector<kba::entity::Entity*> entityList) : to
   kba::term::populateVocabulary(entityList, this);
 } 
 
-std::set<kba::term::TopicStat*> kba::term::topicStatSet(std::vector<kba::entity::Entity*> entitySet) {
+std::set<kba::term::TopicStat*> kba::term::crtTopicStatSet(std::vector<kba::entity::Entity*> entitySet) {
   using namespace kba::entity;
 
   std::set<kba::term::TopicStat*> topicStatSet;
@@ -78,24 +78,37 @@ std::set<kba::term::TopicStat*> kba::term::topicStatSet(std::vector<kba::entity:
     else {
       delete topicStat;
     } 
+    for(std::vector<boost::shared_ptr<Entity> >::iterator relIt = ((*entIt)->relatedEntities).begin(); relIt != ((*entIt)->relatedEntities).end(); ++relIt) {
+      Entity* ent = (*relIt).get();
+      TopicStat* topicStat = new TopicStat();
+      topicStat->topic = ent->wikiURL;
+      if(topicStatSet.find(topicStat) == topicStatSet.end())
+        topicStatSet.insert(topicStat);
+      else {
+        delete topicStat;
+      } 
+    }
   }
   return topicStatSet;
 }
 
-std::set<kba::term::TermStat*> kba::term::termStatSet(std::vector<kba::entity::Entity*> entitySet) {
+std::set<kba::term::TermStat*> kba::term::crtTermStatSet(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet) {
   using namespace kba::entity;
   using namespace std;
   std::set<kba::term::TermStat*> termStatSet;
+  std::set<std::string> termsFound;
 
   for(std::vector<Entity*>::iterator entIt = entitySet.begin(); entIt != entitySet.end(); ++entIt) {
      Entity* entity = *entIt;
     for(set<string>::iterator tokIt = (entity->tokenSet).begin(); tokIt != (entity->tokenSet).end(); ++tokIt) {
       TermStat* termStat = new TermStat();
       termStat->term = *tokIt;
-      if(termStatSet.find(termStat) == termStatSet.end())
+      if(stopSet.find(termStat->term) == stopSet.end() && termsFound.find(termStat->term) == termsFound.end()) {
         termStatSet.insert(termStat);
+        termsFound.insert(termStat->term);
+      } 
       else
-        delete termStat;
+         delete termStat;
     } 
 
     for(vector<boost::shared_ptr<Entity> >::iterator relIt = (entity->relatedEntities).begin(); relIt != (entity->relatedEntities).end(); ++relIt) {
@@ -103,8 +116,10 @@ std::set<kba::term::TermStat*> kba::term::termStatSet(std::vector<kba::entity::E
       for(set<string>::iterator tokIt = (ent->tokenSet).begin(); tokIt != (ent->tokenSet).end(); ++tokIt) {
         TermStat* termStat = new TermStat();
         termStat->term = *tokIt;
-        if(termStatSet.find(termStat) == termStatSet.end())
+        if(stopSet.find(termStat->term) == stopSet.end() && termsFound.find(termStat->term) == termsFound.end()) {
           termStatSet.insert(termStat);
+          termsFound.insert(termStat->term);
+	}
         else
           delete termStat;
         
@@ -114,7 +129,7 @@ std::set<kba::term::TermStat*> kba::term::termStatSet(std::vector<kba::entity::E
   return termStatSet;
 }
 
-std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::topicTermMap(std::vector<kba::entity::Entity*> entitySet) {
+std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::crtTopicTermMap(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet) {
   using namespace kba::entity;
   using namespace kba::term;
   using namespace std;
@@ -127,7 +142,7 @@ std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::topicT
       termKey->topic = entity->wikiURL;
       termKey->term = *tokIt;
       TopicTermValue* termValue = new TopicTermValue();
-      if(topicTermMap.find(termKey) == topicTermMap.end()) {
+      if(stopSet.find(*tokIt) == stopSet.end() && topicTermMap.find(termKey) == topicTermMap.end()) {
         topicTermMap.insert(std::pair<TopicTermKey*,TopicTermValue*>(termKey, termValue));
       }
       else {
@@ -143,7 +158,7 @@ std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::topicT
          termKey->topic = ent->wikiURL;
          termKey->term = *tokIt;
          TopicTermValue* termValue = new TopicTermValue();
-         if(topicTermMap.find(termKey) == topicTermMap.end()) {
+         if(stopSet.find(*tokIt) == stopSet.end() && topicTermMap.find(termKey) == topicTermMap.end()) {
            topicTermMap.insert(std::pair<TopicTermKey*,TopicTermValue*>(termKey, termValue));
          }
          else {
@@ -156,3 +171,4 @@ std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::topicT
  
   return topicTermMap;
 }
+ 
