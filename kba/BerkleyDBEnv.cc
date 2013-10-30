@@ -163,78 +163,10 @@ void kba::berkley::CorpusDb::addTopicStat(kba::term::TopicStat* topicStat) {
 }
 
 void kba::berkley::CorpusDb::addEvaluationData(kba::term::EvaluationData* evalData) {
-  size_t keySize = (evalData->stream_id).size() + (evalData->topic).size() + 2;
-  char* keyData = (char*) malloc(keySize);
-  memset(keyData,0, keySize);
-  memcpy(keyData,(evalData->stream_id).c_str(),  (evalData->stream_id).size() + 1);
-  memcpy(keyData + (evalData->stream_id).size() + 1 ,(evalData->topic).c_str(),  (evalData->topic).size() + 1);
-
-  DBT dbKey;
-  memset(&dbKey, 0, sizeof(DBT));
-  dbKey.data = keyData;
-  dbKey.size = keySize;
-  
-  size_t dirSize = (evalData->directory).size() + 1;
-  size_t assessorSize = (evalData->assessorId).size() + 1;
-  size_t valueSize = dirSize + assessorSize + sizeof(int16_t) + sizeof(u_int16_t);
-  char* valueData = new char[valueSize];
-  memset(valueData, 0, valueSize);
-  memcpy(valueData, &(evalData->rating), sizeof(int16_t));
-  memcpy(valueData+sizeof(int16_t), &(evalData->cleanVisibleSize), sizeof(u_int16_t));
-  memcpy(valueData+sizeof(int16_t)+sizeof(u_int16_t), (evalData->directory).c_str(), dirSize);
-  memcpy(valueData+sizeof(int16_t)+sizeof(u_int16_t)+dirSize, (evalData->assessorId).c_str(), assessorSize);
-
-  DBT dbValue;
-  memset(&dbValue, 0, sizeof(DBT)); 
-  dbValue.data = valueData;
-  dbValue.size = valueSize;
-
-  kba::berkley::CorpusDb::_evalDb->put(_evalDb, NULL, &dbKey, &dbValue, 0);
-
-  delete keyData;
-  delete valueData;
+ 
 }
 
 std::vector<boost::shared_ptr<kba::term::EvaluationData> > kba::berkley::CorpusDb::getEvaluationData(std::string stream_id, std::string topic) {
-  using namespace kba::term;
-  std::vector<boost::shared_ptr<kba::term::EvaluationData> > judgementData;
-
-  size_t keySize = stream_id.size() + topic.size() + 2;
-  char* keyData = (char*) malloc(keySize);
-  memset(keyData,0, keySize);
-  memcpy(keyData, stream_id.c_str(),  stream_id.size() + 1);
-  memcpy(keyData + stream_id.size() + 1 , topic.c_str(),  topic.size() + 1);
-
-  DBT dbKey;
-  memset(&dbKey, 0, sizeof(DBT)); 
-  dbKey.data = keyData;
-  dbKey.size = keySize;
-  
-  DBT dbValue;
-  memset(&dbValue, 0, sizeof(DBT));
-  dbValue.flags = 0;
-
-  DBC *cursor = 0;
-  _evalDb->cursor(_evalDb, NULL,  &cursor, 0);
-  int ret = cursor->get(cursor, &dbKey, &dbValue, DB_SET);
-  while(ret != DB_NOTFOUND) {
-    boost::shared_ptr<kba::term::EvaluationData> eval(new kba::term::EvaluationData());
-    EvaluationData* edata = eval.get();
-    edata->stream_id =  stream_id;
-    edata->topic = topic;
-    char* data = (char *)(dbValue.data);
-    edata->rating = *((int16_t *)data);
-    data = data + sizeof(int16_t);
-    edata->cleanVisibleSize = (*(u_int16_t*)data);
-    data = data + sizeof(u_int16_t);
-    std::string directory(data); 
-    edata->directory = directory;
-    judgementData.push_back(eval);
-    ret = cursor->get(cursor, &dbKey, &dbValue, DB_NEXT_DUP);
-  }
-  if(cursor != 0)
-    cursor->close(cursor);
-  
-  delete keyData;  
-  return judgementData;
+  std::vector<boost::shared_ptr<kba::term::EvaluationData> >ev;
+  return ev;
 }

@@ -41,7 +41,7 @@ void kba::StreamThread::parseFile(int cutOffScore) {
   std::vector<kba::dump::ResultRow> rows;
 
   while((streamItem = tdextractor->nextStreamItem()) != 0) {
-    kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createParsedStream(streamItem,_stopSet);
+    kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createLightParsedStream(streamItem,_stopSet);
  
     std::string title = streamcorpus::utils::getTitle(*streamItem);
   
@@ -51,16 +51,11 @@ void kba::StreamThread::parseFile(int cutOffScore) {
     //std::cout << "id :: "<< id << "\n";
     std::vector<kba::entity::Entity*> entities = kba::StreamThread::_scorer->getEntityList();
     for(std::vector<kba::entity::Entity*>::iterator entIt = entities.begin(); entIt != entities.end(); entIt++) {
-      
         
       kba::entity::Entity* entity = *entIt;
 
       int score = (int) (kba::StreamThread::_scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not
       
-      if(score < 0) {
-	score = kba::StreamThread::_scorer->score(streamItem, entity, 1000); // we can remove this altogether.
-      }
-
       if (score >= cutOffScore) {
         std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
         kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
@@ -68,11 +63,12 @@ void kba::StreamThread::parseFile(int cutOffScore) {
       }
     }
 
+    /**
     if(StreamThread::_termBase != 0 && StreamThread::_lockMutex != 0) {
       boost::lock_guard<boost::mutex> lockTermBase(*_lockMutex); 
       kba::term::updateTermBase(parsedStream, StreamThread::_termBase);
     }
-
+    */
     delete parsedStream; 
   }
 

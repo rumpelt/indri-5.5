@@ -39,7 +39,7 @@ float kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedS
   if(score > mainMaxScore)
     score = mainMaxScore;
 
-
+  /**
   for(int idx=0; idx < relatedEntities.size(); idx++) {
     kba::entity::Entity* relatedEnt = relatedEntities[idx].get();
     float step = scorePerEntity / (relatedEnt->labelTokens).size();    
@@ -50,7 +50,7 @@ float kba::scorer::RelatedEntityScorer::score(kba::stream::ParsedStream* parsedS
         score = score + step;
     }
   }
-
+  */
   return score > (float)maxScore  ? (float)maxScore : score;
 }
 

@@ -36,27 +36,34 @@ bool compareString(std::string firstStr, std::string secondStr) {
   return false;
 }
 
-void storeEvaluationData(std::string trgFile, std::string envBaseDir) {
+void storeEvaluationData(std::string trgFile) {
   std::ifstream trgStream(trgFile.c_str());
   std::string dbName = "eval.db"; 
-  kba::berkley::CorpusDb* db= new kba::berkley::CorpusDb(envBaseDir, dbName);
-  db->init(envBaseDir, dbName);
+  StatDb* st = new StatDb();
+  st->crtEvalDb("/usa/arao/test/eval.db", false);
+
   std::string row;
-  while(std::getline(trgStream, row)) {
+    while(std::getline(trgStream, row)) {
     if(row.find('#') == 0)
       continue;
     std::vector<std::string> rowTokens = Tokenize::split(row);
     
     kba::term::EvaluationData* evalData = new kba::term::EvaluationData();
-    evalData->assessorId  = rowTokens.at(1);
-    evalData->stream_id = rowTokens.at(2);
+
+    std::string stream_id = rowTokens.at(2);
+    evalData->timeStamp =strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
+    evalData->docId = stream_id.substr(stream_id.find("-") +1);
+    std::cout << "eval data time " << evalData->timeStamp <<  " doc id "<< evalData->docId << "\n"; 
     evalData->topic = rowTokens.at(3);
     evalData->rating = strtol(rowTokens.at(5).c_str(), NULL, 10);
     evalData->directory = rowTokens.at(7);
     evalData->cleanVisibleSize = strtol(rowTokens.at(11).c_str(), NULL, 10);
-    db->addEvaluationData(evalData);
+    st->wrtEvalSt(evalData);
+    delete evalData;
   }
-  delete db;
+
+  delete st;
+  st = new StatDb();
 }
 
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
@@ -113,28 +120,33 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, stopSet);
   std::map<TopicTermKey*, TopicTermValue*> topicTermMap = kba::term::crtTopicTermMap(ENTITY_SET, stopSet);
 
-  //  kba::berkley::CorpusDb* corpusDb = new kba::berkley::CorpusDb(envBaseDir, false); 
+
   std::cout << "TermSet size : " << termStatSet.size() << " topicTerm Size " << topicTermMap.size() << "\n";
   StatDb* stDb = new StatDb();
 
-  stDb->crtTrmDb("/usa/arao/test/term.db", true);
-  stDb->crtCrpDb("/usa/arao/test/corpus.db", true);
-
+  stDb->crtTrmDb("/usa/arao/test/eff_imp_term-o.db", false);
+  stDb->crtCrpDb("/usa/arao/test/eff_imp_corpus-o.db", false);
+  
+  std::unordered_set<std::string> termsToFetch;
+  for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt  ) {
+    termsToFetch.insert((*termIt)->term);
+  } 
 
   std::vector<std::string> dirBunch;
   std::sort(dirList.begin(), dirList.end(), compareString); 
   std::string prevDayDate = (dirList.at(0)).substr(0, dirList.at(0).rfind('-'));
-  std::cout << "Starting with date " << prevDayDate << "\n";
+  std::unordered_set<std::string> nullStopSet;
+  kba::StreamIndex* streamIndex = new kba::StreamIndex(topicTermMap, corpusStat, topicStatSet, termStatSet, stDb, nullStopSet, termsToFetch);
+
   for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
     std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
-    //std::cout << "Processing day "<< dayDate << "\n";
-    if(dayDate.compare(prevDayDate)) {
-      std::cout << "Dir size "<< dirBunch.size() << "\n";
-      kba::StreamIndex* streamIndex = new kba::StreamIndex(dirBunch, topicTermMap, corpusStat, topicStatSet, termStatSet, stDb, stopSet);
-      streamIndex->processDir();
+
+    if(dayDate.compare(prevDayDate) != 0) {
+      streamIndex->setCollectionTime(kba::time::convertDateToTime(prevDayDate));
+      streamIndex->processDir(dirBunch);
+      streamIndex->reset();
       dirBunch.clear();
-      Logger::LOG_MSG("KbProcessing.cc", "termStatIndexer", "processed dirs :"+prevDayDate);  
-      delete streamIndex;
+      Logger::LOG_MSG("KbProcessing.cc", "termStatIndexer", "processed dirs :"+prevDayDate); 
     }
     dirBunch.push_back(pathToProcess+"/"+*dirIt);
     prevDayDate = dayDate;
@@ -142,16 +154,18 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   }
 
   if(dirBunch.size() > 0) {
-    kba::StreamIndex* streamIndex = new kba::StreamIndex(dirBunch, topicTermMap, corpusStat, topicStatSet, termStatSet, stDb, stopSet);
-    streamIndex->processDir();
+    streamIndex->setCollectionTime(kba::time::convertDateToTime(prevDayDate));
+    streamIndex->processDir(dirBunch);
+    streamIndex->reset();
+    Logger::LOG_MSG("KbProcessing.cc", "termStatIndexer", "processed dirs :"+prevDayDate); 
     dirBunch.clear();
     delete streamIndex;
   }
-
+  delete streamIndex;
   delete stDb;
 }
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
-  int cutOffScore=600; 
+  int cutOffScore=200; 
   std::map<std::string, std::string> repoMap;
   repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
   repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
@@ -168,8 +182,14 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
     
-    if((entity->label).size() > 0)
+    if((entity->label).size() > 0) {
+      std::cout << "Entity :" << entity->label << " ";
+      for(std::vector<std::string>::iterator it = (entity->labelTokens).begin(); it != (entity->labelTokens).end(); ++it) {
+	std::cout << *it << " ";
+      }
+      std::cout << "\n";
       filterSet.push_back(entity);
+    }
     else
       delete entity;
   } 
@@ -182,8 +202,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
  
   //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-  //kba::scorer::RelatedEntityScorer scorer(ENTITY_SET, repoMap);
-  kba::scorer::BM25Scorer scorer(ENTITY_SET, termBase);
+  kba::scorer::RelatedEntityScorer scorer(ENTITY_SET, repoMap);
+  //kba::scorer::BM25Scorer scorer(ENTITY_SET, termBase);
   // kba::dump::writeHeader(fileToDump);
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
@@ -193,7 +213,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
     if(!fileExtension.compare(".xz")) {
       kba::StreamThread st(pathToProcess, dumpStream, &scorer, 0, stopSet);
-      st.setTermBase(termBase.get());
+      //      st.setTermBase(termBase.get());
       st.parseFile(cutOffScore);
     }
   }
@@ -229,11 +249,8 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
         std::string fileExtension = fileName.substr(fileName.size() - 3);
       
         if(!fileExtension.compare(".xz")) {
-        
-	  //    std::cout << "process : " << fileName << "\n";   
           kba::StreamThread st(fileName, dumpStream, &scorer, lockMutex, stopSet);
-          st.setTermBase(termBase.get());
-	
+	  //  st.setTermBase(termBase.get());
 	  //  st.parseFile();
 	  boost::thread *streamThread = new boost::thread(st, cutOffScore); 
           
@@ -311,8 +328,8 @@ int main(int argc, char *argv[]){
   assert(logFile.size() > 0);  
   Logger::LOGGER(logFile);
   
-  if(trainingFile.size() > 0  && berkleyDbDir.size() > 0) {
-    storeEvaluationData(trainingFile, berkleyDbDir);
+  if(trainingFile.size() > 0) {
+    storeEvaluationData(trainingFile);
   }
 
   STOP_SET  = Tokenize::getStopSet(stopFile);

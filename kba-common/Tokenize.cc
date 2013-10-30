@@ -16,16 +16,6 @@ std::unordered_set<std::string> Tokenize::getStopSet(std::string& stopFile) {
   return stopwords;
 }
 
-std::vector<std::string> Tokenize::toLower(std::vector<std::string>& inVector) {
-  std::vector<std::string> lowerVector;
-  for(std::vector<std::string>::iterator vecIt = inVector.begin(); vecIt != inVector.end(); vecIt++) {
-    std::string lowerString = *vecIt;
-    
-    std::transform(lowerString.begin(), lowerString.end(), lowerString.begin(), ::tolower); 
-    lowerVector.push_back(lowerString);
-  }
-  return lowerVector;
-}
 
 std::vector<std::string> Tokenize::ngrams(std::vector<std::string>& inVector, int ngram) {
   std::vector<std::string> gramVector;
@@ -58,18 +48,29 @@ std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inp
   return filterWords;
 }
 
-std::vector<std::string> Tokenize::filterShortWords(std::vector<std::string>& inputTokens, int lengthToReject) 
-{
-  std::vector<std::string> filterWords;
-  for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
-    std::string token = *tokIt;
-    if(token.size() > lengthToReject) {
-      filterWords.push_back(token);
+
+std::vector<std::string> Tokenize::split(std::string& inputSource) {
+  std::vector<std::string> tokens;
+  char phrase[4096];
+  int phraseIndex=0;
+  for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); charIt++) {
+    char thisChar = *charIt;
+    if(!isspace(thisChar)) {
+      phrase[phraseIndex] = thisChar;
+      phraseIndex+=1;
+    }
+    else {
+      std::string content((const char*) &phrase, phraseIndex);
+      tokens.push_back(content);
+      phraseIndex = 0;
     }
   }
-  return filterWords;
+  if(phraseIndex > 0) {
+    std::string content((const char*) &phrase, phraseIndex);
+    tokens.push_back(content);
+  }
+  return tokens;
 }
-
 
 std::vector<std::string> Tokenize::tokenize(std::string& inputSource) {
   std::vector<std::string> tokens;
@@ -133,7 +134,7 @@ std::vector<std::string> Tokenize::getPhrases(std::string& inputSource) {
   boost::tokenizer<> tokens(inputSource);
   std::vector<std::string> phrases;
   bool prevCaseUpper = false;
-  for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {p
+  for(boost::tokenizer<>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
     std::string token = *tokIt;
     bool upperCase = isupper(token[0]);
     if(!upperCase || !prevCaseUpper) {

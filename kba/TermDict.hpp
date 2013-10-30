@@ -121,12 +121,12 @@ namespace kba {
      * Duplicate data should be allowed
      */
     struct EvaluationData {
-      std::string stream_id; // first part of primary key
-      std::string topic; // second part of assessor key
+      time_t timeStamp; // time stamp part of the stream-id
+      std::string docId; // doc id part of the stream-id. Combinatin of the above two form the stream-id      
+      std::string topic; 
       int16_t rating;  
-      u_int16_t cleanVisibleSize;     
+      int cleanVisibleSize;     
       std::string directory; 
-      std::string assessorId;  
       EvaluationData() : rating(-2), cleanVisibleSize(0) {}
     };
 

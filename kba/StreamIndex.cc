@@ -11,13 +11,10 @@
 time_t kba::StreamIndex::secondsInDay = (3600 * 24);
 int16_t kba::StreamIndex::ratingAcceptance = 2;
 
-kba::StreamIndex::StreamIndex(std::vector<std::string> dirsToProcess , std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet) : 
-  _docSize(0), _numDoc(0), _dirsToProcess(dirsToProcess), _termTopicMap(termTopicMap), _corpusStat(corpusStat), _topicStatSet(topicStat), _termStatSet(termStat), _stDb(stDb), _stopSet(stopSet) 
+kba::StreamIndex::StreamIndex(std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet,
+   std::unordered_set<std::string> termsToFetch) : 
+  _docSize(0), _numDoc(0),  _termTopicMap(termTopicMap), _corpusStat(corpusStat), _topicStatSet(topicStat), _termStatSet(termStat), _stDb(stDb), _stopSet(stopSet), _termsToFetch(termsToFetch) 
   {
-    std::string day =  dirsToProcess.at(0).substr(dirsToProcess.at(0).rfind("/") + 1);
-    day = day.substr(0, day.rfind("-"));
-    _collectionTime =  kba::time::convertDateToTime(day);  
-    assert(_collectionTime > 0);
   }
 
 
@@ -46,7 +43,7 @@ void kba::StreamIndex::processStream(streamcorpus::StreamItem* streamItem ) {
   std::map<std::string, int16_t> topicStreamRating;
 
   bool judgedFlag = false;
-  kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem, _stopSet);
+  kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem, _stopSet, _termsToFetch);
 
   for(std::set<kba::term::TopicStat*>::iterator topicIt = _topicStatSet.begin(); topicIt != _topicStatSet.end(); ++topicIt) {
    
@@ -109,7 +106,7 @@ void kba::StreamIndex::processStreamBasicStat(streamcorpus::StreamItem* streamIt
   using namespace kba::term;
 
 
-  kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem, _stopSet);
+  kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem, _stopSet, _termsToFetch);
   
 
   for(std::set<TermStat*>::iterator termIt = _termStatSet.begin(); termIt != _termStatSet.end(); ++termIt  ) {
@@ -193,9 +190,9 @@ void kba::StreamIndex::processFile(std::string fileName) {
   delete tdextractor;
 }
 
-void kba::StreamIndex::processDir() {
+void kba::StreamIndex::processDir(std::vector<std::string>& dirsToProcess) {
 
- for(std::vector<std::string>::iterator dirIt= StreamIndex::_dirsToProcess.begin(); dirIt != StreamIndex::_dirsToProcess.end(); ++dirIt) {
+ for(std::vector<std::string>::iterator dirIt= dirsToProcess.begin(); dirIt != dirsToProcess.end(); ++dirIt) {
     std::string pathToProcess = *dirIt;
     indri::file::FileTreeIterator files(pathToProcess);
     for(; files != indri::file::FileTreeIterator::end() ;files++) {
@@ -203,4 +200,15 @@ void kba::StreamIndex::processDir() {
     }
   }
   StreamIndex::flushBasicStatToDb();
+}
+
+void kba::StreamIndex::reset() {
+  _docSize = 0;
+  _numDoc = 0;
+  _collectionTime = -1;
+}
+
+void kba::StreamIndex::setCollectionTime(time_t cTime) {
+  _collectionTime = cTime;
+  assert(_collectionTime > 0);
 }

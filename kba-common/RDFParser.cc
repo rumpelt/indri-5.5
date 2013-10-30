@@ -94,6 +94,7 @@ void RDFParser::initRDFParser(std::string& storageName, std::string& dirToStore,
     return;
   }
 
+
   RDFParser::_model = librdf_new_model(RDFParser::_world,RDFParser::_storage, NULL);
   if(!RDFParser::_model) {
     fprintf(stderr, "%s: Failed to create model\n", dirToStore.c_str());
@@ -220,6 +221,8 @@ RDFParser::RDFParser(std::string parserName, std::string hashType) {
   _hashType =  hashType;
 }
 
+
+
 RDFParser::RDFParser(std::string dirToStore, std::string repoName, std::string parserName, std::string hashType, bool newRepository) : _world(0), _storage(0),_parser(0), _model(0){
   RDFParser::_world = librdf_new_world();
   librdf_world_open(RDFParser::_world);
@@ -232,7 +235,7 @@ RDFParser::~RDFParser() {
     librdf_free_storage(RDFParser::_storage);
   if(!_parser)
     librdf_free_parser(RDFParser::_parser);
-  if(! _model)
+   if(! _model)
     librdf_free_model(RDFParser::_model);
   if (!_world)
     librdf_free_world(RDFParser::_world);

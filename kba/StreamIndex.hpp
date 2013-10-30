@@ -22,7 +22,6 @@ namespace kba {
   private:
     unsigned int _docSize;
     unsigned int _numDoc;
-    std::vector<std::string> _dirsToProcess;
 
     std::map<TopicTermKey*, TopicTermValue*> _termTopicMap;
     kba::term::CorpusStat* _corpusStat;
@@ -32,7 +31,8 @@ namespace kba {
     StatDb* _stDb;
     time_t _collectionTime;
     std::unordered_set<std::string> _stopSet;    
-
+    std::unordered_set<std::string> _termsToFetch;
+    
     void assertCollectionTime();    
     int16_t getRating(streamcorpus::StreamItem* item, std::string topic);
     void processStream(streamcorpus::StreamItem* streamItem);
@@ -49,10 +49,14 @@ namespace kba {
     static time_t secondsInDay;
     static int16_t ratingAcceptance;
  
-    StreamIndex(std::vector<std::string> dirsToProcess , std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet);
+    StreamIndex(std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet, std::unordered_set<std::string> _termsToFetch);
     
-    void processDir();
- 
+    void processDir(std::vector<std::string>& dirsToProcess);
+    /**
+     * Needed to avoid construction and destruction of the Object
+     */
+    void reset();
+    void setCollectionTime(time_t cTime); 
   };
 }
 

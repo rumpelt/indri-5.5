@@ -56,7 +56,7 @@ kba::stream::ParsedStream* streamcorpus::utils::createParsedStream(streamcorpus:
   return parsedStream;
 }
 
-kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopwords) {
+kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopwords, std::unordered_set<std::string>& termsToFetch) {
   std::string title = streamcorpus::utils::getTitle(*streamItem);
   std::string anchor = streamcorpus::utils::getAnchor(*streamItem);
   std::string body = (streamItem->body).clean_visible;
@@ -66,7 +66,10 @@ kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(stream
   tokens = Tokenize::filterStopWords(tokens, stopwords);
   kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
   for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
+  
     std::string token = *tokIt;
+    if(termsToFetch.find(token) == termsToFetch.end()) 
+      continue;
     try {
       int value = (parsedStream->tokenFreq).at(token);
       value = value + 1;

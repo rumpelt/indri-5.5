@@ -110,7 +110,7 @@ std::set<kba::term::TermStat*> kba::term::crtTermStatSet(std::vector<kba::entity
       else
          delete termStat;
     } 
-
+    /*
     for(vector<boost::shared_ptr<Entity> >::iterator relIt = (entity->relatedEntities).begin(); relIt != (entity->relatedEntities).end(); ++relIt) {
       Entity* ent = (*relIt).get();
       for(set<string>::iterator tokIt = (ent->tokenSet).begin(); tokIt != (ent->tokenSet).end(); ++tokIt) {
@@ -125,6 +125,7 @@ std::set<kba::term::TermStat*> kba::term::crtTermStatSet(std::vector<kba::entity
         
       } 
     }
+    */
   }
   return termStatSet;
 }
@@ -150,7 +151,7 @@ std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::crtTop
         delete termValue;
       }
     } 
-
+    /*
     for(vector<boost::shared_ptr<Entity> >::iterator relIt = (entity->relatedEntities).begin(); relIt != (entity->relatedEntities).end(); ++relIt) {
       Entity* ent = (*relIt).get();
       for(set<string>::iterator tokIt = (ent->tokenSet).begin(); tokIt != (ent->tokenSet).end(); ++tokIt) {
@@ -167,6 +168,7 @@ std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*> kba::term::crtTop
          } 
        } 
     }
+    */
   } 
  
   return topicTermMap;

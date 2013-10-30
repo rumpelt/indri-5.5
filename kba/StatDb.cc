@@ -3,7 +3,7 @@
 #include "Logging.hpp"
 using namespace std;
 
-StatDb::StatDb() : _trmFd(-1), _crpFd(-1), _tpcFd(-1), _trmTpcFd(-1) {
+StatDb::StatDb() : _trmFd(-1), _crpFd(-1), _tpcFd(-1), _trmTpcFd(-1), _evalFd(-1) {
   _pgSz = getpagesize();
 }
 
@@ -18,6 +18,13 @@ StatDb::~StatDb() {
     close(_crpFd);
     _crpFd = -1;
   }
+
+  if(_evalFd > 0) {
+    Logger::LOG_MSG("StatDb.cc", "~StatDb", "closing eval db");  
+    close(_evalFd);
+    _evalFd = -1;
+  }
+
   if(_tpcFd > 0) {
     Logger::LOG_MSG("StatDb.cc", "~StatDb", "closing topic db");  
     close(_tpcFd);
@@ -40,8 +47,17 @@ void StatDb::crtTrmDb(string fName, bool rdOnly) {
   } 
   
 }
+void StatDb::crtEvalDb(string fName, bool rdOnly) {
+  if (rdOnly)
+    _evalFd = open(fName.c_str(), O_RDONLY, S_IRUSR | S_IWUSR);  
+  else
+    _evalFd = open(fName.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+  if(_evalFd < 0) {
+    std::cerr << "File creation failed for " << fName << " status " << _evalFd;
+  }
+}
 
-void StatDb::crtCrpDb(string fName, bool rdOnly) {
+void   StatDb::crtCrpDb(string fName, bool rdOnly) {
   if(rdOnly)
     _crpFd = open(fName.c_str(), O_RDONLY, S_IRUSR | S_IWUSR);  
   else
@@ -101,6 +117,87 @@ void StatDb::wrtCrpSt(CorpusStat* crpSt) {
   }
 }
 
+void StatDb::wrtEvalSt(EvaluationData* evSt) {
+  if(_evalFd >0) {
+    size_t dtSize = sizeof(time_t) + (evSt->docId).size()+1 + (evSt->topic).size()+ 1+ sizeof(int16_t) + sizeof(int) + (evSt->directory).size() + 1;
+    char* pkDt = new char[dtSize + sizeof(size_t)];
+    memset(pkDt, 0, dtSize + sizeof(size_t));
+    memcpy(pkDt, &dtSize, sizeof(size_t));
+    memcpy(pkDt+sizeof(size_t), &(evSt->timeStamp), sizeof(time_t));
+    memcpy(pkDt+sizeof(size_t)+sizeof(time_t), (evSt->docId).c_str(), (evSt->docId).size() +1);
+    memcpy(pkDt+sizeof(size_t)+sizeof(time_t) + (evSt->docId).size() +1, (evSt->topic).c_str(), (evSt->topic).size() +1);
+    memcpy(pkDt+sizeof(size_t)+sizeof(time_t) +(evSt->docId).size() +1 +(evSt->topic).size() +1, &(evSt->rating), sizeof(int16_t));
+    memcpy(pkDt+sizeof(size_t)+sizeof(time_t)+ (evSt->docId).size() +1 +(evSt->topic).size() +1 + sizeof(int16_t), &(evSt->cleanVisibleSize), sizeof(int));
+    memcpy(pkDt+sizeof(size_t)+sizeof(time_t)+ (evSt->docId).size() +1 + (evSt->topic).size() +1 + sizeof(int16_t) + sizeof(int),
+	   (evSt->directory).c_str(), (evSt->directory).size() +1);
+    int status = write(_evalFd, pkDt, dtSize+sizeof(size_t));
+    if(status < 0)
+      Logger::LOG_MSG("StatDb.cc", "wrtEvalSt", "Could Not write the evaluation data");
+    delete pkDt;
+  }
+  else
+    Logger::LOG_MSG("StatDb.cc", "wrtEvalSt", "Eval db not open");
+}
+
+std::vector<boost::shared_ptr<EvaluationData> > StatDb::getEvalData(std::string stream_id, bool seekStart, bool rstOffset) {
+  off_t offset;
+
+  if(seekStart)
+    offset = lseek(_evalFd, 0, SEEK_SET);
+  
+  if(rstOffset)
+    offset  = lseek(_evalFd, 0, SEEK_CUR); 
+  
+  std::vector<boost::shared_ptr<EvaluationData> > evlVec;
+  time_t timeStamp = strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
+  std::string docId = stream_id.substr(stream_id.find("-") + 1).c_str();
+  
+  
+  bool exitRd = false;
+  while(!exitRd) {
+    size_t dataSize;
+    int szRd = read(_evalFd, &dataSize, sizeof(size_t));
+    if(szRd == sizeof(size_t)) {
+      char* data = new char[dataSize];
+      char*  origData = data;
+      int dtRd = read(_evalFd, data, dataSize);
+      if (dtRd == dataSize) {
+        time_t currTm = *((time_t*)data);
+        data = data + sizeof(time_t);
+	std::string id = data;
+        data = data + id.size() + 1;
+
+        if( currTm  == timeStamp && !docId.compare(id)) {
+	  boost::shared_ptr<EvaluationData> evlDt(new EvaluationData());
+          EvaluationData* evl = evlDt.get();
+          evl->timeStamp = currTm;
+          evl->docId = id;
+          
+          evl->topic = data;
+          data = data + (evl->topic).size() + 1;  
+          evl->rating = *((int16_t*)data);
+          data = data + sizeof(int16_t);
+          evl->cleanVisibleSize = *((int*)data);
+          data = data + sizeof(int);
+          evl->directory = data;          
+          evlVec.push_back(evlDt);
+	}
+        else if(currTm > timeStamp) {
+          exitRd = true; 
+	}
+      }
+      delete origData;
+    }
+    else {
+      exitRd = true; 
+    }
+  }
+
+  if(rstOffset)
+    lseek(_evalFd, offset, SEEK_SET);
+  return evlVec;
+}
+
 boost::shared_ptr<TermStat> StatDb::rdTrmStat(const char* term, time_t cPoint, bool seekStart, bool rstOffset) {
   using namespace boost;
   boost::shared_ptr<TermStat> trmSt;
@@ -141,13 +238,16 @@ boost::shared_ptr<TermStat> StatDb::rdTrmStat(const char* term, time_t cPoint, b
 	}
         else
           exitRd = true;
-      } 
-      else 
+      }
+      else
         exitRd = true;
       delete origPtr;
+      if(rstOffset)
+        lseek(_trmFd, origOfft, SEEK_SET);
     }
-    else
+    else {
       exitRd = true;
+    }
   }
   return trmSt;
 }

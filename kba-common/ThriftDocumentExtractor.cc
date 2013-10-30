@@ -10,6 +10,7 @@ void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
   if(_file == NULL) {
     std::cout << "could not open the thrift file : " << _filename.c_str() << "\n";
   }
+
   kba::thrift::ThriftDocumentExtractor::_lzmaStream = LZMA_STREAM_INIT;  
   kba::thrift::ThriftDocumentExtractor::init_decoder(&_lzmaStream);
   
