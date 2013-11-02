@@ -18,6 +18,15 @@
 namespace kba {
   namespace term {
     
+    struct TopicTerm {
+      std::string topic;
+      std::string term; 
+      time_t collectionTime;
+      unsigned int judgedDocFreq; //  Number of judged doc containing term,  n_i term in the Robertson/Sprck Jones
+      unsigned int relevantDocFreq; // Number of the relevant documents containing term, r_i term in Robertosn/sprck Jones weigh
+      int relevantSetSize;  // Relevant set Size , Term R in the Robertson/Sprck Jone weightin, This is not unique for each of they, Every topic should have this same value.
+      TopicTerm(std::string tpc, std::string trm) : topic(tpc), term(trm),  collectionTime(-1), judgedDocFreq(0), relevantDocFreq(0), relevantSetSize(0){}
+    };
     /**
      * You will have to some marshaling   if you have to store in bdb
      */
@@ -25,38 +34,61 @@ namespace kba {
       time_t collectionTime;
       std::string term;  
       std::string topic;
+      
       TopicTermKey() : collectionTime(-1){};
-      bool operator < (const TopicTermKey& rhs) {
-        if(!term.compare(rhs.term) && !topic.compare(rhs.topic))
+      TopicTermKey(std::string term, std::string topic) : collectionTime(-1), term(term), topic(topic){};
+      friend bool operator < (const TopicTermKey& lhs, const TopicTermKey& rhs) {
+        if(!lhs.topic.compare(rhs.topic) && !lhs.term.compare(rhs.term))
           return false;
-        return true; 
+        if(lhs.topic.compare(rhs.topic) < 0)
+          return true;
+        if(lhs.term.compare(rhs.term) <0 )
+          return true;
+        return false; 
       } 
     };
          
     struct TopicTermValue {
       unsigned int judgedDocFreq; //  Number of judged doc containing term,  n_i term in the Robertson/Sprck Jones
-      unsigned int relevantDocFreq; // Number of the relevant documents containing term, r_i term in Robertosn/sprck Jones weight
-      TopicTermValue() : judgedDocFreq(0), relevantDocFreq(0) {};
+      unsigned int relevantDocFreq; // Number of the relevant documents containing term, r_i term in Robertosn/sprck Jones weigh
+      int relevantSetSize;  // Relevant set Size , Term R in the Robertson/Sprck Jone weightin, This is not unique for each of they, Every topic should have this same value.
+      TopicTermValue() : judgedDocFreq(0), relevantDocFreq(0), relevantSetSize(0) {};
     };
    
     struct TopicStat {
       time_t collectionTime;    // This is Primary key along wit the topic Name as following
       std::string topic; //  This is primary key along with above, Topic for which relevantSetSize below is provided, duplcate records should be allowed    
       int relevantSetSize;  // Relevant set Size , Term R in the Robertson/Sprck Jone weightin
+      TopicStat(std::string topic) : collectionTime(-1), topic(topic), relevantSetSize(0) {};
       TopicStat() : collectionTime(-1), relevantSetSize(0) {};
-      
-      bool operator<(const TopicStat& rhs) {
-	
-        if(topic.compare(rhs.topic) == 0)
+      friend bool operator<(const TopicStat& lhs, const TopicStat& rhs) {
+        if(lhs.topic.compare(rhs.topic) == 0)
           return false;
-        if(topic.compare(rhs.topic) < 0)
+        if(lhs.topic.compare(rhs.topic) < 0)
           return true;
         else
           return false;
       }
     };
 
-    
+    struct TermRelevance {
+      std::string term;
+      time_t collectionTime;
+      unsigned int judgedDocFreq; //  Number of judged doc containing term,  n_i term in the Robertson/Sprck Jones
+      unsigned int relevantDocFreq; // Number of the relevant documents containing term, r_i term in Robertosn/sprck Jones weight
+      TermRelevance() : collectionTime(-1), judgedDocFreq(0), relevantDocFreq(0) {};
+      TermRelevance(std::string tm) : term(tm), collectionTime(-1), judgedDocFreq(0), relevantDocFreq(0) {};
+
+      friend bool operator< (const TermRelevance& lhs, const TermRelevance& rhs)  {
+        if((lhs.term).compare(rhs.term) == 0)
+          return false;
+        if((lhs.term).compare(rhs.term) < 0)
+          return true;
+        else
+          return false;
+      }
+    };
+
     struct CorpusStat {
       time_t collectionTime;   // This should be primary key. 
       long totalDocs;
@@ -139,9 +171,11 @@ namespace kba {
     
     void populateVocabulary(std::vector<kba::entity::Entity*> entityList, kba::term::TermBase* termBase);
 
-    std::set<TopicStat*> crtTopicStatSet(std::vector<kba::entity::Entity*> entitySet);    
+    std::set<TopicStat> crtTopicStatSet(std::vector<kba::entity::Entity*> entitySet);    
     std::set<TermStat*> crtTermStatSet(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet);    
-    std::map<TopicTermKey*, TopicTermValue*>  crtTopicTermMap(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet);    
+    std::map<TopicTermKey, TopicTermValue>  crtTopicTermMap(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet);    
+
+    std::set<TopicTerm*> crtTopicTerm(std::vector<kba::entity::Entity*> entitySet);
   }
 }
 

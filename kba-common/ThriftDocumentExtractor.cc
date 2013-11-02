@@ -225,6 +225,12 @@ void kba::thrift::ThriftDocumentExtractor::close() {
     fclose(_file);
 }
 
+void kba::thrift::ThriftDocumentExtractor::reset() {
+  _thriftContent.clear();
+  kba::thrift::ThriftDocumentExtractor::close();
+  _file = 0;
+}
+
 kba::thrift::ThriftDocumentExtractor::~ThriftDocumentExtractor()
 {
   _thriftContent.clear();

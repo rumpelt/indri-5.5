@@ -23,9 +23,9 @@ namespace kba {
     unsigned int _docSize;
     unsigned int _numDoc;
 
-    std::map<TopicTermKey*, TopicTermValue*> _termTopicMap;
+    std::map<TopicTermKey, TopicTermValue> _termTopicMap;
     kba::term::CorpusStat* _corpusStat;
-    std::set<TopicStat*> _topicStatSet;
+    std::set<TopicStat> _topicStatSet;
     std::set<TermStat*> _termStatSet;
     kba::berkley::CorpusDb* _corpusDb;
     StatDb* _stDb;
@@ -47,9 +47,8 @@ namespace kba {
 
   public:
     static time_t secondsInDay;
-    static int16_t ratingAcceptance;
- 
-    StreamIndex(std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet, std::unordered_set<std::string> _termsToFetch);
+   
+    StreamIndex(std::map<TopicTermKey, TopicTermValue>& termTopicMap, CorpusStat* corpusStat, std::set<TopicStat>& topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet, std::unordered_set<std::string> _termsToFetch);
     
     void processDir(std::vector<std::string>& dirsToProcess);
     /**

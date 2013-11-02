@@ -18,6 +18,7 @@
 #include "BM25Scorer.hpp"
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
+#include "ParsedStream.hpp"
 #include "StreamIndex.hpp"
 #include <boost/thread.hpp>
 #include <time.h>
@@ -29,6 +30,7 @@ namespace cmndOp = boost::program_options;
 
 std::vector<kba::entity::Entity*> ENTITY_SET;
 std::unordered_set<std::string> STOP_SET;
+int16_t RATING_LEVEL = 2; // Just to work on vital documents
 
 bool compareString(std::string firstStr, std::string secondStr) {
   if(firstStr.compare(secondStr) < 0) 
@@ -66,6 +68,116 @@ void storeEvaluationData(std::string trgFile) {
   st = new StatDb();
 }
 
+std::set<kba::term::TopicTerm*> readTermRelevance(std::string fileName) {
+  std::ifstream tfile;
+  tfile.open(fileName, std::ifstream::in);
+  std::string topic;
+  std::string term;
+  time_t collectionTime;
+  unsigned int judgedDocFreq;
+  unsigned int relevantDocFreq;
+  int relevantSetSize;
+  std::set<kba::term::TopicTerm*> tpcTrm;
+  while((tfile >> topic >> term >> collectionTime >> judgedDocFreq >> relevantDocFreq >> relevantSetSize)) {
+    kba::term::TopicTerm* tpc = new TopicTerm(topic, term);
+    tpc->collectionTime = collectionTime;
+    tpc->judgedDocFreq = judgedDocFreq;
+    tpc->relevantDocFreq = relevantDocFreq;
+    tpc->relevantSetSize = relevantSetSize;
+    //    std::cout << tpc->topic << " " << tpc->term << " " << tpc->collectionTime << " " << tpc->relevantDocFreq << "\n";
+    tpcTrm.insert(tpc);    
+  }
+
+  tfile.close();
+  return tpcTrm;
+}
+
+std::set<kba::term::TopicTerm*>& getTermRelevance(std::vector<std::string> dirList, std::set<kba::term::TopicTerm*>& trmTpc, std::string fName) {
+  using namespace kba::term;
+  using namespace boost;
+  std::unordered_set<std::string> dummySet;
+ 
+  std::set<std::string> foundIds;
+
+  std::sort(dirList.begin(), dirList.end(), compareString); 
+  kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
+  streamcorpus::StreamItem* streamItem = 0;
+  StatDb st;
+  st.crtEvalDb("/usa/arao/test/eval.db", true);
+  std::set<std::string> docIds = st.getEvalDocIds();
+  std::cout << "Num docs " << docIds.size() << "\n";
+  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+    std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
+    std::string pathToProcess = "../help/corpus/" + *dirIt;
+    
+    indri::file::FileTreeIterator files(pathToProcess);
+    //    std::cout << "Processing dir " << pathToProcess << "\n";    
+    for(; files != indri::file::FileTreeIterator::end() ;files++) {
+      tdextractor->open(*files);
+      while((streamItem = tdextractor->nextStreamItem()) != 0) {
+        
+	std::string stream_id = streamItem->stream_id;
+        if(docIds.find(stream_id) == docIds.end() ||  foundIds.find(stream_id) != foundIds.end())
+          continue;
+
+        int dtSize = (streamItem->body).clean_visible.size();
+        if (dtSize <= 0)
+          continue;
+        
+	std::vector<shared_ptr<EvaluationData> > evDts = st.getEvalData(stream_id, false, true);     
+	//	std::cout << "Streaim id " << stream_id << " "<<evDts.size() << " " << ev->rating << "\n";   
+        if(evDts.size() <= 0)
+          continue;
+        int16_t minRating = 4;
+        time_t collectionTime  =-1;
+	std::string topic;   
+
+        for(std::vector<shared_ptr<EvaluationData> >::iterator evIt = evDts.begin(); evIt != evDts.end(); ++evIt) {
+          EvaluationData* ev = (*evIt).get();
+	  //	  std::cout << "Ev data " << ev->topic << " docsize " << ev->cleanVisibleSize << " doc size " << dtSize << " " << ev->rating <<"\n";
+          if(ev->cleanVisibleSize == dtSize) {
+            if(ev->rating  < minRating) {
+              minRating = ev->rating;
+	      collectionTime = ev->timeStamp; // actuall no need to save this all the evaluation data have same timestamp which is same as in the stream_id.
+              topic = ev->topic;
+	    }
+	  }
+	}
+
+        if(minRating >= -1 && minRating <= 2) {
+          foundIds.insert(stream_id);
+	  kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createLightParsedStream(streamItem, dummySet);
+          for(std::set<TopicTerm*>::iterator trmTpcIt = trmTpc.begin(); trmTpcIt != trmTpc.end(); ++trmTpcIt) {
+            TopicTerm* tt =  *trmTpcIt;
+	    if(!(tt->topic).compare(topic)) {
+              tt->collectionTime = collectionTime;
+              tt->relevantSetSize++;
+	      //   std::cout << "Updated releant set sie " << topic << " "  << tt->relevantSetSize  << " " <<tt->collectionTime <<"\n";
+              if((parsedStream->tokenSet).find(tt->term) != (parsedStream->tokenSet).end()) {
+                tt->judgedDocFreq += 1;
+		//              std::cout << "Updated judged doc freq " << topic << " " << tt->judgedDocFreq << "\n";
+                if(minRating >= RATING_LEVEL) 
+                  tt->relevantDocFreq += 1; 
+	      }
+	    }
+	  }
+          delete parsedStream;
+	}                  	
+      }   
+      tdextractor->reset();
+    }
+    Logger::LOG_MSG("KbaProcessing.cc","getTermRelevance", "process dir" +*dirIt);
+  }
+
+  std::ofstream relStream(fName, std::ofstream::trunc| std::ofstream::out);
+  for (std::set<TopicTerm*>::iterator termIt = trmTpc.begin(); termIt != trmTpc.end(); ++termIt) {
+    TopicTerm* tt = *termIt;
+    relStream << (tt)->topic << " " << (tt)->term << " " << tt->collectionTime  << " " << tt->judgedDocFreq << "  " << tt->relevantDocFreq << " " << tt->relevantSetSize <<"\n";
+  }
+  relStream.close();
+  delete tdextractor;  
+  return trmTpc;
+}
 void iterateOnStream(std::string& fileName, cmndOp::variables_map& cmndMap, std::string& taggerId) {
   kba::thrift::ThriftDocumentExtractor docExtractor;   
 
@@ -116,16 +228,21 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   ENTITY_SET = filterSet;
   
   kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
-  std::set<TopicStat*> topicStatSet = kba::term::crtTopicStatSet(ENTITY_SET);
-  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, stopSet);
-  std::map<TopicTermKey*, TopicTermValue*> topicTermMap = kba::term::crtTopicTermMap(ENTITY_SET, stopSet);
-
-
+  std::set<TopicStat> topicStatSet = kba::term::crtTopicStatSet(ENTITY_SET);
+  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, stopSet); // I m not free this atthe end so there is a leak
+  std::map<TopicTermKey, TopicTermValue> topicTermMap;
+  std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(ENTITY_SET);
+  
+  // topicTerm = readTermRelevance("/usa/arao/.Trash/TermRelevance.csv");
+  //  std::cout << topicTerm.size() << "\n";
+  //  std::string fname = "../help/FastTermRelevance.csv";
+  //getTermRelevance(dirList,topicTerm, fname);
+  //return;
   std::cout << "TermSet size : " << termStatSet.size() << " topicTerm Size " << topicTermMap.size() << "\n";
   StatDb* stDb = new StatDb();
 
-  stDb->crtTrmDb("/usa/arao/test/eff_imp_term-o.db", false);
-  stDb->crtCrpDb("/usa/arao/test/eff_imp_corpus-o.db", false);
+  stDb->crtTrmDb("/usa/arao/test/term.db", true);
+  stDb->crtCrpDb("/usa/arao/test/corpus.db", true);
   
   std::unordered_set<std::string> termsToFetch;
   for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt  ) {
@@ -194,6 +311,9 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       delete entity;
   } 
   
+  std::set<TopicStat> topicStatSet = kba::term::crtTopicStatSet(ENTITY_SET);
+  std::map<TopicTermKey, TopicTermValue> topicTermMap = kba::term::crtTopicTermMap(ENTITY_SET, stopSet);
+
   ENTITY_SET = filterSet;
 
   boost::shared_ptr<kba::term::TermBase> termBase(new kba::term::TermBase(ENTITY_SET));
@@ -229,7 +349,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     if(dirList.size() <= 0) 
       pathList.push_back(pathToProcess);
     else {
-      for(int index=0; index < dirList.size(); index++) {
+      for(size_t index=0; index < dirList.size(); index++) {
 	std::string subdir = dirList[index];
         pathList.push_back(pathToProcess + "/"+ subdir); 
       }
@@ -239,7 +359,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       pathToProcess = *pathIt; 
       indri::file::FileTreeIterator files(pathToProcess);
       for(; files != indri::file::FileTreeIterator::end() ;files++) {
-        if( index >= maxThreads) {
+	  if( index >= maxThreads) {
 	  threadGroup.join_all();
 	  aliveThreads.clear();
           index = 0;
@@ -348,7 +468,7 @@ int main(int argc, char *argv[]){
       RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld());
 
       std::vector< boost::shared_ptr<unsigned char> > sources = rdfquery->getSourceNodes((unsigned char*)"http://dbpedia.org/unigramtoken",(unsigned char*)(cmndMap["equery"].as<std::string>().c_str()));
-      for(int index=0; index < sources.size() ; index++) {
+      for(size_t index=0; index < sources.size() ; index++) {
         unsigned char* node  = sources[index].get();
 	std::cout << node << "\n";
       }

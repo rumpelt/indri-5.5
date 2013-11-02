@@ -139,6 +139,33 @@ void StatDb::wrtEvalSt(EvaluationData* evSt) {
     Logger::LOG_MSG("StatDb.cc", "wrtEvalSt", "Eval db not open");
 }
 
+
+std::set<std::string> StatDb::getEvalDocIds() {
+  std::set<std::string> docIds;
+  off_t offset = lseek(_evalFd,0, SEEK_SET);
+  if (offset < 0)
+    return docIds;
+  int szRd = 0;
+  size_t dataSize;
+  while((szRd= read(_evalFd, &dataSize, sizeof(size_t))) == sizeof(size_t)) {
+    char* data = new char[dataSize];
+    char*  origData = data;
+    int dtRd = read(_evalFd, data, dataSize);
+    if(dtRd == dataSize) {
+      time_t curr = *((time_t*)data);
+      char buff[20];
+      sprintf(buff,"%ld",curr);
+      std::string docId  = buff;
+      data = data + sizeof(time_t);
+      docId = docId + "-"+data;
+      docIds.insert(docId);
+    }
+    delete origData; 
+  }
+  lseek(_evalFd,0 , SEEK_SET);
+  return docIds;
+}
+
 std::vector<boost::shared_ptr<EvaluationData> > StatDb::getEvalData(std::string stream_id, bool seekStart, bool rstOffset) {
   off_t offset;
 

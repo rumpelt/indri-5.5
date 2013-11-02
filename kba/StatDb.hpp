@@ -39,6 +39,7 @@ public:
   off_t getTrmStatOffset(time_t collTm, bool seekStart);
   off_t getCrpStatOffset(time_t collTm, bool seekStart);
   std::vector<boost::shared_ptr<EvaluationData> > getEvalData(std::string stream_id, bool seekStart, bool rstOffset);
+  std::set<std::string> getEvalDocIds();
   boost::shared_ptr<kba::term::CorpusStat> rdCrpStat(time_t cPoint, bool seekStart, bool rstOffset);
 
 };

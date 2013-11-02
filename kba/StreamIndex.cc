@@ -9,9 +9,9 @@
 #include "indri/FileTreeIterator.hpp"
 
 time_t kba::StreamIndex::secondsInDay = (3600 * 24);
-int16_t kba::StreamIndex::ratingAcceptance = 2;
 
-kba::StreamIndex::StreamIndex(std::map<TopicTermKey*, TopicTermValue*> termTopicMap, CorpusStat* corpusStat, std::set<TopicStat*> topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet,
+
+kba::StreamIndex::StreamIndex(std::map<TopicTermKey, TopicTermValue>& termTopicMap, CorpusStat* corpusStat, std::set<TopicStat>& topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet,
    std::unordered_set<std::string> termsToFetch) : 
   _docSize(0), _numDoc(0),  _termTopicMap(termTopicMap), _corpusStat(corpusStat), _topicStatSet(topicStat), _termStatSet(termStat), _stDb(stDb), _stopSet(stopSet), _termsToFetch(termsToFetch) 
   {
@@ -45,21 +45,23 @@ void kba::StreamIndex::processStream(streamcorpus::StreamItem* streamItem ) {
   bool judgedFlag = false;
   kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem, _stopSet, _termsToFetch);
 
-  for(std::set<kba::term::TopicStat*>::iterator topicIt = _topicStatSet.begin(); topicIt != _topicStatSet.end(); ++topicIt) {
+  for(std::set<kba::term::TopicStat>::iterator topicIt = _topicStatSet.begin(); topicIt != _topicStatSet.end(); ++topicIt) {
    
-    TopicStat* topicStat = (*topicIt);
+    TopicStat topicStat = (*topicIt);
 
     int16_t rating = -1;
-    //StreamIndex::getRating(streamItem, topicStat->topic);
+    //StreamIndex::getRating(streamItem, topicStat.topic);
 
     if(rating >= -1 && rating <= 2)
       judgedFlag = true;
 
-    topicStreamRating.insert(std::pair<std::string, int16_t>((topicStat->topic), rating));
+    topicStreamRating.insert(std::pair<std::string, int16_t>((topicStat.topic), rating));
+    /**
     if(rating >= kba::StreamIndex::ratingAcceptance) {
-      topicStat->relevantSetSize += 1;
-      topicStat->collectionTime = kba::StreamIndex::_collectionTime;
+      topicStat.relevantSetSize += 1;
+      topicStat.collectionTime = kba::StreamIndex::_collectionTime;
     }
+    */
   }
 
   
@@ -77,22 +79,7 @@ void kba::StreamIndex::processStream(streamcorpus::StreamItem* streamItem ) {
     }
   }
 
-  for(std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*>::iterator ttkIt = _termTopicMap.begin(); ttkIt != _termTopicMap.end(); ++ttkIt) {
-    TopicTermKey* topicTermKey = (*ttkIt).first;
-    TopicTermValue* topicTermVal = (*ttkIt).second;
-    topicTermKey->collectionTime = StreamIndex::_collectionTime;
-    int16_t rating = topicStreamRating.at(topicTermKey->topic);
-
-    if((parsedStream->tokenSet).find(topicTermKey->term) != (parsedStream->tokenSet).end()) {
-      if(judgedFlag)
-        topicTermVal->judgedDocFreq += 1;
-      if(rating >= StreamIndex::ratingAcceptance) {
-        topicTermVal->relevantDocFreq += 1; 
-      }
-    }  
-  }
-
-  if(judgedFlag)
+ if(judgedFlag)
     _corpusStat->judgedSample += 1;
   _corpusStat->collectionTime = StreamIndex::_collectionTime;
   _corpusStat->totalDocs +=1;
@@ -158,7 +145,7 @@ void kba::StreamIndex::flushToDb() {
   //std::cout << "Corpus Stat "<< _corpusStat->collectionTime << " total doc " << _corpusStat->totalDocs << " Average doc " << _corpusStat->averageDocSize;
 
   StreamIndex::_stDb->wrtCrpSt(_corpusStat);
-  for(std::set<kba::term::TopicStat*>::iterator topicIt = _topicStatSet.begin(); topicIt != _topicStatSet.end(); ++topicIt) {
+  for(std::set<kba::term::TopicStat>::iterator topicIt = _topicStatSet.begin(); topicIt != _topicStatSet.end(); ++topicIt) {
     //StreamIndex::_corpusDb->addTopicStat(*topicIt);
     //   StreamIndex::_stDb->wrtCrpSt(*topicIt);
   }
@@ -168,11 +155,6 @@ void kba::StreamIndex::flushToDb() {
     StreamIndex::_stDb->wrtTrmSt(*termIt);
   }
  
-  for(std::map<kba::term::TopicTermKey*, kba::term::TopicTermValue*>::iterator ttkIt = _termTopicMap.begin(); ttkIt != _termTopicMap.end(); ++ttkIt) {
-    TopicTermKey* topicTermKey = (*ttkIt).first;
-    TopicTermValue* topicTermVal = (*ttkIt).second;
-    //    StreamIndex::_corpusDb->addTopicTerm(topicTermKey, topicTermVal);
-  }
 } 
 
 

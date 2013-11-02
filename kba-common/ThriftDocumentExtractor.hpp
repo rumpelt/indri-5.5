@@ -53,7 +53,7 @@ namespace kba
       void close();
       bool init_decoder(lzma_stream *strm); // called by open call above
       bool decompress(lzma_stream *strm);
-      
+      void reset();      
       ThriftDocumentExtractor();
       /**
        * the file must be in xz format.
