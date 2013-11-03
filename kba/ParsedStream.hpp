@@ -15,7 +15,7 @@ namespace kba {
       std::unordered_set<std::string> tokenSet;
       std::unordered_map<std::string, int> tokenFreq;
       int size;
-      ParsedStream() : size(-1) {};
+      ParsedStream(int streamSize) : size(streamSize) {};
     };
     void populateTokenFreq(kba::stream::ParsedStream* parsedStream);
     

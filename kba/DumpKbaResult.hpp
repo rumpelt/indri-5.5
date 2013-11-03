@@ -19,14 +19,14 @@ namespace kba {
       std::string slot; // To be used for the ssf runs
       std::string equivalent; // The equivalence class to be used for the SSF run.
       std::string byteRange; // The byte range to be used for the SSF run
+      std::string modelName;
       ResultRow() : teamId("udel"), systemId("CCR-ASD"),slot("NULL"), equivalent("-1"), byteRange("0-0") {};
     };
 
     //   extern std::vector<ResultRow> RESULTROWS;
     //    std::string _DUMPFILE;
     
-    ResultRow makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
-    void addToResultRows(std::vector<kba::dump::ResultRow>* rows, std::string dumpFile, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant=2, bool mention=true);
+    ResultRow makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, std::string modelName, short relevant=2, bool mention=true);
           
     void flushToDumpFile(std::vector<ResultRow>& rows, std::fstream* dumpStream);
     void writeHeader(std::string dumpFile);

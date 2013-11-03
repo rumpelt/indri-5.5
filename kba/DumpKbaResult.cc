@@ -3,7 +3,7 @@
 #include <fstream>
 
 
-kba::dump::ResultRow kba::dump::makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, short relevant, bool mention ) {
+kba::dump::ResultRow kba::dump::makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, std::string modelName, short relevant, bool mention ) {
   ResultRow resultrow;
   resultrow.streamId = streamId;
   resultrow.entityURL = entityURL;
@@ -11,16 +11,11 @@ kba::dump::ResultRow kba::dump::makeCCRResultRow(std::string streamId, std::stri
   resultrow.dateHour = dateHour;
   resultrow.mention = mention;
   resultrow.relevant = relevant;
+  resultrow.modelName = modelName;
   return resultrow;
 }
 
 
-void kba::dump::addToResultRows(std::vector<kba::dump::ResultRow>* rows, std::string fileName, std::string streamId, std::string entityURL, int score, std::string dateHour, short relevance, bool mention) {
-  ResultRow row = kba::dump::makeCCRResultRow(streamId, entityURL, score, dateHour,relevance, mention);
-
-  rows->push_back(row);
-  
-}
 /**
  * should be synchronized if you are writing multiple times.
  */
@@ -42,7 +37,7 @@ void kba::dump::flushToDumpFile(std::vector<ResultRow>& rows, std::fstream* dump
     for(std::vector<ResultRow>::iterator rowIt = rows.begin(); rowIt != rows.end(); rowIt++) {
       ResultRow row = *rowIt;
       //      std::cout << "Row id : " << row.streamId << "\n";
-      *dumpStream << row.teamId << " " << row.systemId << " " << row.streamId << " " << row.entityURL << " "<< row.score << " " << row.relevant << " " << row.mention << " " << row.dateHour << " " << row.slot << " " << row.equivalent << " " << row.byteRange << "\n";
+      *dumpStream << row.teamId << " " << row.systemId << " " << row.streamId << " " << row.entityURL << " "<< row.score << " " << row.relevant << " " << row.mention << " " << row.dateHour << " " << row.slot << " " << row.equivalent << " " << row.byteRange << " " << row.modelName <<"\n";
     }
     dumpStream->flush();
   }

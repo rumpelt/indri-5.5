@@ -27,7 +27,7 @@ namespace kba
     class ThriftDocumentExtractor {
     private:
       std::string _filename;
-      std::vector<uint8_t> _thriftContent;
+      std::vector<unsigned char> _thriftContent;
       lzma_stream _lzmaStream;
       boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>  _memoryTransport;
       boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol> _protocol;

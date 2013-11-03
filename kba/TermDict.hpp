@@ -101,7 +101,7 @@ namespace kba {
       time_t collectionTime; // this is the primary key along with the term
       std::string term;
       long docFreq; // For calculating IDF
-      long int collFreq; //Total frequency of the term in the corpus. this is greater than Id. This to calculate the colelection Term Frequency  
+      long collFreq; //Total frequency of the term in the corpus. this is greater than Id. This to calculate the colelection Term Frequency  
       bool operator() (TermStat* lhs, TermStat* const rhs)  {
         std::cout << "Calling functor\n";
         if((lhs->term).compare(rhs->term) == 0)

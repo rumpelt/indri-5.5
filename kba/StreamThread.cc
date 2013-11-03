@@ -10,8 +10,8 @@ void kba::StreamThread::operator()(int cutOffScore) {
   kba::StreamThread::parseFile(cutOffScore);
 }
 
-kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *lockMutex, std::unordered_set<std::string>& stopSet) :
-  _fileName(path), _dumpStream(dumpStream), _scorer(scorer), _lockMutex(lockMutex), _stopSet(stopSet), _termBase(0) {
+kba::StreamThread::StreamThread(std::string path, std::fstream* dumpStream, std::vector<kba::scorer::Scorer*>& scorers, boost::mutex *lockMutex, std::unordered_set<std::string>& stopSet) :
+  _fileName(path), _dumpStream(dumpStream), _scorers(scorers), _lockMutex(lockMutex), _stopSet(stopSet) {
 }
 
 /**
@@ -53,22 +53,17 @@ void kba::StreamThread::parseFile(int cutOffScore) {
     for(std::vector<kba::entity::Entity*>::iterator entIt = entities.begin(); entIt != entities.end(); entIt++) {
         
       kba::entity::Entity* entity = *entIt;
-
-      int score = (int) (kba::StreamThread::_scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not
+      for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorer.begin(); scIt != _scorer.end(); ++_scIt) {
+        int score = (int) (kba::StreamThread::_scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not
       
-      if (score >= cutOffScore) {
-        std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
-        kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour);
-        rows.push_back(row);  
+        if (score >= cutOffScore) {
+          std::string dateHour = kba::StreamThread::extractDirectoryName(StreamThread::_fileName);
+          kba::dump::ResultRow row = kba::dump::makeCCRResultRow(id, entity->wikiURL, score, dateHour, modelName);
+          rows.push_back(row);  
+        }
       }
     }
 
-    /**
-    if(StreamThread::_termBase != 0 && StreamThread::_lockMutex != 0) {
-      boost::lock_guard<boost::mutex> lockTermBase(*_lockMutex); 
-      kba::term::updateTermBase(parsedStream, StreamThread::_termBase);
-    }
-    */
     delete parsedStream; 
   }
 
@@ -84,7 +79,7 @@ void kba::StreamThread::parseFile(int cutOffScore) {
   
 }
 
-kba::StreamThread::StreamThread() : _scorer(0), _termBase(0){
+kba::StreamThread::StreamThread() : _scorer(0){
 }
 
 

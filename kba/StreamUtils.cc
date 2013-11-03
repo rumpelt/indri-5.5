@@ -37,7 +37,7 @@ kba::stream::ParsedStream* streamcorpus::utils::createParsedStream(streamcorpus:
   std::vector<std::string> tokens = Tokenize::tokenize(fullContent);
   tokens = Tokenize::toLower(tokens); 
   tokens = Tokenize::filterStopWords(tokens, stopwords);
-  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
+  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream(tokens.size());
   for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
     std::string token = *tokIt;
     (parsedStream->tokenSet).insert(token);
@@ -64,7 +64,7 @@ kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(stream
   std::vector<std::string> tokens = Tokenize::tokenize(fullContent);
   tokens = Tokenize::toLower(tokens); 
   tokens = Tokenize::filterStopWords(tokens, stopwords);
-  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
+  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream(tokens.size());
   for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
   
     std::string token = *tokIt;
@@ -80,7 +80,7 @@ kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(stream
       (parsedStream->tokenFreq).insert(std::pair<std::string, int>(token, 1));
     }
   }
-  parsedStream->size = (parsedStream->tokens).size();
+  
   return parsedStream;
 }
 
@@ -93,7 +93,7 @@ kba::stream::ParsedStream* streamcorpus::utils::createLightParsedStream(streamco
   std::vector<std::string> tokens = Tokenize::tokenize(fullContent);
   tokens = Tokenize::toLower(tokens); 
   tokens = Tokenize::filterStopWords(tokens, stopwords);
-  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
+  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream(tokens.size());
   int size = 0;
   for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
     std::string token = *tokIt;

@@ -22,17 +22,16 @@ namespace kba {
     /**
      * Not threadsafe
      */
-    kba::scorer::Scorer* _scorer;
+    std::vector<kba::scorer::Scorer*> _scorers;
     boost::mutex* _lockMutex; // To be used for exclusive locking    , do not fee this at the end of StreamThread because it might be used by other thread.
+
     /**
      * Not Thread safe
      */
     std::unordered_set<std::string> _stopSet;
-    /**
-     * Not Thread safe
-     */
-    kba::term::TermBase* _termBase;
-
+    kba::term::CorpusStat* _crpStat;
+    std::set<kba::term::TermStat*> _trmStat;
+    std::set<kba::term::TopicTerm*> _tpcTrm;
   public:
 
     void setTermBase(kba::term::TermBase* termBase);
@@ -42,13 +41,10 @@ namespace kba {
     std::string extractDirectoryName(std::string absoluteName);
 
     void parseFile(int cutOffScore);
-    StreamThread(std::string path,  std::fstream* dumpStream, kba::scorer::Scorer* scorer, boost::mutex *locMutex, std::unordered_set<std::string>& stopSet);
+    StreamThread(std::string path,  std::fstream* dumpStream, std::vector<kba::scorer::Scorer*>& scorer, boost::mutex *locMutex, std::unordered_set<std::string>& stopSet);
     StreamThread();
 
   };
 }
-
-inline void kba::StreamThread::setTermBase(kba::term::TermBase* termBase) { kba::StreamThread::_termBase = termBase;}
-
 
 #endif
