@@ -21,7 +21,7 @@ namespace streamcorpus {
     /**
      * For term freq and thus we can get anything.
      */
-    kba::stream::ParsedStream* createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopSet, std::unordered_set<std::string>& termsToFetch);
+    kba::stream::ParsedStream* createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopSet, std::set<std::string>& termsToFetch);
   }
 }
 #endif

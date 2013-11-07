@@ -6,7 +6,7 @@
 #include <fstream>
 #include <set>
 #include "boost/shared_ptr.hpp"
-
+#include <unordered_set>
 namespace kba {
   namespace entity {
     /**
@@ -40,9 +40,9 @@ namespace kba {
   /**
    * get the related entities of an entity from dbpedia. Also populates the label field of these entites. Set the labelTokens and tokenSet field for each of the related entity.
   */
-    std::vector<boost::shared_ptr<Entity> > getRelatedEntities(Entity* entity, std::map<std::string, std::string> repoMap);
+    std::vector<boost::shared_ptr<Entity> > getRelatedEntities(Entity* entity, std::map<std::string, std::string> repoMap, std::unordered_set<std::string> stopSet);
 
-  void populateEntityStruct(std::vector<Entity*>& entityList, std::map<std::string, std::string> repoMap);
+    void populateEntityStruct(std::vector<Entity*>& entityList, std::map<std::string, std::string> repoMap, std::unordered_set<std::string> stopSet);
   }
 }
 #endif

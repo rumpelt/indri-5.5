@@ -56,7 +56,7 @@ kba::stream::ParsedStream* streamcorpus::utils::createParsedStream(streamcorpus:
   return parsedStream;
 }
 
-kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopwords, std::unordered_set<std::string>& termsToFetch) {
+kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopwords, std::set<std::string>& termsToFetch) {
   std::string title = streamcorpus::utils::getTitle(*streamItem);
   std::string anchor = streamcorpus::utils::getAnchor(*streamItem);
   std::string body = (streamItem->body).clean_visible;

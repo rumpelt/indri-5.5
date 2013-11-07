@@ -4,6 +4,8 @@
 #include <string>
 #include "Scorer.hpp"
 #include "DumpKbaResult.hpp"
+#include "TimeConversion.hpp"
+#include "ThriftDocumentExtractor.hpp"
 #include "TermDict.hpp"
 #include <boost/thread.hpp>
 #include <unordered_set>
@@ -14,7 +16,7 @@ namespace kba {
    */
   class StreamThread {
   private:
-    std::string _fileName; // a path can be directory to process or file to process//
+   std::vector<std::string> _dirsToProcess;
     /**
      * Not thread safe
      */
@@ -22,8 +24,7 @@ namespace kba {
     /**
      * Not threadsafe
      */
-    std::vector<kba::scorer::Scorer*> _scorers;
-    boost::mutex* _lockMutex; // To be used for exclusive locking    , do not fee this at the end of StreamThread because it might be used by other thread.
+    std::vector<kba::entity::Entity*> _entities;
 
     /**
      * Not Thread safe
@@ -32,16 +33,28 @@ namespace kba {
     kba::term::CorpusStat* _crpStat;
     std::set<kba::term::TermStat*> _trmStat;
     std::set<kba::term::TopicTerm*> _tpcTrm;
-  public:
+    std::set<std::string> _termSet;
 
-    void setTermBase(kba::term::TermBase* termBase);
+    time_t _timeStamp;
+    //    std::string _baseDir;
+    int _cutoffScore;
+    std::vector<kba::scorer::Scorer*> _scorers;
+    kba::thrift::ThriftDocumentExtractor* _tdextractor;
+    
+  public:
     void operator()(int cutOffScore); // operator over loading , potential use as thread functor
 
-
+    void spawnParserNScorers(bool firstPass);
     std::string extractDirectoryName(std::string absoluteName);
-
-    void parseFile(int cutOffScore);
-    StreamThread(std::string path,  std::fstream* dumpStream, std::vector<kba::scorer::Scorer*>& scorer, boost::mutex *locMutex, std::unordered_set<std::string>& stopSet);
+    void setTermStat(std::set<kba::term::TermStat*> termStatSet);
+    void setCorpusStat(kba::term::CorpusStat*);
+    void setTopicTerm(std::set<kba::term::TopicTerm*> tpcTrm);
+    void setTermSet(std::set<std::string> termSet);
+  
+    void updateCorpusStat(kba::term::CorpusStat*, long numDocs, size_t docSize);
+    void updateTermStat(std::set<kba::term::TermStat*> statSet, kba::stream::ParsedStream* stream);
+    void parseFile(int cutOffScore, std::string fileName, std::string dirName, bool firstPass);
+    StreamThread(std::vector<std::string> dirsToProcess,  std::fstream* dumpStream, std::vector<kba::entity::Entity*> entities, std::unordered_set<std::string> stopSet, int cuttoffScore=650);
     StreamThread();
 
   };

@@ -49,11 +49,12 @@ namespace kba {
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
       BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::set<kba::term::TermStat*> trmStat, int maxScore=1000);
+
     };
   }
 }
 
 inline std::vector<kba::entity::Entity* > kba::scorer::BM25Scorer::getEntityList() { return BM25Scorer::_entitySet;}
-inline std::string getModelName() {return "BM25-Normalized";}
+inline std::string kba::scorer::BM25Scorer::getModelName() {return "BM25-Normalized";}
 
 #endif

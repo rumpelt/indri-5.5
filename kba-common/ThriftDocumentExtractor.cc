@@ -1,6 +1,8 @@
 #include "ThriftDocumentExtractor.hpp"
 #include <iostream>
 
+const int kba::thrift::BUFFSIZE = 16384;
+
 void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
 
   _filename = filename;
@@ -20,7 +22,7 @@ void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
   }
   lzma_end(&_lzmaStream);
 
-  _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
+  _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_dynBuff->_data, _dynBuff->_size));
 
   _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));
 
@@ -55,10 +57,11 @@ bool kba::thrift::ThriftDocumentExtractor::init_decoder(lzma_stream *strm) {
 
 bool kba::thrift::ThriftDocumentExtractor::decompress(lzma_stream *strm){
   lzma_action action = LZMA_RUN;
+  
+  uint8_t inbuf[kba::thrift::BUFFSIZE];
+  uint8_t outbuf[kba::thrift::BUFFSIZE];
 
-  uint8_t inbuf[BUFSIZ];
-  uint8_t outbuf[BUFSIZ];
-  _thriftContent.clear();
+  _dynBuff->resetData();
   strm->next_in = NULL;
   strm->avail_in = 0;
   strm->next_out = outbuf;
@@ -75,11 +78,13 @@ bool kba::thrift::ThriftDocumentExtractor::decompress(lzma_stream *strm){
     lzma_ret ret = lzma_code(strm, action);
     if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
       size_t write_size = sizeof(outbuf) - strm->avail_out;
+      _dynBuff->pushData(outbuf, write_size);
       //      std::cout << "total ize: " << _thriftContent.max_size() << " : " << _thriftContent.size() << "\n";
-      for(size_t idx = 0 ; idx < write_size; idx++)  {
+       
+      //     for(size_t idx = 0 ; idx < write_size; idx++)  {
 	// _thriftContent.insert(_thriftContent.end(), write_size,      _outbuf);
-	_thriftContent.push_back(outbuf[idx]);
-      }
+      //	_thriftContent.push_back(outbuf[idx]);
+      // }
       //      cout <<"\n" +_thriftContent.size();
       strm->next_out = outbuf;
       strm->avail_out = sizeof(outbuf);    
@@ -164,7 +169,6 @@ void kba::thrift::ThriftDocumentExtractor::iterateOverRelations(StreamItem& stre
   }
 }
 
-
 std::vector<Token> kba::thrift::ThriftDocumentExtractor::getMentionedTokens(Sentence* sentence, MentionID mentionId) {
   std::vector<Token> tokens;
   for(std::vector<Token>::iterator viter = sentence->tokens.begin(); viter != sentence->tokens.end(); ++viter) {
@@ -227,27 +231,28 @@ void kba::thrift::ThriftDocumentExtractor::close() {
 }
 
 void kba::thrift::ThriftDocumentExtractor::reset() {
-  _thriftContent.clear();
+  //  _thriftContent.clear();
+  _dynBuff->resetData();
   kba::thrift::ThriftDocumentExtractor::close();
   _file = 0;
 }
 
 kba::thrift::ThriftDocumentExtractor::~ThriftDocumentExtractor()
 {
-  _thriftContent.clear();
+  // _thriftContent.clear();
+  delete _dynBuff;
   kba::thrift::ThriftDocumentExtractor::close();
 }
 
-kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor()
+kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor() : _dynBuff(new kba::thrift::DynBuffer()), _file(0)
 {
-  _file = 0;
 }
 
 /**
  * the file must be in xz format
  */
 kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor(std::string fileName)
-{
+  : _dynBuff(new kba::thrift::DynBuffer()){
   _file = std::fopen(fileName.c_str(), "rb");   
   if (_file != 0) {
     kba::thrift::ThriftDocumentExtractor::_lzmaStream = LZMA_STREAM_INIT;
@@ -255,7 +260,7 @@ kba::thrift::ThriftDocumentExtractor::ThriftDocumentExtractor(std::string fileNa
   
     if(kba::thrift::ThriftDocumentExtractor::decompress(&_lzmaStream)) {
       lzma_end(&_lzmaStream);
-      _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_thriftContent.data(), _thriftContent.size()));
+      _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_dynBuff->_data, _dynBuff->_size));
 
       _protocol = boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol>(new apache::thrift::protocol::TBinaryProtocol(_memoryTransport));
     }

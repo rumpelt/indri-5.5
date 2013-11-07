@@ -12,7 +12,7 @@ time_t kba::StreamIndex::secondsInDay = (3600 * 24);
 
 
 kba::StreamIndex::StreamIndex(std::map<TopicTermKey, TopicTermValue>& termTopicMap, CorpusStat* corpusStat, std::set<TopicStat>& topicStat, std::set<TermStat*> termStat, StatDb* stDb, std::unordered_set<std::string> stopSet,
-   std::unordered_set<std::string> termsToFetch) : 
+   std::set<std::string> termsToFetch) : 
   _docSize(0), _numDoc(0),  _termTopicMap(termTopicMap), _corpusStat(corpusStat), _topicStatSet(topicStat), _termStatSet(termStat), _stDb(stDb), _stopSet(stopSet), _termsToFetch(termsToFetch) 
   {
   }
@@ -128,7 +128,7 @@ void kba::StreamIndex::flushBasicStatToDb() {
   _corpusStat->collectionTime = StreamIndex::_collectionTime;
   StreamIndex::_stDb->wrtCrpSt(_corpusStat);
 
-  for(std::set<TermStat*>::iterator termIt = _termStatSet.begin(); termIt != _termStatSet.end(); ++termIt  ) {
+  for(std::set<TermStat*>::iterator termIt = _termStatSet.begin(); termIt != _termStatSet.end(); ++termIt) {
     TermStat* termSt = *termIt;
     termSt->collectionTime = StreamIndex::_collectionTime;
     StreamIndex::_stDb->wrtTrmSt(*termIt);

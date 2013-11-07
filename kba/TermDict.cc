@@ -1,7 +1,9 @@
 #include "TermDict.hpp"
 #include "stdexcept"
 #include <boost/shared_ptr.hpp>
-
+#include <limits>
+//const float MIN_FLOAT = std::numeric_limits<float>::min();
+//const unsigned long MAX_ULONE = std::numeric_limits<float>::max();
 float& kba::term::LOG_OF_2() { static float logOf2  = log(2.0); return logOf2;}
 
 

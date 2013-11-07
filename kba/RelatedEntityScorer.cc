@@ -61,3 +61,7 @@ std::vector<kba::entity::Entity*> kba::scorer::RelatedEntityScorer::getEntityLis
 kba::scorer::RelatedEntityScorer::RelatedEntityScorer(std::vector<kba::entity::Entity*> entitySet, std::map<std::string, std::string> repoMap, int maxScore) : _repoMap(repoMap), _entitySet(entitySet), _maxScore(maxScore){
 
 }
+
+std::string kba::scorer::RelatedEntityScorer::getModelName() {
+  return  "RelatedEntity";
+}

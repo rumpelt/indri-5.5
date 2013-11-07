@@ -8,9 +8,10 @@ namespace kba {
   namespace scorer {
     class LanguageModel : public Scorer {
     private:
-      std::set<kba::entity::Entity*> _entitySet;
-      kba::term::CorpusStat* _crpStat;
+      std::vector<kba::entity::Entity*> _entitySet;
       std::set<kba::term::TermStat*> _trmStat;
+      kba::term::CorpusStat* _crpStat;
+      
       float _mu;
       std::map<std::string, float> _collFreqMap;
       std::map<std::string, float> _maxScoreMap;
@@ -26,7 +27,7 @@ namespace kba {
       std::vector<kba::entity::Entity* > getEntityList(); 
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
-      LanguageModel(std::set<kba::entity::Entity*>& entitySet, std::set<kba::term::TermStat*> trmStat, float mu=2500);
+      LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::set<kba::term::TermStat*> trmStat, kba::term::CorpusStat* crpStat,float mu=2500);
     };
   }
 }

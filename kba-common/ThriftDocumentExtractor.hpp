@@ -5,6 +5,7 @@
 #ifndef THRIFTDOCUMENTEXTRACTOR_HPP
 #define THRIFTDOCUMENTEXTRACTOR_HPP
 #include <stdio.h>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include "lzma.h"
@@ -23,11 +24,22 @@ namespace kba
 {
   namespace thrift
   {
-    
+    extern const int BUFFSIZE;
+    struct DynBuffer {
+      uint8_t* _data;
+      int _size; // The number bytes actually stored
+      int _capacity; // Total number of bytes available for storage;
+      void pushData(uint8_t* load, int loadSize); 
+      void resetData();
+      DynBuffer() : _data(new uint8_t[BUFFSIZE]), _size(0), _capacity(BUFFSIZE)  {memset(_data, 0, BUFFSIZE);};
+      ~DynBuffer() {delete _data;}
+    };
+
     class ThriftDocumentExtractor {
     private:
       std::string _filename;
-      std::vector<unsigned char> _thriftContent;
+      //     std::vector<unsigned char> _thriftContent;
+      kba::thrift::DynBuffer* _dynBuff;
       lzma_stream _lzmaStream;
       boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>  _memoryTransport;
       boost::shared_ptr<apache::thrift::protocol::TBinaryProtocol> _protocol;
@@ -63,7 +75,26 @@ namespace kba
       ThriftDocumentExtractor(std::string fileName);
       ~ThriftDocumentExtractor();
     };
+    
+    
   }
 }
 
+inline void kba::thrift::DynBuffer::resetData() {
+  memset(_data, 0, _size);
+  _size  = 0;
+}
+
+inline void kba::thrift::DynBuffer::pushData (uint8_t* load, int loadSize) {
+  if ((_size + loadSize ) > _capacity) {
+    _capacity = _size + loadSize + loadSize;
+    uint8_t* relocation = new uint8_t[_capacity];
+    memset(relocation, 0,  _capacity );
+    memcpy(relocation, _data, _size);
+    delete _data;
+    _data = relocation;
+  }
+  memcpy(_data+_size, load, loadSize);
+  _size += loadSize;
+}
 #endif

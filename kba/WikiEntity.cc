@@ -146,7 +146,7 @@ void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& enti
   
 }
 
-std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEntities(kba::entity::Entity* entity, std::map<std::string, std::string> repoMap) {
+std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEntities(kba::entity::Entity* entity, std::map<std::string, std::string> repoMap, std::unordered_set<std::string> stopSet) {
   
   RDFParser labelParser;
   RDFParser relatedParser;
@@ -195,8 +195,8 @@ std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEnti
         relatedEntities.push_back(rEntity);     
         entPtr->label = label;
         std::vector<std::string> tokens = Tokenize::tokenize(label);
-        tokens = Tokenize::filterShortWords(tokens);
         tokens = Tokenize::toLower(tokens);
+        tokens = Tokenize::filterStopWords(tokens, stopSet);
         entPtr->labelTokens = tokens;
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	  std::string tok = *tokIt;
@@ -211,21 +211,21 @@ std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEnti
   return relatedEntities;
 }
 
-void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entityList, std::map<std::string, std::string> repoMap) {
+void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entityList, std::map<std::string, std::string> repoMap, std::unordered_set<std::string> stopSet) {
   try {
     kba::entity::updateEntityWithDbpedia(entityList, repoMap.at("wikiToDb"), "wikiToDb" );
     kba::entity::updateEntityWithLabels(entityList, repoMap.at("labels"), "labels" );
     for(std::vector<kba::entity::Entity*>::iterator entIt = entityList.begin(); entIt != entityList.end(); entIt++) {
       kba::entity::Entity* entity = *entIt;
       std::vector<std::string> tokens = Tokenize::tokenize(entity->label);
-      tokens = Tokenize::filterShortWords(tokens);
       tokens = Tokenize::toLower(tokens);
+      tokens = Tokenize::filterStopWords(tokens, stopSet);
       entity->labelTokens = tokens;
       for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	std::string tok = *tokIt;
         (entity->tokenSet).insert(tok);      
       }
-      entity->relatedEntities = kba::entity::getRelatedEntities(entity, repoMap);
+      entity->relatedEntities = kba::entity::getRelatedEntities(entity, repoMap, stopSet);
     }
   } catch (const std::out_of_range& oor) {
   }

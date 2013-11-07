@@ -216,7 +216,7 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
-  kba::entity::populateEntityStruct(ENTITY_SET, repoMap);
+  kba::entity::populateEntityStruct(ENTITY_SET, repoMap, STOP_SET);
   std::vector<kba::entity::Entity*> filterSet;
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
@@ -244,7 +244,7 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   stDb->crtTrmDb("/usa/arao/test/term.db", true);
   stDb->crtCrpDb("/usa/arao/test/corpus.db", true);
   
-  std::unordered_set<std::string> termsToFetch;
+  std::set<std::string> termsToFetch;
   for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt  ) {
     termsToFetch.insert((*termIt)->term);
   } 
@@ -281,8 +281,9 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   delete streamIndex;
   delete stDb;
 }
+
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
-  int cutOffScore=200; 
+  using namespace kba::term;
   std::map<std::string, std::string> repoMap;
   repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
   repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
@@ -290,41 +291,32 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
-  kba::entity::populateEntityStruct(ENTITY_SET, repoMap);
-
-  
-  
+  kba::entity::populateEntityStruct(ENTITY_SET, repoMap, STOP_SET);
   std::vector<kba::entity::Entity*> filterSet;
-  
+
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
     
     if((entity->label).size() > 0) {
-      std::cout << "Entity :" << entity->label << " ";
-      for(std::vector<std::string>::iterator it = (entity->labelTokens).begin(); it != (entity->labelTokens).end(); ++it) {
-	std::cout << *it << " ";
-      }
-      std::cout << "\n";
       filterSet.push_back(entity);
     }
     else
       delete entity;
   } 
   
-  std::set<TopicStat> topicStatSet = kba::term::crtTopicStatSet(ENTITY_SET);
-  std::map<TopicTermKey, TopicTermValue> topicTermMap = kba::term::crtTopicTermMap(ENTITY_SET, stopSet);
-
   ENTITY_SET = filterSet;
-
-  boost::shared_ptr<kba::term::TermBase> termBase(new kba::term::TermBase(ENTITY_SET));
-
+   
   std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
- 
-  //  kba::scorer::BaseLineScorer bscorer(ENTITY_SET); 
-  kba::scorer::RelatedEntityScorer scorer(ENTITY_SET, repoMap);
-  //kba::scorer::BM25Scorer scorer(ENTITY_SET, termBase);
-  // kba::dump::writeHeader(fileToDump);
+  
+  kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
+  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, STOP_SET); // I m not free this atthe end so there is a leak
+  std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(ENTITY_SET);
+  std::set<std::string> termSet;
+  for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt) {
+    termSet.insert((*termIt)->term);
+  }
+
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
   time(&startTime);
@@ -332,61 +324,41 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   if(!isDirectory) {
     std::string fileExtension = pathToProcess.substr(pathToProcess.size() - 3);
     if(!fileExtension.compare(".xz")) {
-      kba::StreamThread st(pathToProcess, dumpStream, &scorer, 0, stopSet);
-      //      st.setTermBase(termBase.get());
-      st.parseFile(cutOffScore);
     }
   }
   else {
-    int index = 0;
-    boost::thread_group threadGroup;
-    boost::mutex* lockMutex = new boost::mutex;
- 
-    std::vector<std::string> pathList;
-    std::vector<boost::thread*> aliveThreads;
-    int maxThreads = 4;
-
-    if(dirList.size() <= 0) 
-      pathList.push_back(pathToProcess);
-    else {
-      for(size_t index=0; index < dirList.size(); index++) {
-	std::string subdir = dirList[index];
-        pathList.push_back(pathToProcess + "/"+ subdir); 
+    std::vector<std::string> dirBunch;
+    short countPass = 0;
+    bool firstPass = true;
+    std::string prevDayDate = (dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
+    for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+      std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
+       if(dayDate.compare(prevDayDate) != 0) {
+	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET);
+         st->setTermStat(termStatSet);
+         st->setCorpusStat(corpusStat);   
+         st->setTopicTerm(topicTerm);
+         st->setTermSet(termSet);
+         st->spawnParserNScorers(firstPass);
+	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
+         ++countPass;
+         if(firstPass && countPass >= 7)
+           firstPass = false;
+         dirBunch.clear();
       }
+      dirBunch.push_back(pathToProcess+"/"+*dirIt);
+      prevDayDate = dayDate;
     }
-
-    for(std::vector<std::string>::iterator pathIt = pathList.begin(); pathIt != pathList.end(); pathIt++) {
-      pathToProcess = *pathIt; 
-      indri::file::FileTreeIterator files(pathToProcess);
-      for(; files != indri::file::FileTreeIterator::end() ;files++) {
-	  if( index >= maxThreads) {
-	  threadGroup.join_all();
-	  aliveThreads.clear();
-          index = 0;
-        }
-        
-        std::string fileName(*files);
-        std::string fileExtension = fileName.substr(fileName.size() - 3);
-      
-        if(!fileExtension.compare(".xz")) {
-          kba::StreamThread st(fileName, dumpStream, &scorer, lockMutex, stopSet);
-	  //  st.setTermBase(termBase.get());
-	  //  st.parseFile();
-	  boost::thread *streamThread = new boost::thread(st, cutOffScore); 
-          
-	  aliveThreads.push_back(streamThread);
-          threadGroup.add_thread(streamThread);
-          index++;
-        }
-      }
-      Logger::LOG_MSG("KbaProcess.cc", "performCCRTask", "processed file :"+*pathIt);
+    if(dirBunch.size() > 0) {
+      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET);
+       st->setTermStat(termStatSet);
+       st->setCorpusStat(corpusStat);   
+       st->setTopicTerm(topicTerm);
+       st->setTermSet(termSet); 
+       st->spawnParserNScorers(firstPass);
+       Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
+       dirBunch.clear();
     }
-    
-    if(index > 0) {
-      threadGroup.join_all();
-    } 
-    delete lockMutex;
-  
   }
 
   dumpStream->close(); 

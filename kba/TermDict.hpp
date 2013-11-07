@@ -94,7 +94,8 @@ namespace kba {
       long totalDocs;
       long judgedSample; // The N value
       int averageDocSize;  // Rounded to integer value;
-      CorpusStat() : collectionTime(0), totalDocs(0), judgedSample(0), averageDocSize(0) {}
+      unsigned long collectionSize;
+      CorpusStat() : collectionTime(0), totalDocs(0), judgedSample(0), averageDocSize(0), collectionSize(0) {}
     };
 
     struct TermStat {
@@ -163,7 +164,9 @@ namespace kba {
     };
 
     float& LOG_OF_2();   
-
+    //    static const float MIN_FLOAT;
+    //static const unsigned long MAX_ULONG;
+    //static const long MAX_LONG;
     /**
      * This is not thread safe and so u must synchronize this
      */

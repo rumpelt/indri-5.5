@@ -18,7 +18,7 @@ namespace kba
        */
       std::map<std::string, std::string> _repoMap; // Redland repositories for geting the labels of wikipedia and corresponding entities mentioned
       /**
-       * map from wikiURL to Entities found on that wiki url. We exclude the entities of type     
+       * map from wikiURL to Entities found on that wiki url. We exclude the entities of typ     
        * "http://dbpedia.org/resource/Category:
        */
       std::map<std::string, std::vector<boost::shared_ptr<kba::entity::Entity> > > _relatedMap; 
@@ -39,10 +39,12 @@ namespace kba
       //      void populateRelatedMap();
 
       std::vector<kba::entity::Entity* > getEntityList();
+      std::string getModelName();
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int cutOffScore);       
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int cutOffScore);       
       RelatedEntityScorer(std::vector<kba::entity::Entity*> entitySet, std::map<std::string, std::string> repoMap, int maxScore=1000);  
     };
+
   }
 }
 #endif
