@@ -1,3 +1,5 @@
+#ifndef LOGGING_HPP
+#define LOGGING_HPP
 #include <fstream>  
 #include <cstdio>
 #include <string>
@@ -15,3 +17,4 @@ inline void Logger::LOG_MSG(std::string className, std::string method, std::stri
   (Logger::LOG_FILE) << "class: " <<  className << " : method: " << method << " :msg: " << msg << "\n";
   (Logger::LOG_FILE).flush(); 
 }
+#endif

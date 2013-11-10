@@ -23,6 +23,6 @@ time_t kba::time::convertDateToTime(std::string kbaDate) {
   timeStruct.tm_min = 0;
   timeStruct.tm_isdst = 0;
   time_t convertedTime = mktime(&timeStruct);
-  assert(convertedTime != -1);
+  assert(convertedTime > 0);
   return convertedTime;
 }

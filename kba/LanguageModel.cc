@@ -4,7 +4,7 @@
 using namespace kba::scorer;
 using namespace kba::term;
 
-kba::scorer::LanguageModel::LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::set<kba::term::TermStat*> trmStat, kba::term::CorpusStat* crpStat, float mu) : _entitySet(entitySet), _trmStat(trmStat), _crpStat(crpStat), _mu(mu) {
+kba::scorer::LanguageModel::LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::map<std::string, kba::term::TermStat*> trmStatMap, kba::term::CorpusStat* crpStat, float mu) : _entitySet(entitySet), _trmStatMap(trmStatMap), _crpStat(crpStat), _mu(mu) {
   computeCollectionProb();
   computeMaxDocScore();
 }
@@ -18,9 +18,9 @@ std::vector<kba::entity::Entity* > kba::scorer::LanguageModel::getEntityList() {
 
 void kba::scorer::LanguageModel::computeCollectionProb() {
 
-  for(std::set<TermStat*>::iterator trmIt = _trmStat.begin(); trmIt != _trmStat.end(); ++trmIt) {
-    std::string term = (*trmIt)->term;
-    float collFreq = (*trmIt)->collFreq * _mu; // _mu factor for dirichlet smoothing.
+  for(std::map<std::string, TermStat*>::iterator trmIt = _trmStatMap.begin(); trmIt != _trmStatMap.end(); ++trmIt) {
+    std::string term = (trmIt)->first;
+    float collFreq = (trmIt->second)->collFreq * _mu; // _mu factor for dirichlet smoothing.
     _collFreqMap.insert(std::pair<std::string, float>(term, collFreq));
   }
 
@@ -53,9 +53,12 @@ float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream,
     if((parsedStream->tokenFreq).find(term) != (parsedStream->tokenFreq).end())
       termFreq = (parsedStream->tokenFreq).at(term);
     float collFreq = _collFreqMap.at(term); // here coll Prob is factored by mu
-    float docFreq = termFreq * _crpStat->collectionSize; // some reformulation of originial to avoid underflow arthimetic
-    docFreq = log(docFreq + collFreq);
-    float score = (docFreq - docSizeLog) / kba::term::LOG2; 
+    float totalFreq = termFreq * _crpStat->collectionSize + collFreq;
+    if (totalFreq > 0.999999)
+      totalFreq  = log(totalFreq);
+    else
+      totalFreq = 0;
+    float score = (totalFreq - docSizeLog) / kba::term::LOG2; 
     docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
   }
 

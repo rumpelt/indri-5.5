@@ -25,7 +25,7 @@ namespace kba {
       */
       std::map<std::string, std::vector<boost::shared_ptr<kba::entity::Entity> > > _relatedMap;
       kba::term::CorpusStat* _crpStat;
-      std::set<kba::term::TermStat*> _trmStat;
+      std::map<std::string, kba::term::TermStat*> _trmStatMap;
       
       std::map<std::string, float> _idf;
       std::map<std::string, float> _maxScores; // Map from wiki url to maximum document score
@@ -48,7 +48,7 @@ namespace kba {
       std::vector<kba::entity::Entity* > getEntityList(); 
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
-      BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::set<kba::term::TermStat*> trmStat, int maxScore=1000);
+      BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap, int maxScore=1000);
 
     };
   }

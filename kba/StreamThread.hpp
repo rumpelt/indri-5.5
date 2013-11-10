@@ -9,6 +9,7 @@
 #include "TermDict.hpp"
 #include <boost/thread.hpp>
 #include <unordered_set>
+#include "StatDb.hpp"
 
 namespace kba {
   /**
@@ -25,18 +26,18 @@ namespace kba {
      * Not threadsafe
      */
     std::vector<kba::entity::Entity*> _entities;
-
+    
     /**
      * Not Thread safe
      */
     std::unordered_set<std::string> _stopSet;
     kba::term::CorpusStat* _crpStat;
-    std::set<kba::term::TermStat*> _trmStat;
+    std::map<std::string, kba::term::TermStat*> _trmStatMap;
     std::set<kba::term::TopicTerm*> _tpcTrm;
     std::set<std::string> _termSet;
-
+    StatDb* _statDb;
     time_t _timeStamp;
-    //    std::string _baseDir;
+    std::string _date;
     int _cutoffScore;
     std::vector<kba::scorer::Scorer*> _scorers;
     kba::thrift::ThriftDocumentExtractor* _tdextractor;
@@ -46,15 +47,16 @@ namespace kba {
 
     void spawnParserNScorers(bool firstPass);
     std::string extractDirectoryName(std::string absoluteName);
-    void setTermStat(std::set<kba::term::TermStat*> termStatSet);
+    void setTermStat(std::map<std::string, kba::term::TermStat*> termStatMap);
     void setCorpusStat(kba::term::CorpusStat*);
     void setTopicTerm(std::set<kba::term::TopicTerm*> tpcTrm);
     void setTermSet(std::set<std::string> termSet);
-  
+    void setStatDb(StatDb* statDb);
+
     void updateCorpusStat(kba::term::CorpusStat*, long numDocs, size_t docSize);
-    void updateTermStat(std::set<kba::term::TermStat*> statSet, kba::stream::ParsedStream* stream);
-    void parseFile(int cutOffScore, std::string fileName, std::string dirName, bool firstPass);
-    StreamThread(std::vector<std::string> dirsToProcess,  std::fstream* dumpStream, std::vector<kba::entity::Entity*> entities, std::unordered_set<std::string> stopSet, int cuttoffScore=650);
+    void updateTermStat(std::map<std::string, kba::term::TermStat*> statMap, kba::stream::ParsedStream* stream);
+    void parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass);
+    StreamThread(std::vector<std::string> dirsToProcess,  std::fstream* dumpStream, std::vector<kba::entity::Entity*> entities, std::unordered_set<std::string> stopSet, std::string _date, int cuttoffScore=650);
     StreamThread();
 
   };

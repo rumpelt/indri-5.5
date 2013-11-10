@@ -3,7 +3,7 @@
 #include <iostream>
 #include <Logging.hpp>
 
-kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::set<kba::term::TermStat*> trmStat,   int maxScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStat(trmStat),_maxScore(maxScore), _parameterK(1.75), _parameterB(0.75) {
+kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap,   int maxScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStatMap(trmStatMap),_maxScore(maxScore), _parameterK(1.75), _parameterB(0.75) {
   _k1b = BM25Scorer::_parameterK * BM25Scorer::_parameterB; // the factor k1 * b
   _k1minusB = BM25Scorer::_parameterK * (1 - BM25Scorer::_parameterB); // the factor k1 * (1 - b) 
   computeLogIDF();
@@ -13,9 +13,9 @@ kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,
 
    
 void kba::scorer::BM25Scorer::computeLogIDF() {
-  for(std::set<kba::term::TermStat*>::iterator tIt = _trmStat.begin(); tIt != _trmStat.end(); ++tIt) {
-    std::string term = (*tIt)->term;
-    long docFreq = (*tIt)->docFreq;
+  for(std::map<std::string, kba::term::TermStat*>::iterator tIt = _trmStatMap.begin(); tIt != _trmStatMap.end(); ++tIt) {
+    std::string term = tIt->first;
+    long docFreq = (tIt->second)->docFreq;
     float idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
     idf = idf / kba::term::LOG2;
     //std::cout << "Term " << term << " idf " << idf << " doc Freq " << docFreq << " Total doc " << _crpStat->totalDocs << "\n";

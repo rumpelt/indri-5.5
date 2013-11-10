@@ -179,7 +179,12 @@ namespace kba {
     std::map<TopicTermKey, TopicTermValue>  crtTopicTermMap(std::vector<kba::entity::Entity*> entitySet, std::unordered_set<std::string> stopSet);    
 
     std::set<TopicTerm*> crtTopicTerm(std::vector<kba::entity::Entity*> entitySet);
-  }
+    struct StreamInfo{
+    time_t sTime;
+    std::string docId;
+    std::string directory;
+    };
+  }  
 }
 
 #endif

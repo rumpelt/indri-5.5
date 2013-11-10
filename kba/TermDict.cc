@@ -97,7 +97,7 @@ std::set<kba::term::TermStat*> kba::term::crtTermStatSet(std::vector<kba::entity
 
   for(std::vector<Entity*>::iterator entIt = entitySet.begin(); entIt != entitySet.end(); ++entIt) {
      Entity* entity = *entIt;
-    for(set<string>::iterator tokIt = (entity->tokenSet).begin(); tokIt != (entity->tokenSet).end(); ++tokIt) {
+    for(vector<string>::iterator tokIt = (entity->labelTokens).begin(); tokIt != (entity->labelTokens).end(); ++tokIt) {
       TermStat* termStat = new TermStat();
       termStat->term = *tokIt;
       if(stopSet.find(termStat->term) == stopSet.end() && termsFound.find(termStat->term) == termsFound.end()) {
@@ -107,6 +107,18 @@ std::set<kba::term::TermStat*> kba::term::crtTermStatSet(std::vector<kba::entity
       else
          delete termStat;
     } 
+
+    for(std::vector<std::string>::iterator textIt = (entity->abstractTokens).begin(); textIt != (entity->abstractTokens).end(); ++textIt) {
+      TermStat* termStat = new TermStat();
+      termStat->term = *textIt;
+      if(stopSet.find(termStat->term) == stopSet.end() && termsFound.find(termStat->term) == termsFound.end()) {
+        termStatSet.insert(termStat);
+        termsFound.insert(termStat->term);
+      } 
+      else
+         delete termStat;
+    }
+
     /*
     for(vector<boost::shared_ptr<Entity> >::iterator relIt = (entity->relatedEntities).begin(); relIt != (entity->relatedEntities).end(); ++relIt) {
       Entity* ent = (*relIt).get();
@@ -158,6 +170,7 @@ std::map<kba::term::TopicTermKey, kba::term::TopicTermValue> kba::term::crtTopic
         topicTermMap.insert(std::pair<TopicTermKey, TopicTermValue>(termKey, termValue));
       }
     } 
+
     /*
     for(vector<boost::shared_ptr<Entity> >::iterator relIt = (entity->relatedEntities).begin(); relIt != (entity->relatedEntities).end(); ++relIt) {
       Entity* ent = (*relIt).get();

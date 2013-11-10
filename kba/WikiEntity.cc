@@ -80,6 +80,45 @@ void kba::entity::populateEntityList(std::vector<kba::entity::Entity*>& entityLi
 
 
 
+void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName, std::unordered_set<std::string> stopSet) {
+  RDFParser* rdfparser = new RDFParser();
+  rdfparser->initRDFParser(repoName, storageDir);
+  RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
+    kba::entity::Entity* entity = *entityIt;
+    if((entity->dbpediaURLs).size() > 0) {
+
+      const unsigned char* subject = (entity->dbpediaURLs).at(0).get();
+      const unsigned char* predicate = (const unsigned char*)"http://dbpedia.org/ontology/abstract";
+      std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
+      if (dbResourceList.size() <= 0) {
+        std::cout<< "Could not find abstract for : " <<entity->wikiURL << "\n";
+      } 
+      else {
+        std::string abstract = (const char*)(dbResourceList.at(0).get());
+        std::vector<std::string> tokens = Tokenize::tokenize(abstract);
+        tokens = Tokenize::toLower(tokens);
+        tokens = Tokenize::filterStopWords(tokens, stopSet);
+        int textSize = tokens.size();
+        for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
+	  std::string tok = *tokIt;
+          (entity->abstractTokens).push_back(tok);      
+          if((entity->textFreq).find(tok) == (entity->textFreq).end()) {
+            (entity->textFreq).insert(std::pair<std::string,float>(tok, 1.0));
+	  }
+          else {
+            float count = (entity->textFreq).at(tok) + 1.000000;
+            (entity->textFreq).erase(tok);
+            (entity->textFreq).insert(std::pair<std::string,float>(tok, count));
+	  }
+	}
+      }
+    }
+  }
+  delete rdfquery;
+  delete rdfparser;
+}
+
 
 void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& entityList, std::string storageDir, std::string repoName) {
   RDFParser* rdfparser = new RDFParser();
@@ -91,10 +130,11 @@ void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& ent
     const unsigned char* predicate = (const unsigned char*)"http://xmlns.com/foaf/0.1/primaryTopic";
     std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
     if(dbResourceList.size() <= 0) {
-      std::cout <<"\nCould not find the dbpedia resource for : "<< entity->wikiURL << "\n";
+      //      std::cout <<"\nCould not find the dbpedia resource for : "<< entity->wikiURL << "\n";
       
     }
     else {
+      std::cout << "Adding Entity " << entity->wikiURL  << "\n";
       if(dbResourceList.size() > 1)
 	 std::cout << "More than one dbpedia resource for " << entity->wikiURL << "\n";
       entity->dbpediaURLs = dbResourceList;
@@ -137,7 +177,7 @@ void kba::entity::updateEntityWithLabels(std::vector<kba::entity::Entity*>& enti
       else {
 	boost::shared_ptr<unsigned char> label = labelList[0];
 	entity->label = (const char*)label.get(); 
-	
+	 
       }
     }
   }

@@ -1,6 +1,6 @@
 #include "StatDb.hpp"
 #include <errno.h>
-#include "Logging.hpp"
+
 using namespace std;
 
 StatDb::StatDb() : _trmFd(-1), _crpFd(-1), _tpcFd(-1), _trmTpcFd(-1), _evalFd(-1) {
@@ -8,17 +8,6 @@ StatDb::StatDb() : _trmFd(-1), _crpFd(-1), _tpcFd(-1), _trmTpcFd(-1), _evalFd(-1
 }
 
 StatDb::~StatDb() {
-  if(_trmFd > 0) {
-    Logger::LOG_MSG("StatDb.cc", "~StatDb", "closing term db");  
-    close(_trmFd);
-    _trmFd = -1;
-  }
-  if(_crpFd > 0) {
-    Logger::LOG_MSG("StatDb.cc", "~StatDb", "closing corpus db");  
-    close(_crpFd);
-    _crpFd = -1;
-  }
-
   if(_evalFd > 0) {
     Logger::LOG_MSG("StatDb.cc", "~StatDb", "closing eval db");  
     close(_evalFd);
@@ -78,43 +67,46 @@ void StatDb::crtTrmTpcDb(string fName, bool rdOnly) {
     _trmTpcFd = open(fName.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 }
 
-void StatDb::wrtTrmSt(TermStat* trmSt) {
-  size_t totalSize = sizeof(time_t) + (trmSt->term).size() + 1 + sizeof(long) + sizeof(long);
-  char* packedData =  new char[totalSize+sizeof(size_t)];
-  memset(packedData, 0, totalSize + sizeof(size_t));
-  memcpy(packedData, &totalSize, totalSize);
-  memcpy(packedData + sizeof(size_t), &(trmSt->collectionTime), sizeof(time_t));
-  memcpy(packedData + sizeof(size_t)+ sizeof(time_t), (trmSt->term).c_str(), (trmSt->term).size() + 1);
-  memcpy(packedData + sizeof(size_t)+ sizeof(time_t) + (trmSt->term).size() + 1, &(trmSt->docFreq), sizeof(long));
-  memcpy(packedData + sizeof(size_t)+ sizeof(time_t) + (trmSt->term).size() + 1 + sizeof(long), &(trmSt->collFreq), sizeof(long));
-
-  if( _trmFd > 0) {
-    int status =  write(_trmFd, packedData, totalSize + sizeof(size_t)); 
-    if (status < 0) {
-      Logger::LOG_MSG("StatDb", "wrtTrmSt", "Fatal error ,Cannot write the Term Stat\n");
-    }
-  }
-  else {
-    Logger::LOG_MSG("StatDb", "wrtTrmSt", "Fatal error , term stat db not open\n");
-  }
-  delete packedData;
+void StatDb::crtStreamDb(string fName, bool rdOnly) {
+  if(rdOnly)
+    _strmFd = open(fName.c_str(), O_RDONLY, S_IRUSR | S_IWUSR);  
+  else
+    _strmFd = open(fName.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 }
 
-void StatDb::wrtCrpSt(CorpusStat* crpSt) {
-  if(_crpFd > 0) {
-    size_t dataSize = sizeof(CorpusStat);
-    char* packedData = new char[dataSize + sizeof(size_t)];
-    memset(packedData, 0 , dataSize + sizeof(size_t));
-    memcpy(packedData, &dataSize, sizeof(size_t));
-    memcpy(packedData + sizeof(size_t), crpSt, sizeof(CorpusStat));
-    int status = write(_crpFd, packedData, dataSize + sizeof(size_t));
+void StatDb::closeStreamDb() {
+  close(_strmFd);
+}
+
+void StatDb::closeTrmDb() {
+  if(_trmFd > 0)
+    close(_trmFd);
+  _trmFd = -1;
+}
+
+void StatDb::closeCrpDb() {
+  if(_crpFd > 0)
+    close(_crpFd);
+  _crpFd = -1;
+}
+
+
+
+
+void StatDb::wrtStreamInfo(kba::term::StreamInfo strmInfo) {
+  if(_strmFd > 0 ) {
+    size_t dataSize = sizeof(time_t) + strmInfo.docId.size() + 1 + strmInfo.directory.size() + 1;
+    char *pkDt = new char[dataSize + sizeof(size_t)];
+    memset(pkDt, 0, dataSize + sizeof(size_t));
+    memcpy(pkDt, &dataSize, sizeof(size_t));
+    memcpy(pkDt + sizeof(size_t), &(strmInfo.sTime), sizeof(time_t));
+    memcpy(pkDt+ sizeof(size_t) + sizeof(time_t), strmInfo.docId.c_str(), strmInfo.docId.size() + 1);
+    memcpy(pkDt+ sizeof(size_t) + sizeof(time_t)+ strmInfo.docId.size() + 1, strmInfo.directory.c_str(), strmInfo.directory.size() + 1);
+    int status = write(_strmFd, pkDt, dataSize + sizeof(size_t)); 
     if(status < 0)
-      Logger::LOG_MSG("StatDb", "wrtCrpSt", "Fatal error ,Cannot write the Corpus Stat\n");
-    delete packedData;
-  }
-  else {
-    Logger::LOG_MSG("StatDb", "wrtCrpSt", "Fatal error , Corpus stat db not open\n");
-  }
+      std::cerr << "Cannot write the stream info \n";
+    delete pkDt;
+  }    
 }
 
 void StatDb::wrtEvalSt(EvaluationData* evSt) {
@@ -323,6 +315,86 @@ off_t StatDb::getTrmStatOffset(time_t collTm, bool seekStart) {
   return -1;
 } 
 
+std::unordered_set<std::string> StatDb::getDocIds(time_t sTime, time_t eTime, bool seekStart) {
+  std::unordered_set<std::string> docIds;
+  bool exitRd = false;
+  off_t offt;
+  off_t bytesRead = 0;
+  if(seekStart)
+    offt =  lseek(_strmFd, 0, SEEK_SET);
+  else
+    offt = lseek(_strmFd, 0, SEEK_CUR);
+  if(offt < 0)
+    assert(false);
+  if( eTime < sTime) // eTime must be greater than sTime
+    return docIds;
+  while(!exitRd) {
+    size_t dataSize;
+    bytesRead = 0;
+    int bread = read(_strmFd, &dataSize, sizeof(size_t));
+    bytesRead = bread;
+    if(bread > 0) {
+      
+      char* data  = new char[dataSize];
+      size_t dread = read(_strmFd, data, dataSize);
+      bytesRead += dread;
+      if(dread == dataSize) {
+        time_t currTm = *((time_t*) data);
+	std::string docId = (char*)(data+sizeof(time_t));
+        if(currTm > eTime) {
+          exitRd = true;
+	}
+        else if (currTm >= sTime) {
+          docIds.insert(docId); 
+	}
+        
+      }
+      else
+        assert(false);
+      delete data;
+    }
+    else 
+      exitRd = true;
+  } 
+
+  if(bytesRead > 0)
+    lseek(_strmFd, (0 - bytesRead), SEEK_CUR); // Just back up
+  return docIds;
+}
+
+off_t StatDb::getStreamDbOffset(time_t sTime, bool seekStart) {
+  
+  bool exitRd = false;
+  off_t offt;
+  if(seekStart)
+    offt =  lseek(_strmFd, 0, SEEK_SET);
+  else
+    offt = lseek(_strmFd, 0, SEEK_CUR);
+  if(offt < 0)
+    assert(false);
+  while(!exitRd) {
+    size_t dataSize;
+    int bread = read(_strmFd, &dataSize, sizeof(size_t));
+    if(bread > 0) {
+      char* data  = new char[dataSize];
+      size_t dread = read(_strmFd, data, dataSize);
+      if(dread == dataSize) {
+        time_t currTm = *((time_t*) data);
+        if(currTm >= sTime) {
+          delete data;
+          return offt;  
+	}
+        offt = lseek(_strmFd, 0, SEEK_CUR);
+      }
+      else
+        assert(false);
+      delete data;
+    }
+    else
+      exitRd = true;
+  }
+  return -1;
+}
 
 off_t StatDb::getCrpStatOffset(time_t collTm, bool seekStart) {
 

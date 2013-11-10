@@ -38,6 +38,26 @@ bool compareString(std::string firstStr, std::string secondStr) {
   return false;
 }
 
+void HighRecallInfo(std::string recallFile) {
+  std::ifstream trgStream(recallFile.c_str());
+  StatDb* st = new StatDb();
+  st->crtStreamDb("/usa/arao/test/streamid.db", false);
+  std::string row;
+  while(std::getline(trgStream, row)) {
+    std::vector<std::string> rowTokens = Tokenize::split(row);
+    kba::term::StreamInfo stInfo;
+
+    std::string stream_id = rowTokens.at(2);
+    stInfo.sTime = strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
+    stInfo.docId = stream_id.substr(stream_id.find("-") +1);
+    stInfo.directory = rowTokens.at(7);
+
+    st->wrtStreamInfo(stInfo);
+  }
+  st->closeStreamDb();
+  Logger::LOG_MSG("KbaProcessing.cc", "HighRecallInfo", " finished writing the streamdbs ");
+  delete st;
+}
 void storeEvaluationData(std::string trgFile) {
   std::ifstream trgStream(trgFile.c_str());
   std::string dbName = "eval.db"; 
@@ -288,10 +308,11 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
   repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
   repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
-
+  repoMap.insert(std::pair<std::string, std::string> ("abstract","/usa/arao/dbpediadumps/dbpedia7bdb"));
    
   kba::entity::populateEntityList(ENTITY_SET, entityfile);
   kba::entity::populateEntityStruct(ENTITY_SET, repoMap, STOP_SET);
+  
   std::vector<kba::entity::Entity*> filterSet;
 
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
@@ -303,20 +324,25 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     else
       delete entity;
   } 
-  
   ENTITY_SET = filterSet;
-   
+  kba::entity::updateEntityWithAbstract(ENTITY_SET, repoMap.at("abstract"), "abstract", STOP_SET ); 
+ 
   std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
   
   kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
   std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, STOP_SET); // I m not free this atthe end so there is a leak
+ 
   std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(ENTITY_SET);
   std::set<std::string> termSet;
+  std::map<std::string, TermStat*> termStatMap;
   for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt) {
     termSet.insert((*termIt)->term);
+    termStatMap.insert(std::pair<std::string, TermStat*>((*termIt)->term, *termIt));
   }
-
+  
+  std::cout << "TermStat set size " << termSet.size() << " " << termStatMap.size() << "\n";
+ 
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
   time(&startTime);
@@ -331,14 +357,21 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     short countPass = 0;
     bool firstPass = true;
     std::string prevDayDate = (dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
+    //std::cout << "Prev Day date " << prevDayDate << " " << dirList.at(0) << "\n";
+    StatDb stDb;
+    stDb.crtStreamDb(std::string("/usa/arao/test/streamid.db"), true);
+    stDb.crtTrmDb(std::string("/usa/arao/test/term-")+prevDayDate, false);
+    stDb.crtCrpDb(std::string("/usa/arao/test/corpus-")+prevDayDate, false);
+
     for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
       std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
        if(dayDate.compare(prevDayDate) != 0) {
-	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET);
-         st->setTermStat(termStatSet);
+	 //   std::cout << "Day date " << prevDayDate << " size " << dirBunch.size() << "\n";
+	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET, prevDayDate);
+         st->setTermStat(termStatMap);
          st->setCorpusStat(corpusStat);   
-         st->setTopicTerm(topicTerm);
          st->setTermSet(termSet);
+         st->setStatDb(&stDb);
          st->spawnParserNScorers(firstPass);
 	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
          ++countPass;
@@ -350,15 +383,18 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       prevDayDate = dayDate;
     }
     if(dirBunch.size() > 0) {
-      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET);
-       st->setTermStat(termStatSet);
+      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET, prevDayDate);
+       st->setTermStat(termStatMap);
        st->setCorpusStat(corpusStat);   
-       st->setTopicTerm(topicTerm);
-       st->setTermSet(termSet); 
+       st->setTermSet(termSet);
+       st->setStatDb(&stDb); 
        st->spawnParserNScorers(firstPass);
        Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
        dirBunch.clear();
     }
+    stDb.closeStreamDb();
+    stDb.closeTrmDb();
+    stDb.closeCrpDb();
   }
 
   dumpStream->close(); 
@@ -421,7 +457,8 @@ int main(int argc, char *argv[]){
   Logger::LOGGER(logFile);
   
   if(trainingFile.size() > 0) {
-    storeEvaluationData(trainingFile);
+    //    storeEvaluationData(trainingFile);
+    HighRecallInfo(trainingFile);
   }
 
   STOP_SET  = Tokenize::getStopSet(stopFile);
