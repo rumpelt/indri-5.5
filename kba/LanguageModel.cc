@@ -4,9 +4,9 @@
 using namespace kba::scorer;
 using namespace kba::term;
 
-kba::scorer::LanguageModel::LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::map<std::string, kba::term::TermStat*> trmStatMap, kba::term::CorpusStat* crpStat, float mu) : _entitySet(entitySet), _trmStatMap(trmStatMap), _crpStat(crpStat), _mu(mu) {
+kba::scorer::LanguageModel::LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::map<std::string, kba::term::TermStat*> trmStatMap, kba::term::CorpusStat* crpStat, float cutoffScore, float mu) : _entitySet(entitySet), _trmStatMap(trmStatMap), _crpStat(crpStat), _cutoffScore(cutoffScore), _mu(mu) {
   computeCollectionProb();
-  computeMaxDocScore();
+  //  computeMaxDocScore();
 }
 
 std::string kba::scorer::LanguageModel::getModelName() {
@@ -45,6 +45,11 @@ void kba::scorer::LanguageModel::computeMaxDocScore() {
 }
  
 float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
+
+  float cutoff = 960;
+  if ((entity->labelTokens).size() > 3)
+    cutoff = 950;
+
   float docScore = 0.0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   for(std::vector<std::string>::iterator termIt = (entity->labelTokens).begin(); termIt != (entity->labelTokens).end(); ++termIt) {
@@ -61,13 +66,6 @@ float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream,
     float score = (totalFreq - docSizeLog) / kba::term::LOG2; 
     docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
   }
-
-  if (docScore > _maxScoreMap.at(entity->wikiURL)) {
-    //    std::cout<<  entity->wikiURL << "  " << docScore << " max " << _maxScoreMap.at(entity->wikiURL) << "\n";
-    docScore = maxScore + docScore;
-  }
-  else
-    docScore = 0;
-  
-  return docScore;
+  docScore = maxScore + docScore;
+  return docScore > cutoff ? docScore : 0.0;
 }

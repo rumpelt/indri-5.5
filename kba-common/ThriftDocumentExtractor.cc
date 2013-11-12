@@ -1,7 +1,7 @@
 #include "ThriftDocumentExtractor.hpp"
 #include <iostream>
 
-const int kba::thrift::BUFFSIZE = 16384;
+const int kba::thrift::BUFFSIZE = 512000;
 
 void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
 
@@ -79,13 +79,6 @@ bool kba::thrift::ThriftDocumentExtractor::decompress(lzma_stream *strm){
     if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
       size_t write_size = sizeof(outbuf) - strm->avail_out;
       _dynBuff->pushData(outbuf, write_size);
-      //      std::cout << "total ize: " << _thriftContent.max_size() << " : " << _thriftContent.size() << "\n";
-       
-      //     for(size_t idx = 0 ; idx < write_size; idx++)  {
-	// _thriftContent.insert(_thriftContent.end(), write_size,      _outbuf);
-      //	_thriftContent.push_back(outbuf[idx]);
-      // }
-      //      cout <<"\n" +_thriftContent.size();
       strm->next_out = outbuf;
       strm->avail_out = sizeof(outbuf);    
     }

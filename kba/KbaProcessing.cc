@@ -324,16 +324,17 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     else
       delete entity;
   } 
-  ENTITY_SET = filterSet;
-  kba::entity::updateEntityWithAbstract(ENTITY_SET, repoMap.at("abstract"), "abstract", STOP_SET ); 
+
+
+  kba::entity::updateEntityWithAbstract(filterSet, repoMap.at("abstract"), "abstract", STOP_SET ); 
  
-  std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
+  std::cout << "total enti : " << filterSet.size() << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
   
   kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
-  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, STOP_SET); // I m not free this atthe end so there is a leak
+  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(filterSet, STOP_SET); // I m not free this atthe end so there is a leak
  
-  std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(ENTITY_SET);
+  std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(filterSet);
   std::set<std::string> termSet;
   std::map<std::string, TermStat*> termStatMap;
   for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt) {
@@ -367,7 +368,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
        if(dayDate.compare(prevDayDate) != 0) {
 	 //   std::cout << "Day date " << prevDayDate << " size " << dirBunch.size() << "\n";
-	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET, prevDayDate);
+	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, filterSet, STOP_SET, prevDayDate);
          st->setTermStat(termStatMap);
          st->setCorpusStat(corpusStat);   
          st->setTermSet(termSet);
@@ -375,7 +376,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
          st->spawnParserNScorers(firstPass);
 	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
          ++countPass;
-         if(firstPass && countPass >= 7)
+         if(countPass >= 1)
            firstPass = false;
          dirBunch.clear();
       }
@@ -383,7 +384,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       prevDayDate = dayDate;
     }
     if(dirBunch.size() > 0) {
-      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET, prevDayDate);
+      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, filterSet, STOP_SET, prevDayDate);
        st->setTermStat(termStatMap);
        st->setCorpusStat(corpusStat);   
        st->setTermSet(termSet);

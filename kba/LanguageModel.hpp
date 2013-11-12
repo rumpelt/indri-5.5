@@ -11,7 +11,7 @@ namespace kba {
       std::vector<kba::entity::Entity*> _entitySet;
       std::map<std::string, kba::term::TermStat*> _trmStatMap;
       kba::term::CorpusStat* _crpStat;
-      
+      float _cutoffScore;      
       float _mu;
       std::map<std::string, float> _collFreqMap;
       std::map<std::string, float> _maxScoreMap;
@@ -27,7 +27,7 @@ namespace kba {
       std::vector<kba::entity::Entity* > getEntityList(); 
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
-      LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::map<std::string, kba::term::TermStat*> trmStatMap, kba::term::CorpusStat* crpStat,float mu=2500);
+      LanguageModel(std::vector<kba::entity::Entity*>& entitySet, std::map<std::string, kba::term::TermStat*> trmStatMap, kba::term::CorpusStat* crpStat, float cutoffScore, float mu=2500);
     };
   }
 }

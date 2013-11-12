@@ -3,6 +3,9 @@
 #include <string>
 #include <cstdio>
 #include <vector>
+#include <stdio.h>
+#include <iostream>
+#include <fstream>
 
 namespace kba {
   namespace dump {
@@ -34,4 +37,34 @@ namespace kba {
     std::vector<ResultRow>  resultRows(); 
   }
 }
+
+inline kba::dump::ResultRow kba::dump::makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, std::string modelName, short relevant, bool mention ) {
+  ResultRow resultrow;
+  resultrow.streamId = streamId;
+  resultrow.entityURL = entityURL;
+  resultrow.score = score;
+  resultrow.dateHour = dateHour;
+  resultrow.mention = mention;
+  resultrow.relevant = relevant;
+  resultrow.modelName = modelName;
+  return resultrow;
+}
+
+/**
+ * access must be synchronized
+ */
+inline void kba::dump::flushToDumpFile(std::vector<ResultRow>& rows, std::fstream* dumpStream) {
+
+  if (dumpStream->is_open()) {
+    for(std::vector<ResultRow>::iterator rowIt = rows.begin(); rowIt != rows.end(); rowIt++) {
+      ResultRow row = *rowIt;
+      //      std::cout << "Row id : " << row.streamId << "\n";
+      *dumpStream << row.teamId << " " << row.systemId << " " << row.streamId << " " << row.entityURL << " "<< row.score << " " << row.relevant << " " << row.mention << " " << row.dateHour << " " << row.slot << " " << row.equivalent << " " << row.byteRange << " " << row.modelName <<"\n";
+    }
+    //    dumpStream->flush();
+  }
+  else
+    std::cout << "\n Could not dump to file :\n ";
+}
+
 #endif

@@ -3,6 +3,8 @@
 #include "DumpKbaResult.hpp"
 #include "LanguageModel.hpp"
 #include "BM25Scorer.hpp"
+#include "LanguageModelExt.hpp"
+#include "BM25ScorerExt.hpp"
 #include "KLDivergence.hpp"
 #include <iostream>
 #include <map>
@@ -44,36 +46,23 @@ std::string kba::StreamThread::extractDirectoryName(std::string absoluteName) {
   return dirName;
 }
 
-void kba::StreamThread::updateCorpusStat(CorpusStat* crpStat, long numDocs, size_t docSize) {
-  crpStat->totalDocs += numDocs;
-  crpStat->collectionTime = _timeStamp;
-  float currentAvgDocSize = ((float)docSize)/numDocs;
-  //std::cout <<  "Current doc size " <<  docSize << " num docs " << numDocs << " " << crpStat->averageDocSize <<  "\n";
-  int crpAvgDoc = crpStat->averageDocSize;
-  if(crpAvgDoc > 0)
-    currentAvgDocSize = (currentAvgDocSize + crpAvgDoc) / 2.0;
-  currentAvgDocSize += 0.5;
-  _crpStat->averageDocSize = (int)(currentAvgDocSize); // rounded or floored depedinging    
-  _crpStat->collectionSize += docSize;
-  _statDb->wrtCrpSt(crpStat);
-}
-
-void kba::StreamThread::updateTermStat(std::map<std::string, TermStat*> termStatMap, kba::stream::ParsedStream* stream) {
-//   std::cout << "TermStat update " << "\n";
-  for(std::map<std::string, kba::term::TermStat*>::iterator termIt = termStatMap.begin(); termIt != termStatMap.end(); ++termIt) {
+void kba::StreamThread::flushStatDb() {
+  _statDb->wrtCrpSt(_crpStat);
+  for(std::map<std::string, kba::term::TermStat*>::iterator termIt = _trmStatMap.begin(); termIt != _trmStatMap.end(); ++termIt) {
     kba::term::TermStat* trmSt  = termIt->second;
-    trmSt->collectionTime = _timeStamp;
-    try {
-      int freq = stream->tokenFreq.at(trmSt->term);
-      trmSt->docFreq += 1;
-      trmSt->collFreq += freq;
-      
-      //      std::cout << " Topic term " <<  trmSt->term << " " << trmSt->docFreq << " " << trmSt->collFreq << "\n";
-    } catch (std::out_of_range& oor) {
-    }
     _statDb->wrtTrmSt(trmSt);
   }
 }
+
+void kba::StreamThread::updateCorpusStat(CorpusStat* crpStat, long numDocs, size_t docSize) {
+  crpStat->totalDocs += numDocs;
+  _crpStat->collectionSize += docSize;
+  crpStat->collectionTime = _timeStamp;
+  float avgDocSize =  ((float)(_crpStat->collectionSize)) / ((float) (crpStat->totalDocs));
+  avgDocSize += 0.5;
+  _crpStat->averageDocSize = (int)(avgDocSize); // rounded or floored depedinging    
+}
+
 
 void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass) {
   _tdextractor->open(fileName);
@@ -83,7 +72,7 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
   size_t docSize = 0;
   while((streamItem = _tdextractor->nextStreamItem()) != 0) {
     std::string docId  = (streamItem->stream_id).substr((streamItem->stream_id).find("-")+1);
-    if (docIds.find(docId) == docIds.end())
+    if ( docIds.find(docId) == docIds.end())
       continue;
 
     kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem,_stopSet, _termSet);
@@ -99,10 +88,10 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
 	  kba::scorer::Scorer* scorer = *scIt;
           int score = (int) (scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not
 	  //	  std::cout << "Score " << scorer->getModelName() << " " << score << "n";
-          if (score >= cutOffScore) {
+          if (score > 0) {
             kba::dump::ResultRow row = kba::dump::makeCCRResultRow(streamItem->stream_id, entity->wikiURL, score, dirName, scorer->getModelName());
             rows.push_back(row);  
-          }
+	  }
         }
       }
     }
@@ -116,10 +105,7 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
     kba::dump::flushToDumpFile(rows, _dumpStream);
     rows.clear();
   } 
-
   _tdextractor->reset();
-  //  std::cout << "Acquiring lock :"<< StreamThread::_fileName << "\n";
-  
 }
 
 void kba::StreamThread::setTermSet(std::set<std::string> termSet) {
@@ -142,16 +128,20 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   
   //  std::cout << " Processing "<<_date <<" Doc Ids " << docIds.size() << "\n";
   
-  LanguageModel* lm = 0;
-  BM25Scorer* bm = 0;
-  KLDivergence* kl=0;
   if(!firstPass) {
-    lm = new LanguageModel(_entities, _trmStatMap, _crpStat);
-    _scorers.push_back(lm);
-    bm = new BM25Scorer(_entities, _crpStat, _trmStatMap);
-    _scorers.push_back(bm);
-    kl = new KLDivergence(_entities, _crpStat, _trmStatMap);
-    _scorers.push_back(kl);
+   BM25ScorerExt*  bmExt = new BM25ScorerExt(_entities, _crpStat, _trmStatMap, 10);
+    _scorers.push_back(bmExt);
+   BM25Scorer* bm = new BM25Scorer(_entities, _crpStat, _trmStatMap,2.0);
+   _scorers.push_back(bm);
+
+   LanguageModel*  lm = new LanguageModel(_entities, _trmStatMap, _crpStat, 900.0);
+   _scorers.push_back(lm);
+
+   LanguageModelExt* lmExt = new LanguageModelExt(_entities, _trmStatMap, _crpStat, 500.0);
+   _scorers.push_back(lmExt);
+    
+   KLDivergence* kl = new KLDivergence(_entities, _crpStat, _trmStatMap);
+   _scorers.push_back(kl);
 
   }
   
@@ -162,14 +152,13 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
       parseFile(_cutoffScore, fName, *dirIt, docIds, firstPass);
     }
   }
-  if(lm != 0)
-    delete lm;
-  if(bm != 0)
-    delete bm;
-  if(kl != 0)
-    delete kl;
+
+  StreamThread::flushStatDb();
+
+  for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
+    delete *scIt;
+  }
   delete _tdextractor;
-  
 }
 
 

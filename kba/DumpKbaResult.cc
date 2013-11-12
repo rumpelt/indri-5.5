@@ -1,19 +1,7 @@
 #include "DumpKbaResult.hpp"
 #include <iostream>
-#include <fstream>
 
 
-kba::dump::ResultRow kba::dump::makeCCRResultRow(std::string streamId, std::string entityURL, int score, std::string dateHour, std::string modelName, short relevant, bool mention ) {
-  ResultRow resultrow;
-  resultrow.streamId = streamId;
-  resultrow.entityURL = entityURL;
-  resultrow.score = score;
-  resultrow.dateHour = dateHour;
-  resultrow.mention = mention;
-  resultrow.relevant = relevant;
-  resultrow.modelName = modelName;
-  return resultrow;
-}
 
 
 /**
@@ -28,22 +16,6 @@ void kba::dump::writeHeader(std::string dumpFile) {
   }
 }
 
-/**
- * access must be synchronized
- */
-void kba::dump::flushToDumpFile(std::vector<ResultRow>& rows, std::fstream* dumpStream) {
-
-  if (dumpStream->is_open()) {
-    for(std::vector<ResultRow>::iterator rowIt = rows.begin(); rowIt != rows.end(); rowIt++) {
-      ResultRow row = *rowIt;
-      //      std::cout << "Row id : " << row.streamId << "\n";
-      *dumpStream << row.teamId << " " << row.systemId << " " << row.streamId << " " << row.entityURL << " "<< row.score << " " << row.relevant << " " << row.mention << " " << row.dateHour << " " << row.slot << " " << row.equivalent << " " << row.byteRange << " " << row.modelName <<"\n";
-    }
-    dumpStream->flush();
-  }
-  else
-    std::cout << "\n Could not dump to file :\n ";
-}
 
 std::string&  kba::dump::rowHeader() {
   static std::string rowheader = "#{\"run_type\": \"automatic\", \"poc_email\": \"ashwani@udel.edu\", \"team_id\": \"UdelCis\", \"topic_set_id\": \"kba-2013-ccr-and-ssf\", \"corpus_id\": \"kba-streamcorpus-2013-v0_2_0\", \"$schema\": \"http://trec-kba.org/schemas/v1.1/filter-run.json\", \"team_name\": \"BlueHen\", \"system_description_short\": \"Not for the kab run yet\", \"system_description\": \"Not for kba run yet\", \"task_id\": \"kba-ccr-2013\", \"poc_name\": \"UDEL CIS-Ashwani\",  \"system_id\": \"Udelcis\"}";

@@ -52,14 +52,29 @@ namespace kba {
     void setTopicTerm(std::set<kba::term::TopicTerm*> tpcTrm);
     void setTermSet(std::set<std::string> termSet);
     void setStatDb(StatDb* statDb);
-
+ 
     void updateCorpusStat(kba::term::CorpusStat*, long numDocs, size_t docSize);
     void updateTermStat(std::map<std::string, kba::term::TermStat*> statMap, kba::stream::ParsedStream* stream);
+    void flushStatDb();
     void parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass);
     StreamThread(std::vector<std::string> dirsToProcess,  std::fstream* dumpStream, std::vector<kba::entity::Entity*> entities, std::unordered_set<std::string> stopSet, std::string _date, int cuttoffScore=650);
     StreamThread();
 
   };
+}
+
+inline void kba::StreamThread::updateTermStat(std::map<std::string, TermStat*> termStatMap, kba::stream::ParsedStream* stream) {
+
+  for(std::map<std::string, kba::term::TermStat*>::iterator termIt = termStatMap.begin(); termIt != termStatMap.end(); ++termIt) {
+    kba::term::TermStat* trmSt  = termIt->second;
+    trmSt->collectionTime = _timeStamp;
+    try {
+      int freq = stream->tokenFreq.at(trmSt->term);
+      trmSt->docFreq += 1;
+      trmSt->collFreq += freq;
+    } catch (std::out_of_range& oor) {
+    }
+  }
 }
 
 #endif

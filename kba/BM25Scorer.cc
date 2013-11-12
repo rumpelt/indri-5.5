@@ -3,11 +3,11 @@
 #include <iostream>
 #include <Logging.hpp>
 
-kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap,   int maxScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStatMap(trmStatMap),_maxScore(maxScore), _parameterK(1.75), _parameterB(0.75) {
+kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap,  float cutoffScore,  int maxScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStatMap(trmStatMap), _cutoffScore(cutoffScore), _maxScore(maxScore), _parameterK(1.75), _parameterB(0.75) {
   _k1b = BM25Scorer::_parameterK * BM25Scorer::_parameterB; // the factor k1 * b
   _k1minusB = BM25Scorer::_parameterK * (1 - BM25Scorer::_parameterB); // the factor k1 * (1 - b) 
   computeLogIDF();
-  computeMaxDocScores();
+  //  computeMaxDocScores();
 
 }
 
@@ -61,23 +61,11 @@ float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStre
       //      (parsedStream->tokenFreq).insert(std::pair<std::string, int>(term, value)); 
     }    
   }
-  //  std::cout << " Normalzed doc length " << normalDocLength  <<" Computed doc score " << docScore << " strema size " << stream->size << " Corpus Avg doc " << _crpStat->averageDocSize << " Max Score " << maxDocScore <<  "\n";
-  return maxDocScore > 0.0 ? docScore/maxDocScore : 0.0;
+
+    //    std::cout << " Normalzed doc length " << normalDocLength  <<" Computed doc score " << docScore << " strema size " << stream->size << " Corpus Avg doc " << _crpStat->averageDocSize << " Max Score " << maxDocScore <<  "\n";
+  //  return maxDocScore > 0.0 ? docScore/maxDocScore : 0.0;
+  return docScore;
 }
 
 
-float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-  if ((entity->labelTokens).size() <= 0) {
-    std::cout << " Not a vailid entiy " << entity->wikiURL << "\n";
-    return 0;
-  }
-  using namespace boost;
-  using namespace kba::entity;
-  //  std::cout << " Entity " << entity->wikiURL <<"\n";
-  float score = maxScore * kba::scorer::BM25Scorer::computeNormalizedDocScore(parsedStream, entity->labelTokens, _maxScores.at(entity->wikiURL));
-  return score;   
-}
 
-int kba::scorer::BM25Scorer::score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int cutOffScore) {
-  return -1;
-}

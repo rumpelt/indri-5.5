@@ -92,7 +92,7 @@ void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& en
       const unsigned char* predicate = (const unsigned char*)"http://dbpedia.org/ontology/abstract";
       std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
       if (dbResourceList.size() <= 0) {
-        std::cout<< "Could not find abstract for : " <<entity->wikiURL << "\n";
+	//        std::cout<< "Could not find abstract for : " <<entity->wikiURL << "\n";
       } 
       else {
         std::string abstract = (const char*)(dbResourceList.at(0).get());
@@ -100,6 +100,7 @@ void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& en
         tokens = Tokenize::toLower(tokens);
         tokens = Tokenize::filterStopWords(tokens, stopSet);
         int textSize = tokens.size();
+	//	std::cout << entity->wikiURL << " " << textSize << "\n";
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	  std::string tok = *tokIt;
           (entity->abstractTokens).push_back(tok);      

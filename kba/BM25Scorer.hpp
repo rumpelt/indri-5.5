@@ -32,12 +32,14 @@ namespace kba {
       float _k1b;
       float _k1minusB;      
 
+      float _cutoffScore;
       /**
        * The maximum score which  can be assigned.
        */
       int _maxScore;
       float _parameterK;
       float _parameterB;
+      
      
     public:
       void computeLogIDF();
@@ -48,13 +50,24 @@ namespace kba {
       std::vector<kba::entity::Entity* > getEntityList(); 
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
-      BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap, int maxScore=1000);
+      BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap, float _cutoffScore, int maxScore=1000);
 
     };
   }
 }
 
 inline std::vector<kba::entity::Entity* > kba::scorer::BM25Scorer::getEntityList() { return BM25Scorer::_entitySet;}
-inline std::string kba::scorer::BM25Scorer::getModelName() {return "BM25-Normalized";}
+inline std::string kba::scorer::BM25Scorer::getModelName() {return "BM25";}
+inline int kba::scorer::BM25Scorer::score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore) {return -1;}
+inline float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
+  
+  using namespace boost;
+  using namespace kba::entity;
+  float cutoff = 2.0;
+  if ((entity->labelTokens).size() > 3)
+    cutoff = 3.0;
+  float score = kba::scorer::BM25Scorer::computeNormalizedDocScore(parsedStream, entity->labelTokens, 0);
+  return score > cutoff ? score : 0;   
+}
 
 #endif
