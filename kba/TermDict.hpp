@@ -6,9 +6,11 @@
 #include <cmath>
 #include <iostream>
 
+/**
 #ifndef LOG2
 #define LOG2 LOG_OF_2()
 #endif
+*/
 
 #include "ParsedStream.hpp"
 #include "WikiEntity.hpp"

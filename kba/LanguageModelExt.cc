@@ -42,7 +42,7 @@ void kba::scorer::LanguageModelExt::computeMaxDocScore() {
       float docFreq = 1 * _crpStat->collectionSize;
       float collFreq = _collFreqMap.at(term);
       docFreq = log(docFreq +collFreq);
-      float score = (docFreq - docSizeLog)/kba::term::LOG2;
+      float score = (docFreq - docSizeLog);
       docScore = docScore + score; 
     }
     //    std::cout << "Max score "<< entity->wikiURL << " " << docScore << "\n";
@@ -50,6 +50,10 @@ void kba::scorer::LanguageModelExt::computeMaxDocScore() {
   }
 }
  
+/**
+ * We only process entities 
+ */
+
 float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   float docScore = 0.0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
@@ -57,13 +61,7 @@ float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStre
   float cutoff = 0;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);
-    cutoff = 600;
-  }
-  else {
-    query = entity->labelTokens;
-    cutoff = 960;
-    if(query.size() > 3)
-      cutoff = 950;
+    cutoff = 865; // lowest median oberserved in my samples
   }
 
   for(std::vector<std::string>::iterator termIt = query.begin(); termIt != query.end(); ++termIt) {
@@ -77,11 +75,11 @@ float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStre
       totalFreq  = log(totalFreq);
     else
       totalFreq = 0;
-    float score = (totalFreq - docSizeLog) / kba::term::LOG2; 
+    float score = (totalFreq - docSizeLog) ; 
     docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
   }
-
-  docScore = maxScore + docScore;
+  if (docScore < 0)
+    docScore = maxScore + docScore;
   
   return docScore > cutoff ? docScore : 0;
 }

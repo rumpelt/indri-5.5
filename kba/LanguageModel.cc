@@ -36,7 +36,7 @@ void kba::scorer::LanguageModel::computeMaxDocScore() {
       float docFreq = 1 * _crpStat->collectionSize;
       float collFreq = _collFreqMap.at(term);
       docFreq = log(docFreq +collFreq);
-      float score = (docFreq - docSizeLog)/kba::term::LOG2;
+      float score = (docFreq - docSizeLog);
       docScore = docScore + score; 
     }
     //    std::cout << "Max score "<< entity->wikiURL << " " << docScore << "\n";
@@ -45,11 +45,7 @@ void kba::scorer::LanguageModel::computeMaxDocScore() {
 }
  
 float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-
-  float cutoff = 960;
-  if ((entity->labelTokens).size() > 3)
-    cutoff = 950;
-
+  float cutoff = 966; // minimum third quartile of my observation
   float docScore = 0.0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   for(std::vector<std::string>::iterator termIt = (entity->labelTokens).begin(); termIt != (entity->labelTokens).end(); ++termIt) {
@@ -63,9 +59,10 @@ float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream,
       totalFreq  = log(totalFreq);
     else
       totalFreq = 0;
-    float score = (totalFreq - docSizeLog) / kba::term::LOG2; 
+    float score = (totalFreq - docSizeLog); 
     docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
   }
-  docScore = maxScore + docScore;
+  if(docScore < 0)
+    docScore = maxScore + docScore;
   return docScore > cutoff ? docScore : 0.0;
 }

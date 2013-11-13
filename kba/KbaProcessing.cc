@@ -38,6 +38,19 @@ bool compareString(std::string firstStr, std::string secondStr) {
   return false;
 }
 
+/**
+ * List of positive entities which do not have  
+ */
+std::set<std::string> noPositiveJudgement(std::string noPositiveFile) {
+  std::ifstream flStream(noPositiveFile.c_str());
+  std::set<std::string> entityList;
+  std::string entityName;
+  while((flStream  >> entityName)) {
+    entityList.insert(entityName);
+  }
+  return entityList;
+}
+
 void HighRecallInfo(std::string recallFile) {
   std::ifstream trgStream(recallFile.c_str());
   StatDb* st = new StatDb();
@@ -302,7 +315,7 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   delete stDb;
 }
 
-void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
+void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::string noPositiveFile, std::unordered_set<std::string> stopSet) {
   using namespace kba::term;
   std::map<std::string, std::string> repoMap;
   repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
@@ -314,11 +327,10 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   kba::entity::populateEntityStruct(ENTITY_SET, repoMap, STOP_SET);
   
   std::vector<kba::entity::Entity*> filterSet;
-
+  std::set<std::string> noPositive = noPositiveJudgement(noPositiveFile);
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
-    
-    if((entity->label).size() > 0) {
+    if( noPositive.find(entity->wikiURL) == noPositive.end() && (entity->label).size() > 0) {
       filterSet.push_back(entity);
     }
     else
@@ -418,6 +430,8 @@ int main(int argc, char *argv[]){
   std::string logFile;
   std::string trainingFile;
   std::string berkleyDbDir;
+  std::string noPositiveFile;
+
   char* tz;
   tz = getenv("TZ");
   if(tz) {
@@ -433,8 +447,10 @@ int main(int argc, char *argv[]){
     ("log", cmndOp::value<std::string>(&logFile), "Log file to write msg to")
     ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
     ("trng",cmndOp::value<std::string>(&trainingFile),"the trec kba judgement file, for this option to work bdb-dir should be specified" )
+   
     ("stat", "Write term and corpus and topic stats")
     ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
+    ("require-positive",cmndOp::value<std::string>(&noPositiveFile)->default_value("../help/nopositive-judgementfile"),"Only process entities for which we have judgement")
     ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
     ("dfile",cmndOp::value<std::string>(),"The dump file")
     ("stop-file,SF",cmndOp::value<std::string>(&stopFile)->default_value("../help/sql40stoplist"),"the file containing the stop words") 
@@ -512,7 +528,7 @@ int main(int argc, char *argv[]){
       std::sort(directories.begin(), directories.end(), compareString);
         
     } 
-    performCCRTask(topicFile, corpusPath, dumpFile, directories, STOP_SET);
+    performCCRTask(topicFile, corpusPath, dumpFile, directories, noPositiveFile, STOP_SET);
   }
    
   

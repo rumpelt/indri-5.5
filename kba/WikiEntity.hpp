@@ -26,7 +26,7 @@ namespace kba {
     std::vector<boost::shared_ptr<unsigned char> > dbpediaURLs; // the list of dbpedia URI pointing to this wiki..It should be one but I have not verified.
     std::vector<boost::shared_ptr<kba::entity::Entity> > relatedEntities; 
     std::vector<std::string> abstractTokens;
-    std::map<std::string, float> textFreq;
+    std::map<std::string, int> textFreq;
   };
   
 

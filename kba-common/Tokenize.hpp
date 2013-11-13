@@ -23,7 +23,7 @@ public:
    */
   static bool isSpecialChar(char ch);
   static std::vector<std::string> split(std::string& inputSource);
-  static std::vector<std::string> tokenize(std::string& inputSource);
+  static std::vector<std::string> tokenize(std::string& inputSource, bool lower, std::unordered_set<std::string>& stopwords);
   static std::vector<std::string> ngrams(std::vector<std::string>& inVector, int ngram);
   static std::vector<std::string> toLower(std::vector<std::string>& inVector);
 };

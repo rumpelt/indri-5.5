@@ -4,8 +4,8 @@ INCPATH=-I. -I../kba-common -I../include -I/usa/arao/projects/redlandlib/include
 LIBPATH=-L../obj  -L../kba-common 
 LIBS= -lboost_thread-mt -lboost_program_options -lkbacommon -lrdf -lraptor2 -lrasqal  -lindri -llzma -lthrift  
 APP=KbaProcessing
-CXX = g++
-CXXFLAGS = -Wall -g -c -std=c++0x
+CXX = g++ 
+CXXFLAGS = -Wall -g -c -std=c++0x -O3 -ffast-math
 OBJECTS = $(patsubst %.cc,%.o,$(wildcard *.cc))
 
 RUNDIRFLAGS = -Wl,-R,'$$ORIGIN/../kba-common'

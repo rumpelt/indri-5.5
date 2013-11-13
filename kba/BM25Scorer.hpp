@@ -63,9 +63,7 @@ inline float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStr
   
   using namespace boost;
   using namespace kba::entity;
-  float cutoff = 2.0;
-  if ((entity->labelTokens).size() > 3)
-    cutoff = 3.0;
+  float cutoff = 3.0; // The minimu  third quartile observed
   float score = kba::scorer::BM25Scorer::computeNormalizedDocScore(parsedStream, entity->labelTokens, 0);
   return score > cutoff ? score : 0;   
 }

@@ -17,7 +17,7 @@ void kba::scorer::BM25Scorer::computeLogIDF() {
     std::string term = tIt->first;
     long docFreq = (tIt->second)->docFreq;
     float idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
-    idf = idf / kba::term::LOG2;
+    idf = idf;
     //std::cout << "Term " << term << " idf " << idf << " doc Freq " << docFreq << " Total doc " << _crpStat->totalDocs << "\n";
     _idf.insert(std::pair<std::string, float>(term, idf));
   }
@@ -48,6 +48,7 @@ void kba::scorer::BM25Scorer::computeMaxDocScores() {
 
 float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStream* stream, std::vector<std::string> queryTerms, float maxDocScore) {
   using namespace kba::scorer;
+
   float docScore = 0.0;
   float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
   float denominatorFactor = _k1minusB + normalDocLength * _k1b;
@@ -61,9 +62,6 @@ float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStre
       //      (parsedStream->tokenFreq).insert(std::pair<std::string, int>(term, value)); 
     }    
   }
-
-    //    std::cout << " Normalzed doc length " << normalDocLength  <<" Computed doc score " << docScore << " strema size " << stream->size << " Corpus Avg doc " << _crpStat->averageDocSize << " Max Score " << maxDocScore <<  "\n";
-  //  return maxDocScore > 0.0 ? docScore/maxDocScore : 0.0;
   return docScore;
 }
 

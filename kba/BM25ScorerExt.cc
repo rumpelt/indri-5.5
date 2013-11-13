@@ -2,13 +2,14 @@
 #include <stdexcept>
 #include <iostream>
 #include <Logging.hpp>
-
+using namespace boost;
+using namespace kba::entity;
+  
 kba::scorer::BM25ScorerExt::BM25ScorerExt(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap, float cutoffScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStatMap(trmStatMap), _parameterK(1.75), _parameterB(0.75),_cutoffScore(cutoffScore) {
   _k1b = BM25ScorerExt::_parameterK * BM25ScorerExt::_parameterB; // the factor k1 * b
   _k1minusB = BM25ScorerExt::_parameterK * (1 - BM25ScorerExt::_parameterB); // the factor k1 * (1 - b) 
   computeLogIDF();
   //  computeMaxDocScores();
-
 }
 
    
@@ -17,8 +18,7 @@ void kba::scorer::BM25ScorerExt::computeLogIDF() {
     std::string term = tIt->first;
     long docFreq = (tIt->second)->docFreq;
     float idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
-    idf = idf / kba::term::LOG2;
-    _idf.insert(std::pair<std::string, float>(term, idf));
+   _idf.insert(std::pair<std::string, float>(term, idf));
   }
 }
 
@@ -71,26 +71,14 @@ float kba::scorer::BM25ScorerExt::computeNormalizedDocScore(kba::stream::ParsedS
 
 
 float kba::scorer::BM25ScorerExt::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-  
-  using namespace boost;
-  using namespace kba::entity;
-  
   std::vector<std::string> query; 
-  float cutoff = 0;
+  float cutoff = 23; // the minimum quartile observed
+  float score = 0;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);
     cutoff = 14.000;
+    score = kba::scorer::BM25ScorerExt::computeNormalizedDocScore(parsedStream, query, 0);
   }
-  else {
-    query = entity->labelTokens;
-    int esize  = query.size();
-    cutoff = 2.0;
-    if (esize > 3)
-      cutoff = 3.0;
-  }
-
-  float score = kba::scorer::BM25ScorerExt::computeNormalizedDocScore(parsedStream, query, 0);
-  //  std::cout << score << "\n";  
   return score > cutoff ?  score : 0;   
 }
 

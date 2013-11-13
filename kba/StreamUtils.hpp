@@ -59,9 +59,7 @@ inline kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream
   std::string anchor = streamcorpus::utils::getAnchor(*streamItem);
   std::string body = (streamItem->body).clean_visible;
   std::string fullContent = title + anchor + body;
-  std::vector<std::string> tokens = Tokenize::tokenize(fullContent);
-  tokens = Tokenize::toLower(tokens); 
-  tokens = Tokenize::filterStopWords(tokens, stopwords);
+  std::vector<std::string> tokens = Tokenize::tokenize(fullContent, true, stopwords);
   kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream(tokens.size());
   for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
     std::string token = *tokIt;    

@@ -92,26 +92,16 @@ void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& en
       const unsigned char* predicate = (const unsigned char*)"http://dbpedia.org/ontology/abstract";
       std::vector<boost::shared_ptr<unsigned char> > dbResourceList = rdfquery->getTargetNodes(subject, predicate);
       if (dbResourceList.size() <= 0) {
-	//        std::cout<< "Could not find abstract for : " <<entity->wikiURL << "\n";
+//        std::cout<< "Could not find abstract for : " <<entity->wikiURL << "\n";
       } 
       else {
         std::string abstract = (const char*)(dbResourceList.at(0).get());
-        std::vector<std::string> tokens = Tokenize::tokenize(abstract);
-        tokens = Tokenize::toLower(tokens);
-        tokens = Tokenize::filterStopWords(tokens, stopSet);
-        int textSize = tokens.size();
+        std::vector<std::string> tokens = Tokenize::tokenize(abstract, true, stopSet);
 	//	std::cout << entity->wikiURL << " " << textSize << "\n";
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	  std::string tok = *tokIt;
           (entity->abstractTokens).push_back(tok);      
-          if((entity->textFreq).find(tok) == (entity->textFreq).end()) {
-            (entity->textFreq).insert(std::pair<std::string,float>(tok, 1.0));
-	  }
-          else {
-            float count = (entity->textFreq).at(tok) + 1.000000;
-            (entity->textFreq).erase(tok);
-            (entity->textFreq).insert(std::pair<std::string,float>(tok, count));
-	  }
+          (entity->textFreq)[tok]++;
 	}
       }
     }
@@ -235,9 +225,7 @@ std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEnti
         entPtr->mainDbURL = node;
         relatedEntities.push_back(rEntity);     
         entPtr->label = label;
-        std::vector<std::string> tokens = Tokenize::tokenize(label);
-        tokens = Tokenize::toLower(tokens);
-        tokens = Tokenize::filterStopWords(tokens, stopSet);
+        std::vector<std::string> tokens = Tokenize::tokenize(label, true, stopSet);
         entPtr->labelTokens = tokens;
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	  std::string tok = *tokIt;
@@ -258,9 +246,7 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
     kba::entity::updateEntityWithLabels(entityList, repoMap.at("labels"), "labels" );
     for(std::vector<kba::entity::Entity*>::iterator entIt = entityList.begin(); entIt != entityList.end(); entIt++) {
       kba::entity::Entity* entity = *entIt;
-      std::vector<std::string> tokens = Tokenize::tokenize(entity->label);
-      tokens = Tokenize::toLower(tokens);
-      tokens = Tokenize::filterStopWords(tokens, stopSet);
+      std::vector<std::string> tokens = Tokenize::tokenize(entity->label, true, stopSet);
       entity->labelTokens = tokens;
       for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	std::string tok = *tokIt;

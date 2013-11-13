@@ -19,25 +19,11 @@ int kba::scorer::BaseLineScorer::score(streamcorpus::StreamItem* stream, kba::en
       return 0;
   }
   
-  
-  std::vector<std::string> entityTokens = Tokenize::tokenize(entityLabel);
-  entityTokens = Tokenize::filterShortWords(entityTokens);
+  std::unordered_set<std::string> stopSet;  
+  std::vector<std::string> entityTokens = Tokenize::tokenize(entityLabel, true, stopSet);
   assert(entityTokens.size() > 0);  
-  entityTokens = Tokenize::toLower(entityTokens);
-
-  /**
-  for (std::vector<std::string>::iterator tkIt=  entityTokens.begin(); tkIt != entityTokens.end(); tkIt++) {
-    std::cout << "tok: " <<  *tkIt << " ^^";
-  } 
-  std::cout << "\n"; 
-  */
-  
-
-  
 
   std::vector<std::string> titlePhrases = Tokenize::getPhrases(title);
-  titlePhrases = Tokenize::filterShortWords(titlePhrases);
-  titlePhrases = Tokenize::toLower(titlePhrases);
   
   int score = 0;
   int step = maxScore / entityTokens.size();
