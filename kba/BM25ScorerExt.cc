@@ -33,16 +33,14 @@ void kba::scorer::BM25ScorerExt::computeMaxDocScores() {
     std::vector<std::string> query;
     if((ent->abstractTokens).size() > 0)
       query = (ent->abstractTokens);
-    else
-      query = ent->labelTokens;
-
+  
     float maxDocLength = (query).size() / _crpStat->averageDocSize;
     float denominatorFactor = _k1minusB + maxDocLength * _k1b;
     //    std::cout << " Entity " << ent->wikiURL << "\n";
     for(std::vector<std::string>::iterator queryIt = (query).begin(); queryIt != (query).end(); ++queryIt) {
       std::string term = *queryIt;
       int freq = 1; // The freq of each term in the ideal document. the ideal document is the entity itself. It is assumend that each term will appear only once in the entity.
-      float idf = _idf.at(term);
+      float idf = _idf[term];
       //std::cout << " Term: " << term << " idf " << idf << "\n";
       maxDocScore = maxDocScore + (idf * (freq / (freq + denominatorFactor)));
     }  
@@ -72,13 +70,12 @@ float kba::scorer::BM25ScorerExt::computeNormalizedDocScore(kba::stream::ParsedS
 
 float kba::scorer::BM25ScorerExt::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   std::vector<std::string> query; 
-  float cutoff = 23; // the minimum quartile observed
+  //  float cutoff = 23; // the minimum quartile observed
   float score = 0;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);
-    cutoff = 14.000;
     score = kba::scorer::BM25ScorerExt::computeNormalizedDocScore(parsedStream, query, 0);
   }
-  return score > cutoff ?  score : 0;   
+  return score;   
 }
 

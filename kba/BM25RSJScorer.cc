@@ -28,7 +28,7 @@ void kba::scorer::BM25RSJScorer::computeLogRSJWeight() {
     float logCompRelSet = log(compRelSet);
     float denominator  = logUnjudged + logCompRelSet;
     
-    float weight = (numerator - denominator) / kba::term::LOG2;
+    float weight = (numerator - denominator);
     
     _rsj.insert(std::pair<std::string, float>(topic+term, weight));
   }

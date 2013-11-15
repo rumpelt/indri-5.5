@@ -10,7 +10,8 @@
 #include <map>
 #include <vector>
 #include <string>
-
+#include <stdexcept>
+using namespace boost;
 namespace kba {
   namespace scorer {
     class BM25Scorer : public Scorer{
@@ -50,6 +51,7 @@ namespace kba {
       std::vector<kba::entity::Entity* > getEntityList(); 
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
+      float getMaxScore(streamcorpus::StreamItem* streamItem, kba::entity::Entity* entity);
       BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap, float _cutoffScore, int maxScore=1000);
 
     };
@@ -59,6 +61,16 @@ namespace kba {
 inline std::vector<kba::entity::Entity* > kba::scorer::BM25Scorer::getEntityList() { return BM25Scorer::_entitySet;}
 inline std::string kba::scorer::BM25Scorer::getModelName() {return "BM25";}
 inline int kba::scorer::BM25Scorer::score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore) {return -1;}
+
+inline float kba::scorer::BM25Scorer::getMaxScore(streamcorpus::StreamItem* streamItem, kba::entity::Entity* entity) {
+  try  {
+    return _maxScores[entity->wikiURL];
+  } 
+  catch(const std::out_of_range& expt) {
+    return 0;
+  }
+}
+
 inline float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   
   using namespace boost;

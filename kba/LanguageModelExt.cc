@@ -34,19 +34,17 @@ void kba::scorer::LanguageModelExt::computeMaxDocScore() {
     std::vector<std::string> query;
     if((entity->abstractTokens).size() > 0)
       query = (entity->abstractTokens);
-    else
-      query = entity->labelTokens;
 
     for(std::vector<std::string>::iterator termIt = query.begin(); termIt != query.end(); ++termIt) {
       std::string term = *termIt;
-      float docFreq = 1 * _crpStat->collectionSize;
+      float docFreq = 1 * _crpStat->collectionSize; // the ideal document is the query itself and  in the ideal document the freq is equal to 1.
       float collFreq = _collFreqMap.at(term);
       docFreq = log(docFreq +collFreq);
       float score = (docFreq - docSizeLog);
       docScore = docScore + score; 
     }
     //    std::cout << "Max score "<< entity->wikiURL << " " << docScore << "\n";
-    _maxScoreMap.insert(std::pair<std::string, float>(entity->wikiURL, docScore));
+    _maxScores.insert(std::pair<std::string, float>(entity->wikiURL, docScore));
   }
 }
  
@@ -55,13 +53,13 @@ void kba::scorer::LanguageModelExt::computeMaxDocScore() {
  */
 
 float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-  float docScore = 0.0;
+  float docScore = 0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   std::vector<std::string> query;
-  float cutoff = 0;
+  //  float cutoff = 0;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);
-    cutoff = 865; // lowest median oberserved in my samples
+    //cutoff = 865; // lowest median oberserved in my samples
   }
 
   for(std::vector<std::string>::iterator termIt = query.begin(); termIt != query.end(); ++termIt) {
@@ -78,8 +76,6 @@ float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStre
     float score = (totalFreq - docSizeLog) ; 
     docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
   }
-  if (docScore < 0)
-    docScore = maxScore + docScore;
   
-  return docScore > cutoff ? docScore : 0;
+  return docScore;
 }

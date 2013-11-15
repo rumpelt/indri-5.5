@@ -42,9 +42,12 @@ namespace kba
       std::string getModelName();
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int cutOffScore);       
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int cutOffScore);       
+      float  getMaxScore(streamcorpus::StreamItem* stream, kba::entity::Entity*);
       RelatedEntityScorer(std::vector<kba::entity::Entity*> entitySet, std::map<std::string, std::string> repoMap, int maxScore=1000);  
     };
 
   }
 }
+
+inline  float kba::scorer::RelatedEntityScorer::getMaxScore(streamcorpus::StreamItem* streamItem, kba::entity::Entity* entity) {return -1;}
 #endif

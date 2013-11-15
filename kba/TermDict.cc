@@ -4,7 +4,7 @@
 #include <limits>
 //const float MIN_FLOAT = std::numeric_limits<float>::min();
 //const unsigned long MAX_ULONE = std::numeric_limits<float>::max();
-float& kba::term::LOG_OF_2() { static float logOf2  = log(2.0); return logOf2;}
+//float& kba::term::LOG_OF_2() { static float logOf2  = log(2.0); return logOf2;}
 
 
 void kba::term::updateTermBase(kba::stream::ParsedStream* parsedStream, kba::term::TermBase* termBase) {
@@ -19,7 +19,7 @@ void kba::term::updateTermBase(kba::stream::ParsedStream* parsedStream, kba::ter
   for(std::set<std::string>::iterator termIt = (termBase->vocabulary).begin(); termIt != (termBase->vocabulary).end(); ++termIt) {
     std::string term = *termIt;
     unsigned int value = 1;
-    if((parsedStream->tokenSet).count(term) > 0) {
+    if(parsedStream->size > 0) {
       try {
 	value  = (termBase->termDocFreq).at(term);
         value = value + 1;
@@ -31,7 +31,6 @@ void kba::term::updateTermBase(kba::stream::ParsedStream* parsedStream, kba::ter
       }
       
       float idf = log((termBase->totalDocs - value + 0.5 )/ (value + 0.5)) ;
-      idf = idf/kba::term::LOG2;
       if(idf < 0.0) // In case IDF is less than zero..This can happe
         idf = 0.0;
       (termBase->logIDF).erase(term);
@@ -147,7 +146,7 @@ std::set<kba::term::TopicTerm*> kba::term::crtTopicTerm(std::vector<kba::entity:
   std::set<kba::term::TopicTerm*> topicTerms;
   for(std::vector<Entity*>::iterator entIt = entitySet.begin(); entIt != entitySet.end(); ++entIt) {
      Entity* entity = *entIt;
-    for(set<string>::iterator tokIt = (entity->tokenSet).begin(); tokIt != (entity->tokenSet).end(); ++tokIt) {
+    for(vector<string>::iterator tokIt = (entity->labelTokens).begin(); tokIt != (entity->labelTokens).end(); ++tokIt) {
       TopicTerm*  tpcTrm = new TopicTerm(entity->wikiURL, *tokIt);
       topicTerms.insert(tpcTrm);
     }
@@ -163,7 +162,7 @@ std::map<kba::term::TopicTermKey, kba::term::TopicTermValue> kba::term::crtTopic
 
   for(std::vector<Entity*>::iterator entIt = entitySet.begin(); entIt != entitySet.end(); ++entIt) {
      Entity* entity = *entIt;
-    for(set<string>::iterator tokIt = (entity->tokenSet).begin(); tokIt != (entity->tokenSet).end(); ++tokIt) {
+    for(vector<string>::iterator tokIt = (entity->labelTokens).begin(); tokIt != (entity->labelTokens).end(); ++tokIt) {
       TopicTermKey termKey(*tokIt, entity->wikiURL);
       TopicTermValue termValue;
       if(stopSet.find(*tokIt) == stopSet.end() && topicTermMap.find(termKey) == topicTermMap.end()) {

@@ -48,6 +48,7 @@ namespace kba {
       std::vector<kba::entity::Entity* > getEntityList(); 
       float score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore);
       int score(streamcorpus::StreamItem* stream, kba::entity::Entity* entity, int maxScore);
+      float  getMaxScore(streamcorpus::StreamItem* stream, kba::entity::Entity*);
       BM25RSJScorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::set<kba::term::TermStat*> trmStat, std::set<kba::term::TopicTerm*> tpcTrm, int maxScore=1000);
     };
   }
@@ -55,5 +56,5 @@ namespace kba {
 
 inline std::vector<kba::entity::Entity* > kba::scorer::BM25RSJScorer::getEntityList() { return BM25RSJScorer::_entitySet;}
 inline std::string kba::scorer::BM25RSJScorer::getModelName() {return "BM25RSJ";}
-
+inline  float kba::scorer::BM25RSJScorer::getMaxScore(streamcorpus::StreamItem* streamItem, kba::entity::Entity* entity) {return -1;}
 #endif

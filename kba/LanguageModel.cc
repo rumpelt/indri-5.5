@@ -33,20 +33,20 @@ void kba::scorer::LanguageModel::computeMaxDocScore() {
     float docSizeLog = log((_crpStat->averageDocSize + _mu) * _crpStat->collectionSize);
     for(std::vector<std::string>::iterator termIt = (entity->labelTokens).begin(); termIt != (entity->labelTokens).end(); ++termIt) {
       std::string term = *termIt;
-      float docFreq = 1 * _crpStat->collectionSize;
+      float docFreq = 1 * _crpStat->collectionSize; // the document here query itself and so the freq is just 1
       float collFreq = _collFreqMap.at(term);
       docFreq = log(docFreq +collFreq);
       float score = (docFreq - docSizeLog);
       docScore = docScore + score; 
     }
     //    std::cout << "Max score "<< entity->wikiURL << " " << docScore << "\n";
-    _maxScoreMap.insert(std::pair<std::string, float>(entity->wikiURL, docScore));
+    _maxScores.insert(std::pair<std::string, float>(entity->wikiURL, docScore));
   }
 }
  
 float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-  float cutoff = 966; // minimum third quartile of my observation
-  float docScore = 0.0;
+  //   float cutoff = 966; // minimum third quartile of my observation
+  float docScore = 0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   for(std::vector<std::string>::iterator termIt = (entity->labelTokens).begin(); termIt != (entity->labelTokens).end(); ++termIt) {
     std::string term = *termIt;
@@ -62,7 +62,6 @@ float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream,
     float score = (totalFreq - docSizeLog); 
     docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
   }
-  if(docScore < 0)
-    docScore = maxScore + docScore;
-  return docScore > cutoff ? docScore : 0.0;
+
+  return docScore;
 }

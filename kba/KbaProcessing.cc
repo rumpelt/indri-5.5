@@ -13,7 +13,6 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include "BaseLineScorer.hpp"
 #include "RelatedEntityScorer.hpp"
 #include "BM25Scorer.hpp"
 #include "DumpKbaResult.hpp"

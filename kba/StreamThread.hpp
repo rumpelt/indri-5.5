@@ -1,5 +1,5 @@
 #ifndef STREAMTHREAD_HPP
-#define STREAMTHREAD_HPP
+#define STREAMTHREAD_HPP 
 #include <cstdio>
 #include <string>
 #include "Scorer.hpp"
@@ -10,8 +10,9 @@
 #include <boost/thread.hpp>
 #include <unordered_set>
 #include "StatDb.hpp"
-
+using namespace boost;
 namespace kba {
+  
   /**
    * We are creating this class to spawn as thread later on .
    */
@@ -33,8 +34,10 @@ namespace kba {
     std::unordered_set<std::string> _stopSet;
     kba::term::CorpusStat* _crpStat;
     std::map<std::string, kba::term::TermStat*> _trmStatMap;
+    std::map<std::string, shared_ptr<ResultPool> > strmColl;
     std::set<kba::term::TopicTerm*> _tpcTrm;
     std::set<std::string> _termSet;
+    std::map<std::string, std::map<std::string, ResultPool*> > collMap;
     StatDb* _statDb;
     time_t _timeStamp;
     std::string _date;
@@ -56,6 +59,10 @@ namespace kba {
     void updateCorpusStat(kba::term::CorpusStat*, long numDocs, size_t docSize);
     void updateTermStat(std::map<std::string, kba::term::TermStat*> statMap, kba::stream::ParsedStream* stream);
     void flushStatDb();
+    void publishResult();
+    void freeResultPool();
+    void addResult(std::string modelName, std::string entityId, std::string streamId, int score, std::string directory);
+    void createResultPool(std::string modelName, int poolSz, bool biggerIsBetter, int initValue);
     void parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass);
     StreamThread(std::vector<std::string> dirsToProcess,  std::fstream* dumpStream, std::vector<kba::entity::Entity*> entities, std::unordered_set<std::string> stopSet, std::string _date, int cuttoffScore=650);
     StreamThread();

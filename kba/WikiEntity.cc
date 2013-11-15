@@ -229,7 +229,7 @@ std::vector<boost::shared_ptr<kba::entity::Entity> > kba::entity::getRelatedEnti
         entPtr->labelTokens = tokens;
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	  std::string tok = *tokIt;
-          (entPtr->tokenSet).insert(tok);      
+          (entPtr->labelMap)[tok]++;      
         }
       
       }    
@@ -250,7 +250,7 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
       entity->labelTokens = tokens;
       for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	std::string tok = *tokIt;
-        (entity->tokenSet).insert(tok);      
+        (entity->labelMap)[tok]++;      
       }
       entity->relatedEntities = kba::entity::getRelatedEntities(entity, repoMap, stopSet);
     }

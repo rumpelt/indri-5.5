@@ -18,7 +18,7 @@ namespace kba {
   struct Entity {
     std::string label;
     std::vector<std::string> labelTokens; // tokens of the label.
-    std::set<std::string> tokenSet; //same as labelTokens above but the unique tokens only, for efficiency purpuse only
+    std::map<std::string, int> labelMap; //same as labelTokens above but the unique tokens only, for efficiency purpuse only
     std::string wikiURL; // corresponds to wikiurl, important
     std::string mainDbURL; // either this one will be populatd or dbpediaURLs will be set, this is againg important so as to fetch data form dbpedia.
     std::string entityType; // may be later conver to enum, not important

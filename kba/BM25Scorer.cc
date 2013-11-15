@@ -8,7 +8,6 @@ kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,
   _k1minusB = BM25Scorer::_parameterK * (1 - BM25Scorer::_parameterB); // the factor k1 * (1 - b) 
   computeLogIDF();
   //  computeMaxDocScores();
-
 }
 
    
@@ -37,7 +36,7 @@ void kba::scorer::BM25Scorer::computeMaxDocScores() {
     for(std::vector<std::string>::iterator queryIt = (ent->labelTokens).begin(); queryIt != (ent->labelTokens).end(); ++queryIt) {
       std::string term = *queryIt;
       int freq = 1; // The freq of each term in the ideal document. the ideal document is the entity itself. It is assumend that each term will appear only once in the entity.
-      float idf = _idf.at(term);
+      float idf = _idf[term];
       //std::cout << " Term: " << term << " idf " << idf << "\n";
       maxDocScore = maxDocScore + (idf * (freq / (freq + denominatorFactor)));
     }  
@@ -49,7 +48,7 @@ void kba::scorer::BM25Scorer::computeMaxDocScores() {
 float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStream* stream, std::vector<std::string> queryTerms, float maxDocScore) {
   using namespace kba::scorer;
 
-  float docScore = 0.0;
+  float docScore = 0;
   float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
   float denominatorFactor = _k1minusB + normalDocLength * _k1b;
 

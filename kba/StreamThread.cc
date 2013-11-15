@@ -67,14 +67,14 @@ void kba::StreamThread::updateCorpusStat(CorpusStat* crpStat, long numDocs, size
 void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass) {
   _tdextractor->open(fileName);
   streamcorpus::StreamItem* streamItem = 0;
-  std::vector<kba::dump::ResultRow> rows;
+  //  std::vector<kba::dump::ResultRow> rows;
   long numDocs = 0;
   size_t docSize = 0;
   while((streamItem = _tdextractor->nextStreamItem()) != 0) {
     std::string docId  = (streamItem->stream_id).substr((streamItem->stream_id).find("-")+1);
     if ( docIds.find(docId) == docIds.end())
       continue;
-
+    //    std::string streamId = streamItem->stream_id;
     kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem,_stopSet, _termSet);
     ++numDocs;
     docSize = docSize + parsedStream->size;
@@ -86,11 +86,13 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
       if(!firstPass) {
         for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
 	  kba::scorer::Scorer* scorer = *scIt;
-          int score = (int) (scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not
+          int score = (int) (scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not 
 	  //	  std::cout << "Score " << scorer->getModelName() << " " << score << "n";
-          if (score > 0) {
-            kba::dump::ResultRow row = kba::dump::makeCCRResultRow(streamItem->stream_id, entity->wikiURL, score, dirName, scorer->getModelName());
-            rows.push_back(row);  
+          if (score != 0) {
+            //int maxScore = (int) (scorer->getMaxScore(streamItem, entity));
+	    //         kba::dump::ResultRow row = kba::dump::makeCCRResultRow(streamItem->stream_id, entity->wikiURL, score, dirName, modelName, maxScore);
+	    //        rows.push_back(row);  
+	    StreamThread::addResult(scorer->getModelName(), entity->wikiURL, streamItem->stream_id, score, dirName);
 	  }
         }
       }
@@ -100,11 +102,12 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
     delete parsedStream; 
   }
   updateCorpusStat(_crpStat, numDocs, docSize);
-
+  /**
   if(rows.size() > 0) {
     kba::dump::flushToDumpFile(rows, _dumpStream);
     rows.clear();
   } 
+  */
   _tdextractor->reset();
 }
 
@@ -115,6 +118,51 @@ void kba::StreamThread::setTermSet(std::set<std::string> termSet) {
 void kba::StreamThread::setStatDb(StatDb* statDb) {
   StreamThread::_statDb = statDb;
 }
+
+void kba::StreamThread::createResultPool(std::string modelName, int poolSz, bool biggerIsBetter, int initValue) {
+  std::map<std::string, ResultPool*>& resMap = collMap[modelName];
+
+  for(std::vector<kba::entity::Entity*>::iterator entIt = _entities.begin(); entIt != _entities.end(); ++entIt) {
+    kba::entity::Entity* entity = *entIt;    
+    ResultPool* rp = new ResultPool(entity->wikiURL, poolSz, initValue, biggerIsBetter);
+    resMap.insert(std::pair<std::string, ResultPool* >(entity->wikiURL, rp));
+  }
+}
+    
+void kba::StreamThread::addResult(std::string modelName, std::string entityId, std::string streamId, int score, std::string directory) {
+  std::map<std::string, ResultPool*>& resMap = collMap[modelName];
+  ResultPool* rp = resMap.at(entityId);
+  rp->addResult(streamId, directory, score);
+}
+    
+void kba::StreamThread::freeResultPool() {
+  for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
+    std::string modelName = (*scIt)->getModelName();
+    std::map<std::string, ResultPool*> & resMap = collMap[modelName];
+    for(std::vector<kba::entity::Entity*>::iterator entIt = _entities.begin(); entIt != _entities.end(); ++entIt) {
+      ResultPool* rp = resMap.at((*entIt)->wikiURL);
+      delete rp;
+    }
+  }
+}
+
+void kba::StreamThread::publishResult() {
+  for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
+    std::string modelName = (*scIt)->getModelName();
+    std::map<std::string, ResultPool*> & resMap = collMap[modelName];
+    for(std::vector<kba::entity::Entity*>::iterator entIt = _entities.begin(); entIt != _entities.end(); ++entIt) {
+      kba::entity::Entity* entity = *entIt;      
+      ResultPool* rp = resMap.at(entity->wikiURL);
+      std::vector<ResultStruct*> resultSet = rp->getResults();
+      for(std::vector<ResultStruct*>::iterator rsIt = resultSet.begin(); rsIt != resultSet.end(); ++rsIt) {
+        if(((*rsIt)->id).size() > 0) // Chance are very less to be false
+          *_dumpStream << (*rsIt)->id << " " << entity->wikiURL << " "<< (*rsIt)->score << " " << (*rsIt)->dayDt << " "  << modelName   << "\n";
+      }
+    }
+  }
+}   
+
+
 
 void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   // create the scorers here
@@ -127,34 +175,44 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   std::unordered_set<std::string> docIds = _statDb->getDocIds(stime, etime, false);
   
   //  std::cout << " Processing "<<_date <<" Doc Ids " << docIds.size() << "\n";
-  
+  int poolSz = 100;
   if(!firstPass) {
-   BM25ScorerExt*  bmExt = new BM25ScorerExt(_entities, _crpStat, _trmStatMap, 10);
+   BM25ScorerExt*  bmExt = new BM25ScorerExt(_entities, _crpStat, _trmStatMap, 10); 
     _scorers.push_back(bmExt);
+   createResultPool(bmExt->getModelName(), poolSz, true, 0);
+   
    BM25Scorer* bm = new BM25Scorer(_entities, _crpStat, _trmStatMap,2.0);
    _scorers.push_back(bm);
+   createResultPool(bm->getModelName(), poolSz, true, 0);
 
    LanguageModel*  lm = new LanguageModel(_entities, _trmStatMap, _crpStat, 900.0);
    _scorers.push_back(lm);
+   createResultPool(lm->getModelName(), poolSz, true, -10000);
 
    LanguageModelExt* lmExt = new LanguageModelExt(_entities, _trmStatMap, _crpStat, 500.0);
    _scorers.push_back(lmExt);
-    
+   createResultPool(lmExt->getModelName(), poolSz, true, -10000);
+   
    KLDivergence* kl = new KLDivergence(_entities, _crpStat, _trmStatMap);
    _scorers.push_back(kl);
-
+   createResultPool(kl->getModelName(), poolSz, true, -10000);
+   
   }
   
   for(std::vector<std::string>::iterator dirIt = _dirsToProcess.begin(); dirIt != _dirsToProcess.end(); ++dirIt) {
     indri::file::FileTreeIterator files(*dirIt);
+    std::string dirName = (*dirIt).substr((*dirIt).rfind("/")+1);
     for(; files != indri::file::FileTreeIterator::end() ;files++) {
       std::string fName = *files;
-      parseFile(_cutoffScore, fName, *dirIt, docIds, firstPass);
+      parseFile(_cutoffScore, fName, dirName, docIds, firstPass);
     }
   }
 
   StreamThread::flushStatDb();
-
+  if(!firstPass) {
+    StreamThread::publishResult();
+    StreamThread::freeResultPool();
+  }
   for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
     delete *scIt;
   }
