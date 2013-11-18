@@ -45,7 +45,6 @@ void kba::scorer::LanguageModel::computeMaxDocScore() {
 }
  
 float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
-  //   float cutoff = 966; // minimum third quartile of my observation
   float docScore = 0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   for(std::vector<std::string>::iterator termIt = (entity->labelTokens).begin(); termIt != (entity->labelTokens).end(); ++termIt) {

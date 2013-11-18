@@ -69,10 +69,6 @@ float KLDivergence::score(kba::stream::ParsedStream* parsedStream, Entity* entit
     docScore = docScore + logFactor; 
   }
 
-  //  docScore = -1 * docScore;
-  //  if((docScore - _maxScores[entity->wikiURL]) > cutoff)
-  //std::cout << "Entity " << entity->wikiURL << " score " << docScore << " max " << _maxScores[entity->wikiURL] << "\n";
-
   return docScore;
 }
 

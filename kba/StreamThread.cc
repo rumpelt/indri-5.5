@@ -8,7 +8,7 @@
 #include "KLDivergence.hpp"
 #include <iostream>
 #include <map>
-
+#include <thread>
 #include "indri/FileTreeIterator.hpp"
 #include "indri/Path.hpp"
 using namespace kba::term;
@@ -89,9 +89,6 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
           int score = (int) (scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not 
 	  //	  std::cout << "Score " << scorer->getModelName() << " " << score << "n";
           if (score != 0) {
-            //int maxScore = (int) (scorer->getMaxScore(streamItem, entity));
-	    //         kba::dump::ResultRow row = kba::dump::makeCCRResultRow(streamItem->stream_id, entity->wikiURL, score, dirName, modelName, maxScore);
-	    //        rows.push_back(row);  
 	    StreamThread::addResult(scorer->getModelName(), entity->wikiURL, streamItem->stream_id, score, dirName);
 	  }
         }
@@ -198,7 +195,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
    createResultPool(kl->getModelName(), poolSz, true, -10000);
    
   }
-  
+
   for(std::vector<std::string>::iterator dirIt = _dirsToProcess.begin(); dirIt != _dirsToProcess.end(); ++dirIt) {
     indri::file::FileTreeIterator files(*dirIt);
     std::string dirName = (*dirIt).substr((*dirIt).rfind("/")+1);
@@ -206,6 +203,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
       std::string fName = *files;
       parseFile(_cutoffScore, fName, dirName, docIds, firstPass);
     }
+
   }
 
   StreamThread::flushStatDb();

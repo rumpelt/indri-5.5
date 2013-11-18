@@ -56,17 +56,15 @@ float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStre
   float docScore = 0;
   float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   std::vector<std::string> query;
-  //  float cutoff = 0;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);
-    //cutoff = 865; // lowest median oberserved in my samples
   }
 
   for(std::vector<std::string>::iterator termIt = query.begin(); termIt != query.end(); ++termIt) {
     std::string term = *termIt;
     float termFreq = 0;
     if((parsedStream->tokenFreq).find(term) != (parsedStream->tokenFreq).end())
-      termFreq = (parsedStream->tokenFreq).at(term);
+       termFreq = (parsedStream->tokenFreq).at(term);
     float collFreq = _collFreqMap.at(term); // here coll Prob is factored by mu
     float totalFreq = termFreq * _crpStat->collectionSize + collFreq;
     if (totalFreq > 0.999999)

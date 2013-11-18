@@ -8,13 +8,13 @@ CXX = g++
 CXXFLAGS = -Wall -g -c -std=c++0x -O3 -ffast-math
 OBJECTS = $(patsubst %.cc,%.o,$(wildcard *.cc))
 
-RUNDIRFLAGS = -Wl,-R,'$$ORIGIN/../kba-common'
+RUNDIRFLAGS = -Wl,-R,'$$ORIGIN/../kba-common' 
 
 %.o : %.cc
 	$(CXX) $(CXXFLAGS) $? -o $@  $(INCPATH) 
 
 all:  $(OBJECTS)
-	$(CXX) -Wall -g  -o $(APP) $(OBJECTS)    $(LIBPATH) $(LIBS) $(RUNDIRFLAGS)
+	$(CXX) -Wall -g  -o $(APP) $(OBJECTS)    $(LIBPATH) $(LIBS) $(RUNDIRFLAGS) 
 
 
 install:
@@ -22,5 +22,4 @@ install:
 
 clean:
 	rm -f $(APP)
-
 
