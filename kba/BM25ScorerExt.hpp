@@ -31,7 +31,7 @@ namespace kba {
       std::map<std::string, float> _maxScores; // Map from wiki url to maximum document score
       float _k1b;
       float _k1minusB;      
-      
+      float _denominatorFactor;      
       /**
        * The maximum score which  can be assigned.
        */

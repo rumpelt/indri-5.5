@@ -40,10 +40,8 @@ void kba::scorer::KLDivergence::computeMaxDocScore() {
 }
 
 float KLDivergence::score(kba::stream::ParsedStream* parsedStream, Entity* entity, int maxScore) {
-
-  //  float cutoff = -4;
   int querySize = (entity->abstractTokens).size();
-  std::map<std::string, int>& queryMap = entity->textFreq;
+  std::map<std::string, int> queryMap = entity->textFreq;
   if(querySize <= 0) {
     queryMap = entity->labelMap; // Okay we were not able to get the abstract text and so we just use the labeltokens
     querySize = (entity->labelTokens).size();
@@ -53,24 +51,28 @@ float KLDivergence::score(kba::stream::ParsedStream* parsedStream, Entity* entit
 
   for(std::map<std::string, int>::iterator queryIt = queryMap.begin(); queryIt != queryMap.end(); ++queryIt) {
     std::string word = queryIt->first;
-    float docFreq = 0;
-    try {
-      docFreq = (parsedStream->tokenFreq).at(word);
+    if((parsedStream->langModelProb).find(word) == (parsedStream->langModelProb).end()) {
+      float docFreq = 0;
+      try {
+        docFreq = (parsedStream->tokenFreq).at(word);
+      }
+      catch(const std::out_of_range& oor) {
+      }
+      float collFreq = _collFreqMap[word];
+      docFreq = (docFreq * _crpStat->collectionSize) + collFreq;
+      if (docFreq >= 0.999)
+        docFreq = log(docFreq);
+      float score = docFreq - log ((parsedStream->size + _mu) * _crpStat->collectionSize);
+      (parsedStream->langModelProb).insert(std::pair<std::string, float>(word, score));
     }
-    catch(const std::out_of_range& oor) {
-    }
-    float collFreq = _collFreqMap[word];
-    
-    docFreq = (docFreq * _crpStat->collectionSize) + collFreq;
-    if (docFreq >= 1.0)
-      docFreq = log(docFreq);
-    float logFactor = docFreq - log ((parsedStream->size + _mu) * _crpStat->collectionSize);
-    logFactor = ((queryIt->second) * logFactor) / querySize;
+    float logFactor = ((queryIt->second) * (parsedStream->langModelProb)[word]) / querySize;
     docScore = docScore + logFactor; 
   }
 
   return docScore;
 }
+
+
 
 void kba::scorer::KLDivergence::computeCollectionProb() {
 

@@ -8,6 +8,7 @@ using namespace kba::entity;
 kba::scorer::BM25ScorerExt::BM25ScorerExt(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap, float cutoffScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStatMap(trmStatMap), _parameterK(1.75), _parameterB(0.75),_cutoffScore(cutoffScore) {
   _k1b = BM25ScorerExt::_parameterK * BM25ScorerExt::_parameterB; // the factor k1 * b
   _k1minusB = BM25ScorerExt::_parameterK * (1 - BM25ScorerExt::_parameterB); // the factor k1 * (1 - b) 
+  _denominatorFactor = -1;
   computeLogIDF();
   //  computeMaxDocScores();
 }
@@ -52,16 +53,24 @@ void kba::scorer::BM25ScorerExt::computeMaxDocScores() {
 float kba::scorer::BM25ScorerExt::computeNormalizedDocScore(kba::stream::ParsedStream* stream, std::vector<std::string> queryTerms, float maxDocScore) {
   using namespace kba::scorer;
   float docScore = 0.0;
-  float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
-  float denominatorFactor = _k1minusB + normalDocLength * _k1b;
 
   for(std::vector<std::string>::iterator queryIt = queryTerms.begin(); queryIt != queryTerms.end(); queryIt++) {
     try {
-      int freq = (stream->tokenFreq).at(*queryIt);
-      float idf = _idf.at(*queryIt);
-      docScore = docScore + (idf * (freq / (freq + denominatorFactor)));
+      std::string term= *queryIt;
+      if((stream->bm25Prob).find(term) == (stream->bm25Prob).end()) {
+        int freq = (stream->tokenFreq).at(term);
+        float idf = _idf.at(*queryIt);
+        if(_denominatorFactor < 0) {
+          float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
+          _denominatorFactor = _k1minusB + normalDocLength * _k1b;
+        }
+        float score = idf * (freq / (freq + _denominatorFactor));
+        (stream->bm25Prob).insert(std::pair<std::string, float>(term, score));
+      }
+      docScore = docScore + (stream->bm25Prob)[term];
     } catch(std::out_of_range& oor) {
-    }    
+
+    }
   }
   //  std::cout << " Normalzed doc length " << normalDocLength  <<" Computed doc score " << docScore << " strema size " << stream->size << " Corpus Avg doc " << _crpStat->averageDocSize << "\n";
   return docScore;
@@ -70,7 +79,6 @@ float kba::scorer::BM25ScorerExt::computeNormalizedDocScore(kba::stream::ParsedS
 
 float kba::scorer::BM25ScorerExt::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   std::vector<std::string> query; 
-  //  float cutoff = 23; // the minimum quartile observed
   float score = 0;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);

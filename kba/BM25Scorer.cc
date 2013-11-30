@@ -6,6 +6,7 @@
 kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,  kba::term::CorpusStat* crpStat, std::map<std::string, kba::term::TermStat*> trmStatMap,  float cutoffScore,  int maxScore) : _entitySet(entitySet), _crpStat(crpStat), _trmStatMap(trmStatMap), _cutoffScore(cutoffScore), _maxScore(maxScore), _parameterK(1.75), _parameterB(0.75) {
   _k1b = BM25Scorer::_parameterK * BM25Scorer::_parameterB; // the factor k1 * b
   _k1minusB = BM25Scorer::_parameterK * (1 - BM25Scorer::_parameterB); // the factor k1 * (1 - b) 
+  _denominatorFactor = -1;
   computeLogIDF();
   //  computeMaxDocScores();
 }
@@ -49,16 +50,23 @@ float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStre
   using namespace kba::scorer;
 
   float docScore = 0;
-  float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
-  float denominatorFactor = _k1minusB + normalDocLength * _k1b;
-
+  
   for(std::vector<std::string>::iterator queryIt = queryTerms.begin(); queryIt != queryTerms.end(); queryIt++) {
     try {
-      int freq = (stream->tokenFreq).at(*queryIt);
-      float idf = _idf.at(*queryIt);
-      docScore = docScore + (idf * (freq / (freq + denominatorFactor)));
+      std::string term= *queryIt;
+      if((stream->bm25Prob).find(term) == (stream->bm25Prob).end()) {
+        int freq = (stream->tokenFreq).at(term);
+        float idf = _idf.at(*queryIt);
+        if(_denominatorFactor < 0) {
+          float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
+          _denominatorFactor = _k1minusB + normalDocLength * _k1b;
+        }
+        float score = idf * (freq / (freq + _denominatorFactor));
+        (stream->bm25Prob).insert(std::pair<std::string, float>(term, score));
+      }
+      docScore = docScore + (stream->bm25Prob)[term];
     } catch(std::out_of_range& oor) {
-      //      (parsedStream->tokenFreq).insert(std::pair<std::string, int>(term, value)); 
+
     }    
   }
   return docScore;

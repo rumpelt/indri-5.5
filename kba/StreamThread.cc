@@ -8,7 +8,6 @@
 #include "KLDivergence.hpp"
 #include <iostream>
 #include <map>
-#include <thread>
 #include "indri/FileTreeIterator.hpp"
 #include "indri/Path.hpp"
 using namespace kba::term;
@@ -55,6 +54,7 @@ void kba::StreamThread::flushStatDb() {
 }
 
 void kba::StreamThread::updateCorpusStat(CorpusStat* crpStat, long numDocs, size_t docSize) {
+  std::unique_lock<std::mutex> lk(StreamThread::mut);
   crpStat->totalDocs += numDocs;
   _crpStat->collectionSize += docSize;
   crpStat->collectionTime = _timeStamp;
@@ -65,47 +65,62 @@ void kba::StreamThread::updateCorpusStat(CorpusStat* crpStat, long numDocs, size
 
 
 void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass) {
-  _tdextractor->open(fileName);
+  kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
+  tdextractor->open(fileName);
   streamcorpus::StreamItem* streamItem = 0;
-  //  std::vector<kba::dump::ResultRow> rows;
+  std::vector<kba::stream::ParsedStream*> streams;
+  std::vector<kba::TempResult> rsLst;
   long numDocs = 0;
   size_t docSize = 0;
-  while((streamItem = _tdextractor->nextStreamItem()) != 0) {
+  while((streamItem = tdextractor->nextStreamItem()) != 0) {
+    //  std::cout << "first Pass " << firstPass << "\n";  
     std::string docId  = (streamItem->stream_id).substr((streamItem->stream_id).find("-")+1);
-    if ( docIds.find(docId) == docIds.end())
+    if ( (streamItem->body).clean_visible.size() <= 0 || docIds.find(docId) == docIds.end() )
       continue;
-    //    std::string streamId = streamItem->stream_id;
     kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem,_stopSet, _termSet);
     ++numDocs;
     docSize = docSize + parsedStream->size;
-
-    //std::cout << "Found id " << "\n";
+    
     for(std::vector<kba::entity::Entity*>::iterator entIt = _entities.begin(); entIt != _entities.end(); entIt++) {
         
       kba::entity::Entity* entity = *entIt;
-      if(!firstPass) {
+      bool found = false;
+
+      for(std::vector<std::string>::iterator tokIt=(entity->labelTokens).begin(); tokIt != (entity->labelTokens).end(); ++tokIt) {
+        if((parsedStream->tokenFreq).find(*tokIt) != (parsedStream->tokenFreq).end()) {
+          found = true;
+          break;
+	}
+      }
+
+      if(found && !firstPass) {
         for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
 	  kba::scorer::Scorer* scorer = *scIt;
           int score = (int) (scorer->score(parsedStream, entity, 1000)); // first check we have implemented the parsedStreamMethod or not 
-	  //	  std::cout << "Score " << scorer->getModelName() << " " << score << "n";
-          if (score != 0) {
-	    StreamThread::addResult(scorer->getModelName(), entity->wikiURL, streamItem->stream_id, score, dirName);
+
+          if (score > -99999) {
+	    kba::TempResult tmp;
+            tmp.modelName = scorer->getModelName(); tmp.topicName = entity->wikiURL; tmp.stream_id = streamItem->stream_id; tmp.score = score; tmp.dirName = dirName;
+            rsLst.push_back(tmp);
+
 	  }
         }
       }
     }
-    //    std::cout << "Updateing TermStat" << "\n";
-    updateTermStat(_trmStatMap, parsedStream);  
-    delete parsedStream; 
+    //    updateTermStat(_trmStatMap, parsedStream);  
+    (parsedStream->bm25Prob).clear();
+    (parsedStream->langModelProb).clear();
+    streams.push_back(parsedStream);
+    //delete parsedStream; 
   }
+
+  StreamThread::addResult(rsLst);
+  StreamThread::updateTermStat(_trmStatMap, streams);
+  for(std::vector<kba::stream::ParsedStream*>::iterator psIt = streams.begin(); psIt != streams.end(); ++psIt)
+    delete *psIt;
+
   updateCorpusStat(_crpStat, numDocs, docSize);
-  /**
-  if(rows.size() > 0) {
-    kba::dump::flushToDumpFile(rows, _dumpStream);
-    rows.clear();
-  } 
-  */
-  _tdextractor->reset();
+  delete tdextractor;
 }
 
 void kba::StreamThread::setTermSet(std::set<std::string> termSet) {
@@ -127,10 +142,22 @@ void kba::StreamThread::createResultPool(std::string modelName, int poolSz, bool
 }
     
 void kba::StreamThread::addResult(std::string modelName, std::string entityId, std::string streamId, int score, std::string directory) {
+  std::unique_lock<std::mutex> lk(StreamThread::mut);
   std::map<std::string, ResultPool*>& resMap = collMap[modelName];
   ResultPool* rp = resMap.at(entityId);
   rp->addResult(streamId, directory, score);
 }
+
+void kba::StreamThread::addResult(std::vector<kba::TempResult>& rsLst) {
+  std::unique_lock<std::mutex> lk(StreamThread::mut);
+  for (std::vector<kba::TempResult>::iterator rsIt = rsLst.begin(); rsIt != rsLst.end(); ++rsIt) {
+    kba::TempResult rs = *rsIt;
+    std::map<std::string, ResultPool*>& resMap = StreamThread::collMap[rs.modelName];
+    ResultPool* rp = resMap.at(rs.topicName);
+    rp->addResult(rs.stream_id, rs.dirName, rs.score);
+  }
+}
+
     
 void kba::StreamThread::freeResultPool() {
   for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
@@ -157,22 +184,37 @@ void kba::StreamThread::publishResult() {
       }
     }
   }
+  (*_dumpStream).flush();
 }   
+
+
+
 
 
 
 void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   // create the scorers here
   using namespace kba::scorer;
-  _tdextractor= new kba::thrift::ThriftDocumentExtractor();
   //  std::cout << " date " << _date << "\n";
   _timeStamp = kba::time::convertDateToTime(_date);
   time_t stime = _timeStamp - 7200;
   time_t etime = _timeStamp + ((24 * 3600) - 1);
   std::unordered_set<std::string> docIds = _statDb->getDocIds(stime, etime, false);
-  
   //  std::cout << " Processing "<<_date <<" Doc Ids " << docIds.size() << "\n";
+
+  int numThreads = std::thread::hardware_concurrency();
+  std::ifstream trdF("../help/cputhread");
+  if (trdF.is_open()) {
+    trdF >> numThreads;
+    trdF.close();
+  }
+  else if(numThreads <= 0)
+    numThreads = 16;
+  //  std::cout << "Num Threads " << numThreads << "\n";
+  std::vector<std::thread> threads;
+
   int poolSz = 100;
+  //  std::cout << "first Pass " << firstPass << "\n"; 
   if(!firstPass) {
    BM25ScorerExt*  bmExt = new BM25ScorerExt(_entities, _crpStat, _trmStatMap, 10); 
     _scorers.push_back(bmExt);
@@ -195,15 +237,25 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
    createResultPool(kl->getModelName(), poolSz, true, -10000);
    
   }
-
+  
   for(std::vector<std::string>::iterator dirIt = _dirsToProcess.begin(); dirIt != _dirsToProcess.end(); ++dirIt) {
     indri::file::FileTreeIterator files(*dirIt);
     std::string dirName = (*dirIt).substr((*dirIt).rfind("/")+1);
     for(; files != indri::file::FileTreeIterator::end() ;files++) {
       std::string fName = *files;
-      parseFile(_cutoffScore, fName, dirName, docIds, firstPass);
+      if(threads.size() >= numThreads) {
+	std::for_each(threads.begin(), threads.end(),std::mem_fn(&std::thread::join));
+        threads.clear();
+      }
+      // parseFile(_cutoffScore, fName, dirName, docIds, firstPass);
+      threads.push_back(std::thread(&StreamThread::parseFile, this, _cutoffScore, fName, dirName, docIds, firstPass));
     }
-
+    
+  }
+  
+  if(threads.size() >= 0) {
+    std::for_each(threads.begin(), threads.end(),std::mem_fn(&std::thread::join));
+    threads.clear();
   }
 
   StreamThread::flushStatDb();
@@ -214,7 +266,6 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   for(std::vector<kba::scorer::Scorer*>::iterator scIt = _scorers.begin(); scIt != _scorers.end(); ++scIt) {
     delete *scIt;
   }
-  delete _tdextractor;
 }
 
 

@@ -1,7 +1,6 @@
 #ifndef STREAMINDEX_HPP
 #define STREAMINDEX_HPP
 
-#include "BerkleyDBEnv.hpp"
 #include "StatDb.hpp"
 #include "TermDict.hpp"
 #include "map"
@@ -27,14 +26,13 @@ namespace kba {
     kba::term::CorpusStat* _corpusStat;
     std::set<TopicStat> _topicStatSet;
     std::set<TermStat*> _termStatSet;
-    kba::berkley::CorpusDb* _corpusDb;
     StatDb* _stDb;
     time_t _collectionTime;
     std::unordered_set<std::string> _stopSet;    
     std::set<std::string> _termsToFetch;
     
     void assertCollectionTime();    
-    int16_t getRating(streamcorpus::StreamItem* item, std::string topic);
+
     void processStream(streamcorpus::StreamItem* streamItem);
     void processStreamBasicStat(streamcorpus::StreamItem* streamItem);
     void flushToDb();

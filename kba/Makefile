@@ -6,6 +6,7 @@ LIBS= -lboost_thread-mt -lboost_program_options -lkbacommon -lrdf -lraptor2 -lra
 APP=KbaProcessing
 CXX = g++ 
 CXXFLAGS = -Wall -g -c -std=c++0x -O3 -ffast-math
+#CXXFLAGS = -Wall -g -c -std=c++0x 
 OBJECTS = $(patsubst %.cc,%.o,$(wildcard *.cc))
 
 RUNDIRFLAGS = -Wl,-R,'$$ORIGIN/../kba-common' 

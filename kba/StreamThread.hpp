@@ -7,18 +7,30 @@
 #include "TimeConversion.hpp"
 #include "ThriftDocumentExtractor.hpp"
 #include "TermDict.hpp"
-#include <boost/thread.hpp>
+#include <thread>
+#include "ThreadQueue.hpp"
 #include <unordered_set>
 #include "StatDb.hpp"
 using namespace boost;
 namespace kba {
-  
+ 
+  struct TempResult {
+    std::string modelName;
+    std::string topicName;
+    std::string stream_id;
+    int score;
+    std::string dirName;
+  };  
+
   /**
    * We are creating this class to spawn as thread later on .
    */
   class StreamThread {
   private:
    std::vector<std::string> _dirsToProcess;
+   mutable std::mutex mut;
+  
+  
     /**
      * Not thread safe
      */
@@ -43,7 +55,7 @@ namespace kba {
     std::string _date;
     int _cutoffScore;
     std::vector<kba::scorer::Scorer*> _scorers;
-    kba::thrift::ThriftDocumentExtractor* _tdextractor;
+    //    kba::thrift::ThriftDocumentExtractor* _tdextractor;
     
   public:
     void operator()(int cutOffScore); // operator over loading , potential use as thread functor
@@ -58,10 +70,13 @@ namespace kba {
  
     void updateCorpusStat(kba::term::CorpusStat*, long numDocs, size_t docSize);
     void updateTermStat(std::map<std::string, kba::term::TermStat*> statMap, kba::stream::ParsedStream* stream);
+    void updateTermStat(std::map<std::string, kba::term::TermStat*> statMap, std::vector<kba::stream::ParsedStream*> streams);
     void flushStatDb();
     void publishResult();
     void freeResultPool();
     void addResult(std::string modelName, std::string entityId, std::string streamId, int score, std::string directory);
+    void addResult(std::vector<kba::TempResult>& resLst);
+ 
     void createResultPool(std::string modelName, int poolSz, bool biggerIsBetter, int initValue);
     void parseFile(int cutOffScore, std::string fileName, std::string dirName, std::unordered_set<std::string> docIds, bool firstPass);
     StreamThread(std::vector<std::string> dirsToProcess,  std::fstream* dumpStream, std::vector<kba::entity::Entity*> entities, std::unordered_set<std::string> stopSet, std::string _date, int cuttoffScore=650);
@@ -71,7 +86,7 @@ namespace kba {
 }
 
 inline void kba::StreamThread::updateTermStat(std::map<std::string, TermStat*> termStatMap, kba::stream::ParsedStream* stream) {
-
+  std::unique_lock<std::mutex> lk(StreamThread::mut); 
   for(std::map<std::string, kba::term::TermStat*>::iterator termIt = termStatMap.begin(); termIt != termStatMap.end(); ++termIt) {
     kba::term::TermStat* trmSt  = termIt->second;
     trmSt->collectionTime = _timeStamp;
@@ -80,6 +95,23 @@ inline void kba::StreamThread::updateTermStat(std::map<std::string, TermStat*> t
       trmSt->docFreq += 1;
       trmSt->collFreq += freq;
     } catch (std::out_of_range& oor) {
+    }
+  }
+}
+
+inline void kba::StreamThread::updateTermStat(std::map<std::string, TermStat*> termStatMap, std::vector<kba::stream::ParsedStream*> streams) {
+  std::unique_lock<std::mutex> lk(StreamThread::mut); 
+  for(std::map<std::string, kba::term::TermStat*>::iterator termIt = termStatMap.begin(); termIt != termStatMap.end(); ++termIt) {
+    kba::term::TermStat* trmSt  = termIt->second;
+    trmSt->collectionTime = _timeStamp;
+    for (std::vector<kba::stream::ParsedStream*>::iterator psIt = streams.begin(); psIt != streams.end(); ++psIt) {
+      kba::stream::ParsedStream* stream = *psIt;
+      try {
+        int freq = stream->tokenFreq.at(trmSt->term);
+        trmSt->docFreq += 1;
+        trmSt->collFreq += freq;
+      } catch (std::out_of_range& oor) {
+      }
     }
   }
 }

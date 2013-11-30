@@ -54,7 +54,6 @@ void kba::scorer::LanguageModelExt::computeMaxDocScore() {
 
 float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStream, kba::entity::Entity* entity, int maxScore) {
   float docScore = 0;
-  float docSizeLog =log((parsedStream->size + _mu) * _crpStat->collectionSize);
   std::vector<std::string> query;
   if((entity->abstractTokens).size() > 0) {
     query = (entity->abstractTokens);
@@ -62,17 +61,20 @@ float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStre
 
   for(std::vector<std::string>::iterator termIt = query.begin(); termIt != query.end(); ++termIt) {
     std::string term = *termIt;
-    float termFreq = 0;
-    if((parsedStream->tokenFreq).find(term) != (parsedStream->tokenFreq).end())
-       termFreq = (parsedStream->tokenFreq).at(term);
-    float collFreq = _collFreqMap.at(term); // here coll Prob is factored by mu
-    float totalFreq = termFreq * _crpStat->collectionSize + collFreq;
-    if (totalFreq > 0.999999)
-      totalFreq  = log(totalFreq);
-    else
-      totalFreq = 0;
-    float score = (totalFreq - docSizeLog) ; 
-    docScore = docScore + score; // _mu factor for collection probability is already taken care of in computeCollection
+    if( (parsedStream->langModelProb).find(term) == (parsedStream->langModelProb).end()) {
+      float termFreq = 0;
+      if((parsedStream->tokenFreq).find(term) != (parsedStream->tokenFreq).end())
+        termFreq = (parsedStream->tokenFreq)[term];
+      float collFreq = _collFreqMap[term]; // here coll Prob is factored by mu
+      float totalFreq = termFreq * _crpStat->collectionSize + collFreq;
+      if (totalFreq > 0.999999)
+        totalFreq  = log(totalFreq);
+      else
+        totalFreq = 0;
+      float score = totalFreq - log((parsedStream->size + _mu) * _crpStat->collectionSize); 
+      (parsedStream->langModelProb).insert(std::pair<std::string, float>(term, score));
+    }
+    docScore = docScore + (parsedStream->langModelProb)[term]; // _mu factor for collection probability is already taken care of in computeCollection
   }
   
   return docScore;

@@ -32,7 +32,7 @@ namespace kba {
       std::map<std::string, float> _maxScores; // Map from wiki url to maximum document score
       float _k1b;
       float _k1minusB;      
-
+      float _denominatorFactor;
       float _cutoffScore;
       /**
        * The maximum score which  can be assigned.
@@ -75,9 +75,8 @@ inline float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStr
   
   using namespace boost;
   using namespace kba::entity;
-  float cutoff = 3.0; // The minimu  third quartile observed
   float score = kba::scorer::BM25Scorer::computeNormalizedDocScore(parsedStream, entity->labelTokens, 0);
-  return score > cutoff ? score : 0;   
+  return score;   
 }
 
 #endif

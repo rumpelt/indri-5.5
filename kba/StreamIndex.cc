@@ -18,19 +18,7 @@ kba::StreamIndex::StreamIndex(std::map<TopicTermKey, TopicTermValue>& termTopicM
   }
 
 
-int16_t kba::StreamIndex::getRating(streamcorpus::StreamItem* streamItem, std::string topic) {
-  using namespace boost;
-  using namespace kba::term;
-  using namespace std;
-  std::vector<boost::shared_ptr<EvaluationData> > ratings = StreamIndex::_corpusDb->getEvaluationData(streamItem->stream_id, topic);
-  int16_t rating = 3;
-  for(vector<boost::shared_ptr<EvaluationData> > ::iterator ratingIt = ratings.begin(); ratingIt != ratings.end(); ++ratingIt) {
-    EvaluationData* eval = (*ratingIt).get();
-    if(eval->rating < rating)
-      rating = eval->rating;
-  } 
-  return rating >=3 ? -2 : rating;
-}
+
 
 void kba::StreamIndex::assertCollectionTime() {
   assert((_corpusStat->collectionTime - _collectionTime) >= kba::StreamIndex::secondsInDay);

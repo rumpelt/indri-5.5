@@ -53,18 +53,22 @@ std::set<std::string> noPositiveJudgement(std::string noPositiveFile) {
 void HighRecallInfo(std::string recallFile) {
   std::ifstream trgStream(recallFile.c_str());
   StatDb* st = new StatDb();
-  st->crtStreamDb("/usa/arao/test/streamid.db", false);
+  st->crtStreamDb("/usa/arao/test/streamid-small.db", false);
   std::string row;
   while(std::getline(trgStream, row)) {
     std::vector<std::string> rowTokens = Tokenize::split(row);
-    kba::term::StreamInfo stInfo;
+    int score = strtol(rowTokens.at(4).c_str(), NULL, 10);
+    if (score > 300) {
+      kba::term::StreamInfo stInfo;
+   
+      std::string stream_id = rowTokens.at(2);
+      stInfo.sTime = strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
+    
+      stInfo.docId = stream_id.substr(stream_id.find("-") +1);
+      stInfo.directory = rowTokens.at(7);
 
-    std::string stream_id = rowTokens.at(2);
-    stInfo.sTime = strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
-    stInfo.docId = stream_id.substr(stream_id.find("-") +1);
-    stInfo.directory = rowTokens.at(7);
-
-    st->wrtStreamInfo(stInfo);
+      st->wrtStreamInfo(stInfo);
+    }
   }
   st->closeStreamDb();
   Logger::LOG_MSG("KbaProcessing.cc", "HighRecallInfo", " finished writing the streamdbs ");
@@ -395,6 +399,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       prevDayDate = dayDate;
     }
     if(dirBunch.size() > 0) {
+      firstPass = false;
       kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, filterSet, STOP_SET, prevDayDate);
        st->setTermStat(termStatMap);
        st->setCorpusStat(corpusStat);   

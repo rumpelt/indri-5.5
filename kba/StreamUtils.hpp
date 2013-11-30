@@ -32,7 +32,7 @@ inline std::string streamcorpus::utils::getAnchor(streamcorpus::StreamItem& stre
   std::string anchor;
   try { 
     ContentItem content;
-    content = streamItem.other_content.at("anchor0");
+    content = streamItem.other_content.at("anchor");
     anchor = content.raw;
     return anchor;
   }
@@ -54,20 +54,5 @@ inline std::string streamcorpus::utils::getTitle(streamcorpus::StreamItem& strea
   }
 }
 
-inline kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(streamcorpus::StreamItem* streamItem, std::unordered_set<std::string>& stopwords, std::set<std::string>& termsToFetch) {
-  std::string title = streamcorpus::utils::getTitle(*streamItem);
-  std::string anchor = streamcorpus::utils::getAnchor(*streamItem);
-  std::string body = (streamItem->body).clean_visible;
-  std::string fullContent = title + anchor + body;
-  std::vector<std::string> tokens = Tokenize::tokenize(fullContent, true, stopwords);
-  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream(tokens.size());
-  for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
-    std::string token = *tokIt;    
-    if(termsToFetch.find(token) == termsToFetch.end()) 
-      continue;
-    (parsedStream->tokenFreq)[token]++;
-  }
-  return parsedStream;
-}
 
 #endif

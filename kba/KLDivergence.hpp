@@ -14,6 +14,7 @@ namespace kba {
       std::map<std::string, kba::term::TermStat*> _trmStatMap;
       std::map<std::string, float> _maxScores;
       std::map<std::string, float> _collFreqMap;
+      std::map<std::string, float> _logFactorCache;
       static float _mu;
       
     public:
