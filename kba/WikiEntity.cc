@@ -84,6 +84,7 @@ void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& en
   RDFParser* rdfparser = new RDFParser();
   rdfparser->initRDFParser(repoName, storageDir);
   RDFQuery* rdfquery = new RDFQuery(rdfparser->getModel(), rdfparser->getWorld()); 
+  //  std::cout << " Abstract " << "\n";
   for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
     kba::entity::Entity* entity = *entityIt;
     if((entity->dbpediaURLs).size() > 0) {
@@ -97,7 +98,7 @@ void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& en
       else {
         std::string abstract = (const char*)(dbResourceList.at(0).get());
         std::vector<std::string> tokens = Tokenize::tokenize(abstract, true, stopSet);
-	//	std::cout << entity->wikiURL << " " << textSize << "\n";
+	//	std::cout << entity->wikiURL << "\n";
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	  std::string tok = *tokIt;
           (entity->abstractTokens).push_back(tok);      
@@ -125,7 +126,7 @@ void kba::entity::updateEntityWithDbpedia(std::vector<kba::entity::Entity*>& ent
       
     }
     else {
-      std::cout << "Adding Entity " << entity->wikiURL  << "\n";
+      //      std::cout << "Adding Entity " << entity->wikiURL  << "\n";
       if(dbResourceList.size() > 1)
 	 std::cout << "More than one dbpedia resource for " << entity->wikiURL << "\n";
       entity->dbpediaURLs = dbResourceList;

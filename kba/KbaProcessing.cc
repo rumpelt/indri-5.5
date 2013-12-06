@@ -343,7 +343,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 
   kba::entity::updateEntityWithAbstract(filterSet, repoMap.at("abstract"), "abstract", STOP_SET ); 
  
-  std::cout << "total enti : " << filterSet.size() << "\n"; 
+  //  std::cout << "total enti : " << filterSet.size() << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
   
   kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
@@ -357,7 +357,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     termStatMap.insert(std::pair<std::string, TermStat*>((*termIt)->term, *termIt));
   }
   
-  std::cout << "TermStat set size " << termSet.size() << " " << termStatMap.size() << "\n";
+  //  std::cout << "TermStat set size " << termSet.size() << " " << termStatMap.size() << "\n";
  
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
@@ -391,7 +391,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
          st->spawnParserNScorers(firstPass);
 	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
          ++countPass;
-         if(countPass >= 1)
+         if(countPass >= 13)
            firstPass = false;
          dirBunch.clear();
       }

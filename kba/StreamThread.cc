@@ -216,6 +216,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   int poolSz = 100;
   //  std::cout << "first Pass " << firstPass << "\n"; 
   if(!firstPass) {
+    
    BM25ScorerExt*  bmExt = new BM25ScorerExt(_entities, _crpStat, _trmStatMap, 10); 
     _scorers.push_back(bmExt);
    createResultPool(bmExt->getModelName(), poolSz, true, 0);
@@ -223,7 +224,8 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
    BM25Scorer* bm = new BM25Scorer(_entities, _crpStat, _trmStatMap,2.0);
    _scorers.push_back(bm);
    createResultPool(bm->getModelName(), poolSz, true, 0);
-
+   
+    /**
    LanguageModel*  lm = new LanguageModel(_entities, _trmStatMap, _crpStat, 900.0);
    _scorers.push_back(lm);
    createResultPool(lm->getModelName(), poolSz, true, -10000);
@@ -235,7 +237,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
    KLDivergence* kl = new KLDivergence(_entities, _crpStat, _trmStatMap);
    _scorers.push_back(kl);
    createResultPool(kl->getModelName(), poolSz, true, -10000);
-   
+    */
   }
   
   for(std::vector<std::string>::iterator dirIt = _dirsToProcess.begin(); dirIt != _dirsToProcess.end(); ++dirIt) {

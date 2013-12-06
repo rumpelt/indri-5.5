@@ -20,7 +20,8 @@ void kba::scorer::LanguageModel::computeCollectionProb() {
 
   for(std::map<std::string, TermStat*>::iterator trmIt = _trmStatMap.begin(); trmIt != _trmStatMap.end(); ++trmIt) {
     std::string term = (trmIt)->first;
-    float collFreq = (trmIt->second)->collFreq * _mu; // _mu factor for dirichlet smoothing.
+    float collFreq = (trmIt->second)->collFreq * _mu;
+    collFreq = collFreq / _crpStat->collectionSize; // _mu factor for dirichlet smoothing.
     _collFreqMap.insert(std::pair<std::string, float>(term, collFreq));
   }
 
@@ -52,13 +53,13 @@ float kba::scorer::LanguageModel::score(kba::stream::ParsedStream* parsedStream,
       float termFreq = 0;
       if((parsedStream->tokenFreq).find(term) != (parsedStream->tokenFreq).end())
         termFreq = (parsedStream->tokenFreq)[term];
-      float collFreq = _collFreqMap[term]; // here coll Prob is factored by mu
-      float totalFreq = termFreq * _crpStat->collectionSize + collFreq;
-      if (totalFreq > 0.999999)
+      float collFreq = _collFreqMap[term]; // here coll Prob is factored by mu and corpus collectionSize
+      float totalFreq = termFreq  + collFreq;
+      if (totalFreq > 0.0001) // This is based on 1/_mu (1/2500). We want at least that much value. We are trying to induce some counts
         totalFreq  = log(totalFreq);
       else
         totalFreq = 0;
-      float score = totalFreq - log((parsedStream->size + _mu) * _crpStat->collectionSize); 
+      float score = totalFreq - log((parsedStream->size + _mu)); 
       (parsedStream->langModelProb).insert(std::pair<std::string, float>(term, score));
     }
     docScore = docScore + (parsedStream->langModelProb)[term]; // _mu factor for collection probability is already taken care of in computeCollection
