@@ -1,5 +1,6 @@
 #include "Passage.hpp"
 #include <stdexcept>
+#include <iostream>
 
 void Passage::setTerms(std::vector<std::string> terms) {
   Passage::terms = terms;
@@ -9,7 +10,7 @@ void Passage::setPsgId(int psgId) {
   Passage::psgId = psgId;
 }
 
-void Passage::setDocId(int docId) {
+void Passage::setDocId(unsigned long docId) {
   Passage::docId = docId;
 }
 
@@ -41,7 +42,7 @@ float Passage::getScore() {
   return Passage::score;
 }
 
-int Passage::getDocId() {
+unsigned long Passage::getDocId() {
   return Passage::docId;
 }
 
@@ -54,4 +55,10 @@ std::string Passage::getTrecId() {
 
 std::vector<std::string> Passage::getTerms() {
   return Passage::terms;
+}
+
+void Passage::printPassage() {
+  for(std::vector<std::string>::iterator tkIt = (Passage::terms).begin(); tkIt != (Passage::terms).end(); ++tkIt) {
+    std::cout <<" " << *tkIt;
+  }
 }

@@ -46,23 +46,28 @@ kba::stream::ParsedStream* streamcorpus::utils::createMinimalParsedStream(stream
   title = title + " "+ anchor;
   std::vector<Sentence> sentences;
   sentences = (streamItem->body).sentences["lingpipe"]; 
+  
+  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream();
+ 
   std::vector<std::string> tokens = Tokenize::split(title);
+  for(std::vector<std::string>::iterator tokIt  = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
+    std::string token = *tokIt;
+    std::transform(token.begin(), token.end(), token.begin(), ::tolower); 
+    (parsedStream->tokenFreq)[token]++;
+  }
+
   for(std::vector<Sentence>::iterator sentit = sentences.begin(); sentit != sentences.end(); sentit++) {
     Sentence  sentence = *sentit;
     for (std::vector<Token>::iterator tokit = sentence.tokens.begin(); tokit != sentence.tokens.end(); tokit++) {
       std::string token =  (*tokit).token;
-      if(stopwords.find(token) == stopwords.end() || token.size() <= 2) {
-        tokens.push_back(token);
+      std::transform(token.begin(), token.end(), token.begin(), ::tolower);
+      if(stopwords.find(token) == stopwords.end() && token.size() > 2) {
+         tokens.push_back(token);
+         (parsedStream->tokenFreq)[token]++;
       }
     }
   }
-  
-  kba::stream::ParsedStream *parsedStream = new kba::stream::ParsedStream(tokens.size());
-  for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); tokIt++) {
-    std::string token = *tokIt;    
-    if(termsToFetch.find(token) == termsToFetch.end()) 
-      continue;
-    (parsedStream->tokenFreq)[token]++;
-  }
+
+  parsedStream->size = tokens.size();
   return parsedStream;
 }

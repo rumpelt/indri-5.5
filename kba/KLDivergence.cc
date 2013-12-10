@@ -58,7 +58,7 @@ float KLDivergence::score(kba::stream::ParsedStream* parsedStream, Entity* entit
       }
       catch(const std::out_of_range& oor) {
       }
-      float collFreq = _collFreqMap[word]; // collfreq is factor by _mu and collectionssize
+      double collFreq = _collFreqMap[word]; // collfreq is factor by _mu and collectionssize
       docFreq = docFreq  + collFreq; 
       if (docFreq >= 0.0001) // We want it to be atleast bigger than 1/_mu or 1/2500
         docFreq = log(docFreq);
@@ -78,7 +78,7 @@ void kba::scorer::KLDivergence::computeCollectionProb() {
 
   for(std::map<std::string, TermStat*>::iterator trmIt = _trmStatMap.begin(); trmIt != _trmStatMap.end(); ++trmIt) {
     std::string term = (trmIt)->first;
-    float collFreq = (trmIt->second)->collFreq * _mu; // _mu factor for dirichlet smoothing.
+    double collFreq = (trmIt->second)->collFreq * _mu; // _mu factor for dirichlet smoothing.
     collFreq = collFreq/ _crpStat->collectionSize;
     _collFreqMap.insert(std::pair<std::string, float>(term, collFreq));
   }

@@ -15,10 +15,9 @@ kba::scorer::BM25Scorer::BM25Scorer(std::vector<kba::entity::Entity*> entitySet,
 void kba::scorer::BM25Scorer::computeLogIDF() {
   for(std::map<std::string, kba::term::TermStat*>::iterator tIt = _trmStatMap.begin(); tIt != _trmStatMap.end(); ++tIt) {
     std::string term = tIt->first;
-    long docFreq = (tIt->second)->docFreq;
-    float idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
-    idf = idf;
-    //std::cout << "Term " << term << " idf " << idf << " doc Freq " << docFreq << " Total doc " << _crpStat->totalDocs << "\n";
+    unsigned long docFreq = (tIt->second)->docFreq;
+    double idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
+    //    std::cout << "Term " << term << " idf " << idf << " doc Freq " << docFreq << " Total doc " << _crpStat->totalDocs << "\n";
     _idf.insert(std::pair<std::string, float>(term, idf));
   }
 }
@@ -55,7 +54,7 @@ float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStre
     try {
       std::string term= *queryIt;
       if((stream->bm25Prob).find(term) == (stream->bm25Prob).end()) {
-        int freq = (stream->tokenFreq).at(term);
+        float freq = (stream->tokenFreq).at(term);
         float idf = _idf.at(*queryIt);
         if(_denominatorFactor < 0) {
           float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)
@@ -63,14 +62,13 @@ float kba::scorer::BM25Scorer::computeNormalizedDocScore(kba::stream::ParsedStre
         }
         float score = idf * (freq / (freq + _denominatorFactor));
         (stream->bm25Prob).insert(std::pair<std::string, float>(term, score));
+	//	std::cout << term << " " << score << "\n";
       }
       docScore = docScore + (stream->bm25Prob)[term];
     } catch(std::out_of_range& oor) {
 
     }    
   }
+  //  std::cout << "\n";
   return docScore;
 }
-
-
-

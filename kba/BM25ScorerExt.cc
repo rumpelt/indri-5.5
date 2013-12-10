@@ -17,8 +17,8 @@ kba::scorer::BM25ScorerExt::BM25ScorerExt(std::vector<kba::entity::Entity*> enti
 void kba::scorer::BM25ScorerExt::computeLogIDF() {
   for(std::map<std::string, kba::term::TermStat*>::iterator tIt = _trmStatMap.begin(); tIt != _trmStatMap.end(); ++tIt) {
     std::string term = tIt->first;
-    long docFreq = (tIt->second)->docFreq;
-    float idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
+    unsigned long docFreq = (tIt->second)->docFreq;
+    double idf = log((_crpStat->totalDocs - docFreq + 0.5)/ (docFreq + 0.5));
    _idf.insert(std::pair<std::string, float>(term, idf));
   }
 }
@@ -58,7 +58,7 @@ float kba::scorer::BM25ScorerExt::computeNormalizedDocScore(kba::stream::ParsedS
     try {
       std::string term= *queryIt;
       if((stream->bm25Prob).find(term) == (stream->bm25Prob).end()) {
-        int freq = (stream->tokenFreq).at(term);
+        float freq = (stream->tokenFreq).at(term);
         float idf = _idf.at(*queryIt);
         if(_denominatorFactor < 0) {
           float normalDocLength = (float)(stream->size) /  _crpStat->averageDocSize; // normalized document length (dl / avgdl)

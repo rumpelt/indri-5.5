@@ -21,6 +21,7 @@ namespace kba {
       std::unordered_map<std::string, float> bm25Prob; // cache to hold some prob for bm25 score
       int size;
       ParsedStream(int streamSize) : size(streamSize) {};
+      ParsedStream() : size(0){};
     };
     void populateTokenFreq(kba::stream::ParsedStream* parsedStream);
     

@@ -48,6 +48,39 @@ std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inp
   return filterWords;
 }
 
+std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std::unordered_set<std::string> stopSet, bool lower, unsigned int charLimit) {
+  std::vector<std::string> tokens;
+  char phrase[4096];
+  int phraseIndex=0;
+  for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); charIt++) {
+    char thisChar = *charIt;
+    if(!isspace(thisChar)) {
+      phrase[phraseIndex] = thisChar;
+      phraseIndex+=1;
+    }
+    else {
+      std::string content((const char*) &phrase, phraseIndex);
+      if(content.size() > charLimit) {
+        if(lower)
+	  std::transform(content.begin(), content.end(), content.begin(), ::tolower);
+        if(stopSet.find(content) == stopSet.end())    
+          tokens.push_back(content);
+      }
+      phraseIndex = 0;
+    }
+  }
+  if(phraseIndex > 0) {
+    std::string content((const char*) &phrase, phraseIndex);
+    if(content.size() > charLimit) {
+      if(lower)
+        std::transform(content.begin(), content.end(), content.begin(), ::tolower);
+      if(stopSet.find(content) == stopSet.end())
+        tokens.push_back(content);
+    }
+  }
+  return tokens;
+}
+
 
 std::vector<std::string> Tokenize::split(std::string& inputSource) {
   std::vector<std::string> tokens;
@@ -72,7 +105,7 @@ std::vector<std::string> Tokenize::split(std::string& inputSource) {
   return tokens;
 }
 
-std::vector<std::string> Tokenize::tokenize(std::string& inputSource, bool lower, std::unordered_set<std::string>& stopwords) {
+std::vector<std::string> Tokenize::tokenize(std::string& inputSource, bool lower, std::unordered_set<std::string>& stopwords, unsigned int charLimit) {
   std::vector<std::string> tokens;
   char phrase[4096];
   int phraseIndex=0;
@@ -82,7 +115,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource, bool lower
     if(!isspace(thisChar)) { // If this case is not upper then we process it
       if(!prevUpperCase && isupper(thisChar)) { // IF the previous character was also upper case then it might be some abbreviation and so we just append it to previous
 	std::string content((const char*) &phrase, phraseIndex);
-        if(content.size() > 2) {
+        if(content.size() > charLimit) {
           if(lower)
             std::transform(content.begin(), content.end(), content.begin(), ::tolower);
           if(stopwords.find(content) == stopwords.end())
@@ -95,7 +128,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource, bool lower
       }
       else if(Tokenize::isSpecialChar(thisChar)) {
         std::string content((const char*) &phrase, phraseIndex);
-        if(content.size() > 2) {
+        if(content.size() > charLimit) {
           if(lower)
             std::transform(content.begin(), content.end(), content.begin(), ::tolower);
           if(stopwords.find(content) == stopwords.end())
@@ -115,7 +148,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource, bool lower
     }
     else  {
       std::string content((const char*) &phrase, phraseIndex);
-      if(content.size() > 2) {
+      if(content.size() > charLimit) {
         if(lower)
           std::transform(content.begin(), content.end(), content.begin(), ::tolower);
         if(stopwords.find(content) == stopwords.end())
@@ -135,7 +168,7 @@ std::vector<std::string> Tokenize::tokenize(std::string& inputSource, bool lower
   
   if(phraseIndex > 0) {
     std::string content((const char*) &phrase, phraseIndex);
-    if (content.size() > 2) {
+    if (content.size() > charLimit) {
       if(lower)
         std::transform(content.begin(), content.end(), content.begin(), ::tolower);
       if(stopwords.find(content) == stopwords.end())

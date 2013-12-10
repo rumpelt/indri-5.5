@@ -93,8 +93,8 @@ namespace kba {
 
     struct CorpusStat {
       time_t collectionTime;   // This should be primary key. 
-      long totalDocs;
-      long judgedSample; // The N value
+      unsigned long totalDocs;
+      unsigned long judgedSample; // The N value
       int averageDocSize;  // Rounded to integer value;
       unsigned long collectionSize;
       CorpusStat() : collectionTime(0), totalDocs(0), judgedSample(0), averageDocSize(0), collectionSize(0) {}
@@ -103,8 +103,8 @@ namespace kba {
     struct TermStat {
       time_t collectionTime; // this is the primary key along with the term
       std::string term;
-      long docFreq; // For calculating IDF
-      long collFreq; //Total frequency of the term in the corpus. this is greater than Id. This to calculate the colelection Term Frequency  
+      unsigned long docFreq; // For calculating IDF
+      unsigned long collFreq; //Total frequency of the term in the corpus. this is greater than Id. This to calculate the colelection Term Frequency  
       bool operator() (TermStat* lhs, TermStat* const rhs)  {
         std::cout << "Calling functor\n";
         if((lhs->term).compare(rhs->term) == 0)

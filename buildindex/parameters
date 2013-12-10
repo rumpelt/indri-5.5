@@ -1,0 +1,28 @@
+<parameters>
+  <memory>2G</memory>
+  <metadata>
+    <field>docno</field>
+    <field>time</field>
+    <field>dir</field>
+    <field>file</field>
+  </metadata>
+  <field>
+    <name>time</name>
+    <numeric>true</numeric>
+  </field>
+  <field>
+    <name>text</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>title</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>anchor</name>
+    <numeric>false</numeric>
+  </field>
+  <stemmer>
+    <name>Krovetz</name>
+  </stemmer>
+</parameters>

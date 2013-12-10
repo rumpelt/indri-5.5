@@ -58,7 +58,7 @@ void kba::StreamThread::updateCorpusStat(CorpusStat* crpStat, long numDocs, size
   crpStat->totalDocs += numDocs;
   _crpStat->collectionSize += docSize;
   crpStat->collectionTime = _timeStamp;
-  float avgDocSize =  ((float)(_crpStat->collectionSize)) / ((float) (crpStat->totalDocs));
+  double avgDocSize =  ((double)(_crpStat->collectionSize)) / (crpStat->totalDocs);
   avgDocSize += 0.5;
   _crpStat->averageDocSize = (int)(avgDocSize); // rounded or floored depedinging    
 }
@@ -75,7 +75,7 @@ void kba::StreamThread::parseFile(int cutOffScore, std::string fileName, std::st
   while((streamItem = tdextractor->nextStreamItem()) != 0) {
     //  std::cout << "first Pass " << firstPass << "\n";  
     std::string docId  = (streamItem->stream_id).substr((streamItem->stream_id).find("-")+1);
-    if ( (streamItem->body).clean_visible.size() <= 0 || docIds.find(docId) == docIds.end() )
+    if ( (streamItem->body).clean_visible.size() <= 0)
       continue;
     kba::stream::ParsedStream* parsedStream = streamcorpus::utils::createMinimalParsedStream(streamItem,_stopSet, _termSet);
     ++numDocs;
@@ -197,9 +197,9 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
   using namespace kba::scorer;
   //  std::cout << " date " << _date << "\n";
   _timeStamp = kba::time::convertDateToTime(_date);
-  time_t stime = _timeStamp - 7200;
-  time_t etime = _timeStamp + ((24 * 3600) - 1);
-  std::unordered_set<std::string> docIds = _statDb->getDocIds(stime, etime, false);
+  //time_t stime = _timeStamp - 7200;
+  //time_t etime = _timeStamp + ((24 * 3600) - 1);
+  std::unordered_set<std::string> docIds; // = _statDb->getDocIds(stime, etime, false);
   //  std::cout << " Processing "<<_date <<" Doc Ids " << docIds.size() << "\n";
 
   int numThreads = std::thread::hardware_concurrency();
@@ -224,8 +224,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
    BM25Scorer* bm = new BM25Scorer(_entities, _crpStat, _trmStatMap,2.0);
    _scorers.push_back(bm);
    createResultPool(bm->getModelName(), poolSz, true, 0);
-   
-    /**
+  
    LanguageModel*  lm = new LanguageModel(_entities, _trmStatMap, _crpStat, 900.0);
    _scorers.push_back(lm);
    createResultPool(lm->getModelName(), poolSz, true, -10000);
@@ -237,7 +236,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
    KLDivergence* kl = new KLDivergence(_entities, _crpStat, _trmStatMap);
    _scorers.push_back(kl);
    createResultPool(kl->getModelName(), poolSz, true, -10000);
-    */
+   
   }
   
   for(std::vector<std::string>::iterator dirIt = _dirsToProcess.begin(); dirIt != _dirsToProcess.end(); ++dirIt) {

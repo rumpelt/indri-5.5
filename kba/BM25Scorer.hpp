@@ -75,6 +75,12 @@ inline float kba::scorer::BM25Scorer::score(kba::stream::ParsedStream* parsedStr
   
   using namespace boost;
   using namespace kba::entity;
+  /**
+  for (std::vector<std::string>::iterator it = (entity->labelTokens).begin(); it != (entity->labelTokens).end(); ++it) {
+    std::cout << " " << *it;
+  }
+  */
+  //  std::cout << "\n";
   float score = kba::scorer::BM25Scorer::computeNormalizedDocScore(parsedStream, entity->labelTokens, 0);
   return score;   
 }

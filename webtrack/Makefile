@@ -6,7 +6,7 @@ LIBPATH=-L../library/lib
 
 LIBS= -lboost_program_options -lindri -lxml2 -lz -liberty -lpthread
 
-APP=clue
+APP=IndriRunQuery
 #CXX = /usa/arao/gcctools/bin/g++ 
 CXX=g++
 

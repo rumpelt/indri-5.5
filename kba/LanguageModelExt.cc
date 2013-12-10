@@ -20,7 +20,7 @@ void kba::scorer::LanguageModelExt::computeCollectionProb() {
 
   for(std::map<std::string, TermStat*>::iterator trmIt = _trmStatMap.begin(); trmIt != _trmStatMap.end(); ++trmIt) {
     std::string term = (trmIt)->first;
-    float collFreq = (trmIt->second)->collFreq * _mu; // _mu factor for dirichlet smoothing.
+    double collFreq = (trmIt->second)->collFreq * _mu; // _mu factor for dirichlet smoothing.
     collFreq = collFreq / _crpStat->collectionSize;
     _collFreqMap.insert(std::pair<std::string, float>(term, collFreq));
   }
@@ -66,8 +66,8 @@ float kba::scorer::LanguageModelExt::score(kba::stream::ParsedStream* parsedStre
       float termFreq = 0;
       if((parsedStream->tokenFreq).find(term) != (parsedStream->tokenFreq).end())
         termFreq = (parsedStream->tokenFreq)[term];
-      float collFreq = _collFreqMap[term]; // here coll Prob is factored by mu
-      float totalFreq = termFreq  + (collFreq / _crpStat->collectionSize);
+      double collFreq = _collFreqMap[term]; // here coll Prob is factored by mu
+      double totalFreq = termFreq  + collFreq;
       if (totalFreq > 0.0001)
         totalFreq  = log(totalFreq);
       else

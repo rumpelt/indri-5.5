@@ -375,7 +375,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     std::string prevDayDate = (dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
     //std::cout << "Prev Day date " << prevDayDate << " " << dirList.at(0) << "\n";
     StatDb stDb;
-    stDb.crtStreamDb(std::string("/usa/arao/test/streamid.db"), true);
+    //stDb.crtStreamDb(std::string("/usa/arao/test/streamid.db"), true);
     stDb.crtTrmDb(std::string("/usa/arao/test/term-")+prevDayDate, false);
     stDb.crtCrpDb(std::string("/usa/arao/test/corpus-")+prevDayDate, false);
 
@@ -391,7 +391,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
          st->spawnParserNScorers(firstPass);
 	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
          ++countPass;
-         if(countPass >= 13)
+         if(countPass >= 1)
            firstPass = false;
          dirBunch.clear();
       }

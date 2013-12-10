@@ -7,7 +7,7 @@
 
 class Passage  {
 private:
-  int docId;
+  unsigned long docId;
   int psgId;
   std::string trecId;
   float score;
@@ -17,16 +17,17 @@ private:
 public:
   void setTerms(std::vector<std::string> terms);
   void setPsgId(int psgId);
-  void setDocId(int docId);
+  void setDocId(unsigned long docId);
   void setScore(float score);
   void setTrecId(std::string trecId);
   void crtTermFreq();
   int getPsgSz();
   float getScore();
-  int getDocId();
+  unsigned long getDocId();
   std::vector<std::string> getTerms();
   std::string getTrecId();
   int freq(std::string term);
+  void printPassage();
 };
 
 #endif
