@@ -19,5 +19,5 @@ float LanguageModel::score(std::vector<std::string> query, Passage* psg, std::ma
     docScore = docScore + log(docFreq) - docSz;
   }
   //  std::cout << "\n";
-  return docScore;
+   return docScore;
 }

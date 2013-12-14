@@ -391,7 +391,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
          st->spawnParserNScorers(firstPass);
 	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
          ++countPass;
-         if(countPass >= 1)
+         if(countPass >= 13)
            firstPass = false;
          dirBunch.clear();
       }

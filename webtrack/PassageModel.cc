@@ -1,4 +1,5 @@
 #include "PassageModel.hpp"
+#include "PassageUtility.hpp"
 
 using namespace indri::api; 
 namespace cmndOp = boost::program_options;
@@ -78,9 +79,9 @@ void dumpResult(std::vector<ClueResult> cresult, std::string dumpFile) {
  * Responsibilty of caller to delete passages
  */
 std::vector<Passage*> PassageModel::createFixedWindowPassage(std::string content, bool lower, std::unordered_set<std::string> stopwordSet, const int passageSz, const int windowSz, unsigned long docId) {
-  assert(passgeSz > windowSz);
+  //  assert(passgeSz > windowSz);
   std::vector<Passage*> psgs;
-  std:vector<std::string> tokens = Tokenize::tokenize(content, lower, stopwordSet);
+  std:vector<std::string> tokens = Tokenize::whiteSpaceSplit(content, stopwordSet); // will stem also
   std::vector<std::string> psgTokens;
   std::vector<std::string> windowTokens;
   int id=1;
@@ -92,6 +93,7 @@ std::vector<Passage*> PassageModel::createFixedWindowPassage(std::string content
       psg->setDocId(docId);
       psg->setTerms(psgTokens);
       psgs.push_back(psg);
+      psgTokens.clear();
       psgTokens = windowTokens;
       windowTokens.clear();
     }
@@ -145,12 +147,96 @@ std::vector<Passage*> createPassageFromParsedDoc(ParsedDocument* pdoc, bool lowe
 }
 
 
+std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringLengthHom(QueryEnvironment* qe, Query* query, std::vector<ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz)
+ {
+  std::vector<ParsedDocument*> pdocs = qe->documents(rslts); // caller has to delete result ParsedDocuments
+  std::vector<std::string> qTokens = Tokenize::whiteSpaceSplit(query->query, stopSet); 
+  std::string trecField = "docno";
+  std::vector<std::string> trecids = qe->documentMetadata(rslts, trecField);
+  std::map<std::string, unsigned long> collFreq;
+  for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(*qIt)));
+  }
+
+  std::map<std::string, int> docLengthMap;
+  int maxDocLength = 0;
+  int minDocLength = 999999;
+  
+  int pdx =0;
+  for(std::vector<ParsedDocument*>::iterator pdIt = pdocs.begin(); pdIt != pdocs.end(); ++pdIt, ++pdx) {
+    ParsedDocument* pdoc = *pdIt;
+    std::string content = pdoc->getContent();
+    std:vector<std::string> tokens = Tokenize::whiteSpaceSplit(content, stopSet);
+    int docLength = tokens.size();
+    //std::cout 
+    if (docLength > maxDocLength)
+      maxDocLength = docLength;
+    else if (docLength < minDocLength)
+      minDocLength = docLength;
+    docLengthMap.insert(std::pair<std::string, int>(trecids[pdx], docLength));
+  }
+
+  std::map<std::string, ScoredExtentResult> srMap;
+  LanguageModel lm;
+  unsigned long collectionSize = qe->termCount();
+  std::vector<Passage*> allPsgs;
+  int idx = 0;
+
+  for(std::vector<ParsedDocument*>::iterator pdIt = pdocs.begin(); pdIt != pdocs.end(); ++pdIt, ++idx) {
+    ParsedDocument* pdoc = *pdIt;
+    std::string trecId = trecids[idx];
+    int docLength = docLengthMap[trecId];
+    float homogeniety = passageutil::lenHomogeniety(minDocLength, maxDocLength, docLength);
+    ScoredExtentResult ser = rslts[idx];
+    std::string content = pdoc->getContent();
+    std::vector<Passage*> psgs = createFixedWindowPassage(pdoc->getContent(), lower, stopSet, passageSz, windowSz ,ser.document);
+    for(std::vector<Passage*>::iterator psgIt = psgs.begin(); psgIt != psgs.end(); ++psgIt) {
+      Passage* psg = *psgIt;  
+      psg->crtTermFreq();
+      psg->setTrecId(trecId);
+      float score = lm.score(qTokens, psg, collFreq, collectionSize);
+      score = ((1 - homogeniety) * ser.score ) + (homogeniety) * score;
+      psg->setScore(score);
+      //      std::cout << "Min len " << minDocLength << " Max " << maxDocLength << " Length " << docLength << " homo " << homogeniety << " score " << ser.score << " total " << score << "\n";
+      allPsgs.push_back(psg);
+      srMap.insert(std::pair<std::string, ScoredExtentResult>(trecId, ser));
+    }
+  }
+  
+  std::sort(allPsgs.begin(), allPsgs.end(), comparePsg); 
+  std::unordered_set<std::string> seenIds;
+  std::vector<ScoredExtentResult> srs;
+  for(std::vector<Passage*>::iterator psgIt = allPsgs.begin(); psgIt != allPsgs.end(); ++psgIt) {
+    Passage* psg = *psgIt;
+    /**
+    std::vector<std::string> terms = psg->getTerms();
+    for(std::vector<std::string>::iterator termIt = (psg->getTerms()).begin(); termIt != (psg->getTerms()).end(); ++termIt)
+      *termIt;
+    std::cout << "\n" <<psg->getScore() << " " << psg->getTrecId() << "\n";
+    */
+    if(seenIds.find(psg->getTrecId()) == seenIds.end()) {
+      ScoredExtentResult sr = srMap[psg->getTrecId()];
+      sr.score = psg->getScore();
+      srs.push_back(sr);
+    }
+    seenIds.insert(psg->getTrecId());
+  }
+  
+  for(std::vector<Passage*>::iterator psgIt = allPsgs.begin(); psgIt != allPsgs.end(); ++psgIt) 
+    delete *psgIt;
+  
+  for(std::vector<ParsedDocument*>::iterator pdIt = pdocs.begin(); pdIt != pdocs.end(); ++pdIt) 
+    delete *pdIt;
+  return srs;  
+}
+
 std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe, Query* query, std::vector<ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz) {
   std::vector<ParsedDocument*> pdocs = qe->documents(rslts); // caller has to delete result ParsedDocuments
   std::vector<std::string> qTokens = Tokenize::whiteSpaceSplit(query->query, stopSet); 
+   
   std::map<std::string, unsigned long> collFreq;
   for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
-    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->documentCount(*qIt)));
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(*qIt)));
   }
 
   std::vector<Passage*> allPsgs;
@@ -159,12 +245,14 @@ std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe
   std::vector<std::string> trecids = qe->documentMetadata(rslts, trecField);
   std::map<std::string, ScoredExtentResult> srMap;
   LanguageModel lm;
-  unsigned long collectionSize = qe->documentCount();
-  
+  unsigned long collectionSize = qe->termCount();
+  assert(collectionSize > 0);
+
   for(std::vector<ParsedDocument*>::iterator pdIt = pdocs.begin(); pdIt != pdocs.end(); ++pdIt, ++idx) {
     ParsedDocument* pdoc = *pdIt;
     ScoredExtentResult ser = rslts[idx];
     std::string trecId = trecids[idx];
+    std::string content = pdoc->getContent();
     std::vector<Passage*> psgs = createFixedWindowPassage(pdoc->getContent(), lower, stopSet, passageSz, windowSz ,ser.document);
     for(std::vector<Passage*>::iterator psgIt = psgs.begin(); psgIt != psgs.end(); ++psgIt) {
       Passage* psg = *psgIt;  
@@ -182,14 +270,22 @@ std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe
   std::vector<ScoredExtentResult> srs;
   for(std::vector<Passage*>::iterator psgIt = allPsgs.begin(); psgIt != allPsgs.end(); ++psgIt) {
     Passage* psg = *psgIt;
+    /**
+    std::vector<std::string> terms = psg->getTerms();
+    for(std::vector<std::string>::iterator termIt = (psg->getTerms()).begin(); termIt != (psg->getTerms()).end(); ++termIt)
+      *termIt;
+    std::cout << "\n" <<psg->getScore() << " " << psg->getTrecId() << "\n";
+    */
     if(seenIds.find(psg->getTrecId()) == seenIds.end()) {
       ScoredExtentResult sr = srMap[psg->getTrecId()];
       sr.score = psg->getScore();
       srs.push_back(sr);
-      seenIds.insert(psg->getTrecId());
     }
-    delete psg;
+    seenIds.insert(psg->getTrecId());
   }
+  
+  for(std::vector<Passage*>::iterator psgIt = allPsgs.begin(); psgIt != allPsgs.end(); ++psgIt) 
+    delete *psgIt;
   
   for(std::vector<ParsedDocument*>::iterator pdIt = pdocs.begin(); pdIt != pdocs.end(); ++pdIt) 
     delete *pdIt;

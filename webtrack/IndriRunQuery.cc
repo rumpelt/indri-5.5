@@ -72,7 +72,7 @@ extern "C" {
 #include "Query.hpp"
 #include "PassageModel.hpp"
 std::map<std::string, Query*> constructQuery(std::string queryFile) {
-  LIBXML_TEST_VERSION
+  //  LIBXML_TEST_VERSION
   xmlDoc* doc = 0;
   std::map<std::string, Query*>();
   doc = xmlReadFile(queryFile.c_str(), NULL, 0); // DOM tree
@@ -225,13 +225,14 @@ private:
   std::string _runID;
   bool _trecFormat;
   bool _inexFormat;
-
+ 
   indri::query::QueryExpander* _expander;
   std::vector<indri::api::ScoredExtentResult> _results;
   indri::api::QueryAnnotation* _annotation;
 
   std::unordered_set<std::string> _stopwords;
   std::map<std::string, Query*> _queryMap;
+  bool _postProcess;
 
   // Runs the query, expanding it if necessary.  Will print output as well if verbose is on.
   void _runQuery( std::stringstream& output, const std::string& query, const std::string& qnumber,
@@ -280,8 +281,11 @@ private:
         }
       }
 
-      Query* q = _queryMap[qnumber];
-      _results  = PassageModel::maxPsgScoring(&_environment, q, _results, true, _stopwords, 150, 50);
+      if(_postProcess) {
+        Query* q = _queryMap[qnumber];
+	_results  = PassageModel::maxPsgScoring(&_environment, q, _results, true, _stopwords, 150, 50);
+	//        _results  = PassageModel::intrpMaxPsgScoringLengthHom(&_environment, q, _results, true, _stopwords, 150, 50);
+      }
        
     }
     catch( lemur::api::Exception& e )
@@ -406,7 +410,7 @@ public:
                std::priority_queue< query_t*, std::vector< query_t* >, query_t::greater >& output,
                indri::thread::Lockable& queueLock,
                indri::thread::ConditionVariable& queueEvent,
-               indri::api::Parameters& params, std::map<std::string, Query*> queryMap ) :
+               indri::api::Parameters& params, std::map<std::string, Query*> queryMap , bool postProcess =false) :
     _queries(queries),
     _output(output),
     _queueLock(queueLock),
@@ -414,7 +418,8 @@ public:
     _parameters(params),
     _expander(0),
     _annotation(0),
-    _queryMap(queryMap)
+    _queryMap(queryMap),
+    _postProcess(postProcess)
   {
   }
 
@@ -580,14 +585,23 @@ int main(int argc, char * argv[]) {
     using namespace boost::program_options;
     std::string topicFile;
     std::vector<std::string> paramFiles;
+    std::string basicRun;
+    bool postProcess=true;
+
     options_description cmndDesc("Allowed command line options");
     cmndDesc.add_options()
       ("qfile", value<std::string>(&topicFile)->default_value("/usa/arao/trec/trec-web/clueweb12/trec2013-topics.xml"))
+      ("basic-run", value<std::string>(&basicRun)->default_value("false"))
       ("param", value<std::vector<std::string> >(&paramFiles));
+
     variables_map cmndMap;
     store(parse_command_line(argc, argv,cmndDesc), cmndMap);
     notify(cmndMap);  
    
+    if(basicRun.compare("true") == 0) {
+      postProcess = false;
+    }
+
     std::map<std::string, Query*> origQuery = constructQuery(topicFile);  
     indri::api::Parameters param = indri::api::Parameters::instance();
     for(std::vector<std::string>::iterator fIt = paramFiles.begin(); fIt != paramFiles.end(); ++fIt) {
@@ -622,7 +636,7 @@ int main(int argc, char * argv[]) {
 
     // launch threads
     for( int i=0; i<threadCount; i++ ) {
-      threads.push_back( new QueryThread( queries, output, queueLock, queueEvent, param , origQuery) );
+      threads.push_back( new QueryThread( queries, output, queueLock, queueEvent, param , origQuery, postProcess) );
       threads.back()->start();
     }
 

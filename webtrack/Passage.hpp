@@ -14,6 +14,7 @@ private:
   std::string content;
   std::vector<std::string> terms;
   std::map<std::string, int> termFreq;
+  std::map<std::string, float> tfIdf;
 public:
   void setTerms(std::vector<std::string> terms);
   void setPsgId(int psgId);
@@ -26,6 +27,7 @@ public:
   unsigned long getDocId();
   std::vector<std::string> getTerms();
   std::string getTrecId();
+  std::map<std::string, int> getTermFreq();
   int freq(std::string term);
   void printPassage();
 };

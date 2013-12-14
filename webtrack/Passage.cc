@@ -57,6 +57,9 @@ std::vector<std::string> Passage::getTerms() {
   return Passage::terms;
 }
 
+std::map<std::string, int> Passage::getTermFreq() {
+  return Passage::termFreq;
+}
 void Passage::printPassage() {
   for(std::vector<std::string>::iterator tkIt = (Passage::terms).begin(); tkIt != (Passage::terms).end(); ++tkIt) {
     std::cout <<" " << *tkIt;

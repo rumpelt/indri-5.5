@@ -249,6 +249,7 @@ void kba::StreamThread::spawnParserNScorers(bool firstPass) {
         threads.clear();
       }
       // parseFile(_cutoffScore, fName, dirName, docIds, firstPass);
+      //      std::cout << " Pushing " << fName << "\n";
       threads.push_back(std::thread(&StreamThread::parseFile, this, _cutoffScore, fName, dirName, docIds, firstPass));
     }
     

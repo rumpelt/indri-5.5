@@ -1,5 +1,6 @@
 #include "Tokenize.hpp"
 #include <fstream>
+#include "KrovetzStemmer.hpp"
 
 std::unordered_set<std::string> Tokenize::getStopSet(std::string& stopFile) {
   std::unordered_set<std::string> stopwords;
@@ -39,7 +40,7 @@ std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inp
     return inputTokens;
   std::vector<std::string> filterWords;
  
-  for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); tokIt++) {
+  for(std::vector<std::string>::iterator tokIt = inputTokens.begin(); tokIt != inputTokens.end(); ++tokIt) {
     std::string token = *tokIt;
     if(token.size() > 1 && stopwords.find(token) == stopwords.end()) {
       filterWords.push_back(token);
@@ -48,12 +49,14 @@ std::vector<std::string> Tokenize::filterStopWords(std::vector<std::string>& inp
   return filterWords;
 }
 
-std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std::unordered_set<std::string> stopSet, bool lower, unsigned int charLimit) {
+std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std::unordered_set<std::string> stopSet, bool lower, unsigned int charLimit, bool stem) {
   std::vector<std::string> tokens;
   char phrase[4096];
   int phraseIndex=0;
-  for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); charIt++) {
-    char thisChar = *charIt;
+  stem::KrovetzStemmer * stemmer = new stem::KrovetzStemmer();   
+  //  for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); ++charIt) {
+  for(size_t idx=0; idx < inputSource.size(); ++idx) {
+    char thisChar = inputSource[idx];
     if(!isspace(thisChar)) {
       phrase[phraseIndex] = thisChar;
       phraseIndex+=1;
@@ -63,8 +66,15 @@ std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std
       if(content.size() > charLimit) {
         if(lower)
 	  std::transform(content.begin(), content.end(), content.begin(), ::tolower);
-        if(stopSet.find(content) == stopSet.end())    
-          tokens.push_back(content);
+        if(stopSet.find(content) == stopSet.end())  { 
+          if (stem) { 
+            char* term = (stemmer->kstem_stemmer((char*)(content.c_str())));
+	    //	    std::cout << " term " << content << " stem " << term << "\n";
+            tokens.push_back(term);
+	  }
+          else
+            tokens.push_back(content);
+	}
       }
       phraseIndex = 0;
     }
@@ -74,10 +84,17 @@ std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std
     if(content.size() > charLimit) {
       if(lower)
         std::transform(content.begin(), content.end(), content.begin(), ::tolower);
-      if(stopSet.find(content) == stopSet.end())
-        tokens.push_back(content);
+      if(stopSet.find(content) == stopSet.end()) {
+        if (stem) { 
+            char* term = (stemmer->kstem_stemmer((char*)(content.c_str())));
+            tokens.push_back(term);
+	  }
+          else
+            tokens.push_back(content);
+      }
     }
   }
+  delete(stemmer);
   return tokens;
 }
 

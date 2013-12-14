@@ -41,5 +41,7 @@ namespace PassageModel {
 
 
 std::vector<indri::api::ScoredExtentResult> maxPsgScoring(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
+
+  std::vector<indri::api::ScoredExtentResult> intrpMaxPsgScoringLengthHom(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
 };
 #endif
