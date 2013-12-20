@@ -659,7 +659,7 @@ int main(int argc, char* argv[]) {
   options_description cmndDesc("Allowed command line options");
   cmndDesc.add_options()
     ("param", value<std::vector<std::string> >(&paramFiles))
-    ("repo", value<std::string >(&baseRepoPath)->default_value("/data/data/collections/KBA/2013/index"))
+    ("repo", value<std::string >(&baseRepoPath)->default_value("/data/data/collections/KBA/2013/newindex"))
     ("corpus", value<std::string >(&baseCorpusPath)->default_value("../help/corpus"))
     ("dir-list", value<std::string >(&dirListFile));
 
@@ -686,8 +686,7 @@ int main(int argc, char* argv[]) {
     std::string dayDate = dir.substr(0, dir.rfind('-'));
   
     if(dayDate.compare(prevDayDate) != 0) {
-      std::string repoPath = baseRepoPath + "/" + dayDate;
-      //      std::cout << dirBunch.size() << "\n";
+      std::string repoPath = baseRepoPath + "/" + prevDayDate;
       int status = createIndex(parameters, dirBunch, repoPath, fileClass);
       if(status < 0)
         std::cout << "Could not create index for dir" << dayDate << "\n";

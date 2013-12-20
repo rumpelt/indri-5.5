@@ -97,6 +97,7 @@ void kba::entity::updateEntityWithAbstract(std::vector<kba::entity::Entity*>& en
       } 
       else {
         std::string abstract = (const char*)(dbResourceList.at(0).get());
+        entity->abstract = abstract;
         std::vector<std::string> tokens = Tokenize::tokenize(abstract, true, stopSet);
 	//	std::cout << entity->wikiURL << "\n";
         for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {

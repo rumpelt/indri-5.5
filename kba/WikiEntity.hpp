@@ -17,6 +17,7 @@ namespace kba {
      */
   struct Entity {
     std::string label;
+    std::string abstract;
     std::vector<std::string> labelTokens; // tokens of the label.
     std::map<std::string, int> labelMap; //same as labelTokens above but the unique tokens only, for efficiency purpuse only
     std::string wikiURL; // corresponds to wikiurl, important

@@ -29,6 +29,7 @@ extern "C" {
 #include "indri/ScoredExtentResult.hpp"
 #include "indri/SnippetBuilder.hpp"
 #include "indri/MetadataPair.hpp"
+#include "indri/DocumentVector.hpp"
 #include "indri/TagExtent.hpp"
 #include "Passage.hpp"
 #include "PassageModel.hpp"
@@ -43,5 +44,13 @@ namespace PassageModel {
 std::vector<indri::api::ScoredExtentResult> maxPsgScoring(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
 
   std::vector<indri::api::ScoredExtentResult> intrpMaxPsgScoringLengthHom(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
+
+  std::vector<Passage*> createPassageFromDocumentVector(indri::api::DocumentVector* dv, bool discardJunk, const int passageSz, const int windowSz, unsigned long docId);
+ 
+  Passage createPassage(std::vector<std::string> terms, lemur::api::DOCID_T docId, bool discard);
+
+  std::vector<indri::api::ScoredExtentResult> intrpMaxPsgScoringCosineHom(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
+
+  std::vector<std::string> constructDocFromVector(indri::api::DocumentVector *dv, bool  discardJunk);
 };
 #endif

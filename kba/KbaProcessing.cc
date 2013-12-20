@@ -1,3 +1,7 @@
+#include "QueryThread.hpp"
+#include <indri/Parameters.hpp>
+
+#include <dirent.h>
 #include "ThriftDocumentExtractor.hpp"
 #include "indri/FileTreeIterator.hpp"
 #include "indri/Path.hpp"
@@ -24,6 +28,7 @@
 #include "Logging.hpp"
 #include "TermDict.hpp"
 #include "TimeConversion.hpp"
+
 
 namespace cmndOp = boost::program_options;
 
@@ -160,7 +165,7 @@ std::set<kba::term::TopicTerm*>& getTermRelevance(std::vector<std::string> dirLi
         if (dtSize <= 0)
           continue;
         
-	std::vector<shared_ptr<EvaluationData> > evDts = st.getEvalData(stream_id, false, true);     
+	std::vector<boost::shared_ptr<EvaluationData> > evDts = st.getEvalData(stream_id, false, true);     
 	//	std::cout << "Streaim id " << stream_id << " "<<evDts.size() << " " << ev->rating << "\n";   
         if(evDts.size() <= 0)
           continue;
@@ -168,7 +173,7 @@ std::set<kba::term::TopicTerm*>& getTermRelevance(std::vector<std::string> dirLi
         time_t collectionTime  =-1;
 	std::string topic;   
 
-        for(std::vector<shared_ptr<EvaluationData> >::iterator evIt = evDts.begin(); evIt != evDts.end(); ++evIt) {
+        for(std::vector<boost::shared_ptr<EvaluationData> >::iterator evIt = evDts.begin(); evIt != evDts.end(); ++evIt) {
           EvaluationData* ev = (*evIt).get();
 	  //	  std::cout << "Ev data " << ev->topic << " docsize " << ev->cleanVisibleSize << " doc size " << dtSize << " " << ev->rating <<"\n";
           if(ev->cleanVisibleSize == dtSize) {
@@ -318,6 +323,37 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   delete stDb;
 }
 
+std::vector<kba::entity::Entity*> getEntityList(std::string entityFile, std::string noPositiveFile, bool useDbpedia) {
+  std::vector<kba::entity::Entity*> entityList;
+  kba::entity::populateEntityList(entityList, entityFile);
+  if(useDbpedia) {
+    std::map<std::string, std::string> repoMap;
+    repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    repoMap.insert(std::pair<std::string, std::string> ("abstract","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    kba::entity::populateEntityStruct(entityList, repoMap, STOP_SET);
+    kba::entity::updateEntityWithAbstract(entityList, repoMap.at("abstract"), "abstract", STOP_SET );
+  }
+  
+  std::vector<kba::entity::Entity*> filterSet;
+  std::set<std::string> noPositive = noPositiveJudgement(noPositiveFile);
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
+    kba::entity::Entity* entity =  *entityIt;
+    if((entity->label).size() <= 0) {
+      std::cout << "Could not get the label for " << entity->wikiURL << "\n";
+    }
+    else
+      std::cout << entity->label << "\n";
+    if( noPositive.find(entity->wikiURL) == noPositive.end() && (entity->label).size() > 0) {
+      filterSet.push_back(entity);
+    }
+    else
+      delete entity;
+  } 
+  return filterSet;
+}
+
 void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::string noPositiveFile, std::unordered_set<std::string> stopSet) {
   using namespace kba::term;
   std::map<std::string, std::string> repoMap;
@@ -425,6 +461,54 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 
 }
 
+std::map<std::string, query_t*> bootStrapIndri(std::vector<std::string> dirList, std::vector<std::string> paramFiles, std::vector<kba::entity::Entity*> entities) {
+
+  std::map<std::string, query_t*> querMap;
+
+  indri::api::Parameters param = indri::api::Parameters::instance();
+  
+  for(std::vector<std::string>::iterator paramIt = paramFiles.begin(); paramIt != paramFiles.end(); ++paramIt) {
+    DIR* dirc = opendir((*paramIt).c_str());
+    if(dirc != NULL) {
+      std::cout << "Loading file " << *paramIt << "\n";
+      param.loadFile(*paramIt);
+      closedir(dirc);
+    }
+  }
+  
+  
+  int idx=1;
+  std::string queryType = "indri";
+  for(std::vector<kba::entity::Entity*>::iterator entIt = entities.begin(); entIt != entities.end() ; ++entIt, ++idx) {
+    kba::entity::Entity* entity = *entIt;  
+    query_t* query = new query_t(idx, entity->wikiURL, queryType);
+    std::string qtext = "#weight( 2.0 ";
+    qtext = qtext + "#combine( "+ entity->label + ")";
+    if((entity->abstract).size() > 0) {
+      qtext = qtext + " 1.0 #combine( " + entity->abstract + ")";
+    }
+    qtext = qtext + ")";
+    std::cout << entity->wikiURL << " query " << qtext << "\n";
+    query->text = qtext;
+    queryMap.insert(std::pair<std::string, query_t*>(entity->wikiURL, query));
+  }
+
+  int dirIdx = 0;
+  for(int dirIdx = 0; dirIdx < dirList.size(); ++idx) {
+  }
+  QueryThread* qt =  new QueryThread(param, dirList);
+  qt->initialize(); // need to call deinitailize
+  //  std::string testQuery = "22123312sfhjlkas";
+  //std::string queryType = "indri";
+  //qt->_runQuery(testQuery, queryType);
+  //
+  //qt->deinit
+  return queryMap;
+}
+
+void prepareForCCR() {
+}
+
 int main(int argc, char *argv[]){
   std::string taggerId;
   std::string corpusPath;
@@ -435,6 +519,9 @@ int main(int argc, char *argv[]){
   std::string trainingFile;
   std::string berkleyDbDir;
   std::string noPositiveFile;
+
+  std::vector<std::string> paramFiles;
+  std::string baseIndexPath;
 
   char* tz;
   tz = getenv("TZ");
@@ -467,6 +554,8 @@ int main(int argc, char *argv[]){
     ("print-model", "print the model")
     ("print-stream", cmndOp::value<bool>(&printStream)->default_value(false), "print the stream")
     ("equery",cmndOp::value<std::string>(), "Look up an entity")
+    ("param", cmndOp::value<std::vector<std::string> >(&paramFiles), "The parameters file for indri")
+    ("base-index", cmndOp::value<std::string>(&baseIndexPath)->default_value("/data/data/collections/KBA/2013/index"), "The base dir where all indexes are found")
     ("taggerId",cmndOp::value<std::string>(&taggerId)->default_value("lingpipe")," print anchor text");
 
   
@@ -476,7 +565,8 @@ int main(int argc, char *argv[]){
   
   assert(logFile.size() > 0);  
   Logger::LOGGER(logFile);
-  
+
+
   if(trainingFile.size() > 0) {
     //    storeEvaluationData(trainingFile);
     HighRecallInfo(trainingFile);
@@ -484,6 +574,31 @@ int main(int argc, char *argv[]){
 
   STOP_SET  = Tokenize::getStopSet(stopFile);
 
+  std::vector<std::string> directories; 
+  if(cmndMap.count("dir-list")) {
+  
+    std::ifstream inputFile(cmndMap["dir-list"].as<std::string>().c_str());
+    for(std::string line;getline(inputFile, line);) {
+      std::string dayDate = line.substr(0, line.rfind('-'));    
+      directories.push_back(dayDate);
+    }
+    inputFile.close();
+    std::sort(directories.begin(), directories.end(), compareString);    
+  }
+
+  if(cmndMap.count("param")) {
+
+    std::vector<std::string> indexDirs;
+    for(std::vector<std::string>::iterator dirIt = directories.begin(); dirIt != directories.end(); ++dirIt){
+      std::string indexPath = baseIndexPath + "/"+ *dirIt;
+      indexDirs.push_back(indexPath);
+    }
+    getEntityList(topicFile, noPositiveFile, true);
+    QueryThread* qt = bootStrapIndri(indexDirs, paramFiles);
+    qt->deinitialize();
+  }
+
+  
   RDFParser* rdfparser = NULL; 
   if(cmndMap.count("repo") && cmndMap.count("repo-name")) {
     rdfparser = new RDFParser();   

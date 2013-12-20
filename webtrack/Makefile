@@ -1,5 +1,5 @@
-INCPATH=-I. -I../library/include  -I/usa/arao/projects/libxml2/include
-#INCPATH=-I. -I../library/include   -I/usa/arao/gcctools/include/c++/4.8.2 -I/usa/arao/gcctools/include -I/usa/arao/projects/libxml2/include
+INCPATH=-I. -I../library/include  -I ../eigen -I/usa/arao/projects/libxml2/include
+#INCPATH=-I. -I../library/include   -I/usa/arao/gcctools/include/c++/4.8.2 -I/usa/arao/gcctools/include -I../eigen -I/usa/arao/projects/libxml2/include
 
 #LIBPATH=-L../library/lib  -L/usa/arao/gcctools/lib64 -L/usa/arao/gcctools/lib
 LIBPATH=-L../library/lib

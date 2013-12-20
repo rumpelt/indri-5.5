@@ -1,0 +1,6 @@
+<parameters>
+<threads>1</threads>
+<runID>kba</runID>
+<count>10000</count>
+<days>10</days>
+</parameters>

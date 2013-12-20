@@ -1,6 +1,6 @@
 <parameters>
 <threads>1</threads>
-<runID>mPsgBasic</runID>
+<runID>intrPLen</runID>
 <trecFormat>true</trecFormat>
 <count>10000</count>
 <server>irnode0:9001</server>

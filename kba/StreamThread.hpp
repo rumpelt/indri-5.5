@@ -11,6 +11,7 @@
 #include "ThreadQueue.hpp"
 #include <unordered_set>
 #include "StatDb.hpp"
+#include <boost/shared_ptr.hpp>
 using namespace boost;
 namespace kba {
  
@@ -46,7 +47,7 @@ namespace kba {
     std::unordered_set<std::string> _stopSet;
     kba::term::CorpusStat* _crpStat;
     std::map<std::string, kba::term::TermStat*> _trmStatMap;
-    std::map<std::string, shared_ptr<ResultPool> > strmColl;
+    std::map<std::string, boost::shared_ptr<ResultPool> > strmColl;
     std::set<kba::term::TopicTerm*> _tpcTrm;
     std::set<std::string> _termSet;
     std::map<std::string, std::map<std::string, ResultPool*> > collMap;

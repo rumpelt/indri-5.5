@@ -283,8 +283,11 @@ private:
 
       if(_postProcess) {
         Query* q = _queryMap[qnumber];
-	_results  = PassageModel::maxPsgScoring(&_environment, q, _results, true, _stopwords, 150, 50);
-	//        _results  = PassageModel::intrpMaxPsgScoringLengthHom(&_environment, q, _results, true, _stopwords, 150, 50);
+        int psgSize = _parameters.get("PassageSize",150);
+        int wdSize = _parameters.get("WindowSize",50);
+	//	_results  = PassageModel::maxPsgScoring(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
+	//	_results  = PassageModel::intrpMaxPsgScoringLengthHom(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
+        _results = PassageModel::intrpMaxPsgScoringCosineHom(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
       }
        
     }

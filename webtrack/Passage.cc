@@ -1,13 +1,15 @@
 #include "Passage.hpp"
 #include <stdexcept>
 #include <iostream>
-
+#include <stdio.h>
 void Passage::setTerms(std::vector<std::string> terms) {
   Passage::terms = terms;
 }
 
 void Passage::setPsgId(int psgId) {
-  Passage::psgId = psgId;
+  char buffer[10];
+  sprintf(buffer,"%d",psgId);
+  Passage::psgId = buffer;
 }
 
 void Passage::setDocId(unsigned long docId) {
@@ -57,6 +59,10 @@ std::vector<std::string> Passage::getTerms() {
   return Passage::terms;
 }
 
+void Passage::pushTerm(std::string term) {
+  Passage::terms.push_back(term);
+}
+
 std::map<std::string, int> Passage::getTermFreq() {
   return Passage::termFreq;
 }
@@ -64,4 +70,12 @@ void Passage::printPassage() {
   for(std::vector<std::string>::iterator tkIt = (Passage::terms).begin(); tkIt != (Passage::terms).end(); ++tkIt) {
     std::cout <<" " << *tkIt;
   }
+}
+
+std::map<std::string, float> Passage::getTfIdf() {
+  return Passage::tfIdf;
+}
+
+std::string Passage::getPsgId() {
+  return Passage::psgId;
 }
