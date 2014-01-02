@@ -5,7 +5,17 @@
 #include <vector>
 
 struct ResultStruct {
-  std::string id;
+  struct greater {
+    /**
+    bool operator() (ResultStruct* one, ResultStruct* two ) {
+      return one->score < two->score;
+    }
+    */
+    bool operator() (ResultStruct& one, ResultStruct& two ) {
+      return one.score < two.score;
+    }
+  };
+  std::string id; // this is document identifier;
   std::string dayDt;
   int score;
   ResultStruct(float initSc) : score(initSc) {}

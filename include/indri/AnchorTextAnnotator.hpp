@@ -200,12 +200,14 @@ namespace indri
     AnchorTextAnnotator() {
       tokenizer = indri::parse::TokenizerFactory::get("Word");
       _handler = 0;
+      _in = 0;
       linkLine = new char[LINKLINE_SIZE];
     }
 
     ~AnchorTextAnnotator() {
-      if( _in )
+      if( _in ) {
         gzclose( _in );
+      }
       _in = 0;
       delete tokenizer;
       delete[](linkLine);

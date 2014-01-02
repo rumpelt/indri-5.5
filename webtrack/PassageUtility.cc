@@ -30,11 +30,36 @@ std::map<std::string, int> passageutil::tfIdf(Passage* psg, indri::api::QueryEnv
     else
       docCount = qe->documentCount(term);
     //    std::cout << "term " << term << " " << docCount << " " << freq << "\n";
-    double idf = log(totalDocs/docCount) * freq;
-    
+        double idf = log(totalDocs/docCount) * freq;
+	//double idf = freq;
     tfIdf.insert(std::pair<std::string, int>(term, (int)(idf+0.5))); // rounding done 
   }
   return tfIdf;
+}
+
+void  passageutil::psgSimilarityMatrix(std::vector<Passage*>& psgs, Passage* motherPassage, indri::api::QueryEnvironment& qe) {
+  TextMatrix* psgTm = 0;
+  psgTm = passageutil::makeWordPassageMatrix(psgs);
+
+  for(std::vector<Passage*>::iterator psgIt = psgs.begin(); psgIt != psgs.end(); ++psgIt) {
+    Passage* psg = *psgIt;
+    std::map<std::string, int> tfIdf = passageutil::tfIdf(psg, &qe, true);
+    for(std::map<std::string, int>::iterator mapIt = tfIdf.begin(); mapIt != tfIdf.end(); ++mapIt) {
+      std::string term = mapIt->first;
+      psgTm->setValue(term, psg->getPsgId(), mapIt->second);      
+    } 
+  }  
+  Eigen::MatrixXf* matrix = psgTm->getMatrix();
+  Eigen::MatrixXf transpose = matrix->transpose();
+  Eigen::MatrixXf multi = transpose * (*matrix);
+  
+  std::cout << "Passage Matrix " << " " << multi.rows() << " " << multi.cols() << std::endl;
+  std::cout << multi << std::endl;
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigenSolver(multi);
+  std::cout << "Eigen Value " << eigenSolver.eigenvalues() << std::endl;
+  std::cout << "Eigne vector " << eigenSolver.eigenvectors() << std::endl;
+  if(psgTm != 0)
+    delete psgTm;
 }
 
 float passageutil::psgCosineSimilarity(std::vector<Passage*> psgs, Passage* motherPassage, indri::api::QueryEnvironment* qe) {
@@ -122,6 +147,13 @@ float passageutil::docPsgHomogeniety(std::vector<Passage*> psgs, Passage* mother
 }
 
 /**
+TextMatrix* passageutil::makePassageMatrix(Passage& psg) {
+  std::set<std::string> 
+
+}
+*/
+
+/**
  * caller must delete the text matrix returned here
  * Assume that term freq map of Passage is populated.
  */
@@ -132,11 +164,10 @@ TextMatrix*  passageutil::makeWordPassageMatrix(std::vector<Passage*> psgs) {
     Passage* psg = *psgIt;
     std::string id = psg->getPsgId();
     psgIds.insert(id);
-    std::map<std::string, int> tfidf = psg->getTermFreq();
-    assert(tfidf.size() > 0);
-    for(std::map<std::string,int>::iterator mapIt = tfidf.begin(); mapIt != tfidf.end(); ++mapIt) {
-      std::string term = mapIt->first;
-      vocabulary.insert(term);   
+    std::vector<std::string> terms = psg->getTerms();
+
+    for(std::vector<std::string>::iterator termIt = terms.begin(); termIt != terms.end(); ++termIt) {
+      vocabulary.insert(*termIt);   
     }
   }
   TextMatrix* tm = new TextMatrix();

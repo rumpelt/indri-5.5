@@ -71,6 +71,7 @@ extern "C" {
 
 #include "Query.hpp"
 #include "PassageModel.hpp"
+
 std::map<std::string, Query*> constructQuery(std::string queryFile) {
   //  LIBXML_TEST_VERSION
   xmlDoc* doc = 0;
@@ -159,6 +160,26 @@ std::map<std::string, Query*> constructQuery(std::string queryFile) {
   xmlFreeDoc(doc);
   xmlCleanupParser();
   return queryMap;
+}
+
+void prepareClueWeb9Query(std::vector<std::string> queryFiles, std::string outputFile) {
+  std::ofstream ofs(outputFile.c_str(), std::ofstream::out);  
+  ofs << "<parameters>" << std::endl;
+  for(std::vector<std::string>::iterator fileIt = queryFiles.begin(); fileIt != queryFiles.end(); ++fileIt) {
+    std::string topicFile = *fileIt;  
+    std::map<std::string, Query*> queryMap = constructQuery(topicFile);
+    for(std::map<std::string,Query*>::iterator qIt = queryMap.begin(); qIt != queryMap.end(); ++qIt) {
+      Query* q = qIt->second;
+      ofs << "<query><number>" << q->qnum << "</number><text>#filreq(#less(spam -130) #combine( "<< q->query << " ))</text></query>" << std::endl; 
+    }
+
+    for(std::map<std::string,Query*>::iterator qIt = queryMap.begin(); qIt != queryMap.end(); ++qIt) {
+      delete qIt->second;
+    }
+  }
+
+  ofs << "</parameters>" << std::endl;
+  ofs.close();
 }
 
 static bool copy_parameters_to_string_vector( std::vector<std::string>& vec, indri::api::Parameters p, const std::string& parameterName ) {
@@ -590,17 +611,22 @@ int main(int argc, char * argv[]) {
     std::vector<std::string> paramFiles;
     std::string basicRun;
     bool postProcess=true;
-
+    std::vector<std::string> combinedQfiles;
     options_description cmndDesc("Allowed command line options");
     cmndDesc.add_options()
       ("qfile", value<std::string>(&topicFile)->default_value("/usa/arao/trec/trec-web/clueweb12/trec2013-topics.xml"))
       ("basic-run", value<std::string>(&basicRun)->default_value("false"))
+      ("file", value<std::vector<std::string> >(&combinedQfiles), "combine trec9,10,11,12")
       ("param", value<std::vector<std::string> >(&paramFiles));
 
     variables_map cmndMap;
     store(parse_command_line(argc, argv,cmndDesc), cmndMap);
     notify(cmndMap);  
    
+    if(combinedQfiles.size() > 0) {
+      std::string ofile = "query.clue9.basic";
+      prepareClueWeb9Query(combinedQfiles, ofile);
+    }
     if(basicRun.compare("true") == 0) {
       postProcess = false;
     }

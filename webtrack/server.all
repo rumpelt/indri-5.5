@@ -1,8 +1,9 @@
 <parameters>
-<threads>1</threads>
-<runID>intrPLen</runID>
+<threads>3</threads>
+<runID>PsgCos</runID>
 <trecFormat>true</trecFormat>
-<count>10000</count>
+<PassageSize>150</PassageSize>
+<count>1000</count>
 <server>irnode0:9001</server>
 <server>irnode1:9001</server>
 <server>irnode2:9001</server>

@@ -2,6 +2,6 @@
 <threads>1</threads>
 <runID>mPsgBasic</runID>
 <trecFormat>true</trecFormat>
-<count>10000</count>
+<count>100</count>
 <index>/data/data2/index/ClueWeb12/ClueWeb12_18/full.new</index>
 </parameters>

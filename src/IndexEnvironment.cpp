@@ -73,7 +73,7 @@ std::vector<indri::parse::Transformation*> indri::api::IndexEnvironment::_create
   // get the path to the filename relative to the document root
   std::string relativePath = indri::file::Path::relative( _documentRoot, fileName );
 
-  if( _anchorTextRoot.length() ) {
+  if( _anchorTextRoot.length() > 0) {
     // if the user specified some anchor text, we'll add it in
     std::string anchorTextPath;
     if( relativePath.length() > 0 )

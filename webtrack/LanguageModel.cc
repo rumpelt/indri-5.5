@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <iostream>
-LanguageModel::LanguageModel() : _mu(100) {}
+LanguageModel::LanguageModel() : _mu(2500) {}
 
 float LanguageModel::score(std::vector<std::string> query, Passage* psg, std::map<std::string, unsigned long> collFreq, const unsigned long collSize) {
   float docScore =0;

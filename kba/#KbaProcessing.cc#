@@ -1,3 +1,7 @@
+#include "QueryThread.hpp"
+#include <indri/Parameters.hpp>
+
+#include <dirent.h>
 #include "ThriftDocumentExtractor.hpp"
 #include "indri/FileTreeIterator.hpp"
 #include "indri/Path.hpp"
@@ -13,7 +17,6 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include "BaseLineScorer.hpp"
 #include "RelatedEntityScorer.hpp"
 #include "BM25Scorer.hpp"
 #include "DumpKbaResult.hpp"
@@ -25,6 +28,9 @@
 #include "Logging.hpp"
 #include "TermDict.hpp"
 #include "TimeConversion.hpp"
+#include "FilterThread.hpp"
+#include <assert.h>
+#include <ctype.h>
 
 namespace cmndOp = boost::program_options;
 
@@ -38,21 +44,38 @@ bool compareString(std::string firstStr, std::string secondStr) {
   return false;
 }
 
+/**
+ * List of positive entities which do not have  
+ */
+std::set<std::string> noPositiveJudgement(std::string noPositiveFile) {
+  std::ifstream flStream(noPositiveFile.c_str());
+  std::set<std::string> entityList;
+  std::string entityName;
+  while((flStream  >> entityName)) {
+    entityList.insert(entityName);
+  }
+  return entityList;
+}
+
 void HighRecallInfo(std::string recallFile) {
   std::ifstream trgStream(recallFile.c_str());
   StatDb* st = new StatDb();
-  st->crtStreamDb("/usa/arao/test/streamid.db", false);
+  st->crtStreamDb("/usa/arao/test/streamid-small.db", false);
   std::string row;
   while(std::getline(trgStream, row)) {
     std::vector<std::string> rowTokens = Tokenize::split(row);
-    kba::term::StreamInfo stInfo;
+    int score = strtol(rowTokens.at(4).c_str(), NULL, 10);
+    if (score > 300) {
+      kba::term::StreamInfo stInfo;
+   
+      std::string stream_id = rowTokens.at(2);
+      stInfo.sTime = strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
+    
+      stInfo.docId = stream_id.substr(stream_id.find("-") +1);
+      stInfo.directory = rowTokens.at(7);
 
-    std::string stream_id = rowTokens.at(2);
-    stInfo.sTime = strtol(stream_id.substr(0, stream_id.find("-")).c_str(), NULL, 10);
-    stInfo.docId = stream_id.substr(stream_id.find("-") +1);
-    stInfo.directory = rowTokens.at(7);
-
-    st->wrtStreamInfo(stInfo);
+      st->wrtStreamInfo(stInfo);
+    }
   }
   st->closeStreamDb();
   Logger::LOG_MSG("KbaProcessing.cc", "HighRecallInfo", " finished writing the streamdbs ");
@@ -144,7 +167,7 @@ std::set<kba::term::TopicTerm*>& getTermRelevance(std::vector<std::string> dirLi
         if (dtSize <= 0)
           continue;
         
-	std::vector<shared_ptr<EvaluationData> > evDts = st.getEvalData(stream_id, false, true);     
+	std::vector<boost::shared_ptr<EvaluationData> > evDts = st.getEvalData(stream_id, false, true);     
 	//	std::cout << "Streaim id " << stream_id << " "<<evDts.size() << " " << ev->rating << "\n";   
         if(evDts.size() <= 0)
           continue;
@@ -152,7 +175,7 @@ std::set<kba::term::TopicTerm*>& getTermRelevance(std::vector<std::string> dirLi
         time_t collectionTime  =-1;
 	std::string topic;   
 
-        for(std::vector<shared_ptr<EvaluationData> >::iterator evIt = evDts.begin(); evIt != evDts.end(); ++evIt) {
+        for(std::vector<boost::shared_ptr<EvaluationData> >::iterator evIt = evDts.begin(); evIt != evDts.end(); ++evIt) {
           EvaluationData* ev = (*evIt).get();
 	  //	  std::cout << "Ev data " << ev->topic << " docsize " << ev->cleanVisibleSize << " doc size " << dtSize << " " << ev->rating <<"\n";
           if(ev->cleanVisibleSize == dtSize) {
@@ -302,7 +325,40 @@ void termStatIndexer(std::string entityfile, std::string pathToProcess, std::vec
   delete stDb;
 }
 
-void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::unordered_set<std::string> stopSet) {
+std::vector<kba::entity::Entity*> getEntityList(std::string entityFile, std::string noPositiveFile, bool useDbpedia) {
+  std::vector<kba::entity::Entity*> entityList;
+  kba::entity::populateEntityList(entityList, entityFile);
+  if(useDbpedia) {
+    std::map<std::string, std::string> repoMap;
+    repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    repoMap.insert(std::pair<std::string, std::string> ("labels","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    repoMap.insert(std::pair<std::string, std::string> ("internalentity","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    repoMap.insert(std::pair<std::string, std::string> ("abstract","/usa/arao/dbpediadumps/dbpedia7bdb"));
+    kba::entity::populateEntityStruct(entityList, repoMap, STOP_SET);
+    kba::entity::updateEntityWithAbstract(entityList, repoMap.at("abstract"), "abstract", STOP_SET );
+  }
+  
+  std::vector<kba::entity::Entity*> filterSet;
+  std::set<std::string> noPositive = noPositiveJudgement(noPositiveFile);
+  for(std::vector<kba::entity::Entity*>::iterator entityIt = entityList.begin(); entityIt != entityList.end(); entityIt++) {
+    kba::entity::Entity* entity =  *entityIt;
+    /**
+    if((entity->label).size() <= 0) {
+      std::cout << "Could not get the label for " << entity->wikiURL << "\n";
+    }
+    else
+      std::cout << entity->label << "\n";
+    */
+    if( noPositive.find(entity->wikiURL) == noPositive.end() && (entity->label).size() > 0) {
+      filterSet.push_back(entity);
+    }
+    else
+      delete entity;
+  } 
+  return filterSet;
+}
+
+void performCCRTask(std::string entityfile, std::string pathToProcess, std::string fileToDump, std::vector<std::string> dirList, std::string noPositiveFile, std::unordered_set<std::string> stopSet) {
   using namespace kba::term;
   std::map<std::string, std::string> repoMap;
   repoMap.insert(std::pair<std::string, std::string> ("wikiToDb","/usa/arao/dbpediadumps/dbpedia7bdb"));
@@ -314,26 +370,26 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
   kba::entity::populateEntityStruct(ENTITY_SET, repoMap, STOP_SET);
   
   std::vector<kba::entity::Entity*> filterSet;
-
+  std::set<std::string> noPositive = noPositiveJudgement(noPositiveFile);
   for(std::vector<kba::entity::Entity*>::iterator entityIt = ENTITY_SET.begin(); entityIt != ENTITY_SET.end(); entityIt++) {
     kba::entity::Entity* entity =  *entityIt;
-    
-    if((entity->label).size() > 0) {
+    if( noPositive.find(entity->wikiURL) == noPositive.end() && (entity->label).size() > 0) {
       filterSet.push_back(entity);
     }
     else
       delete entity;
   } 
-  ENTITY_SET = filterSet;
-  kba::entity::updateEntityWithAbstract(ENTITY_SET, repoMap.at("abstract"), "abstract", STOP_SET ); 
+
+
+  kba::entity::updateEntityWithAbstract(filterSet, repoMap.at("abstract"), "abstract", STOP_SET ); 
  
-  std::cout << "total enti : " << ENTITY_SET.size() << (ENTITY_SET[0])->wikiURL << "\n"; 
+  //  std::cout << "total enti : " << filterSet.size() << "\n"; 
   bool isDirectory = indri::file::Path::isDirectory(pathToProcess );   
   
   kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
-  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(ENTITY_SET, STOP_SET); // I m not free this atthe end so there is a leak
+  std::set<TermStat*> termStatSet = kba::term::crtTermStatSet(filterSet, STOP_SET); // I m not free this atthe end so there is a leak
  
-  std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(ENTITY_SET);
+  std::set<TopicTerm*> topicTerm = kba::term::crtTopicTerm(filterSet);
   std::set<std::string> termSet;
   std::map<std::string, TermStat*> termStatMap;
   for(std::set<TermStat*>::iterator termIt = termStatSet.begin(); termIt != termStatSet.end(); ++termIt) {
@@ -341,7 +397,7 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     termStatMap.insert(std::pair<std::string, TermStat*>((*termIt)->term, *termIt));
   }
   
-  std::cout << "TermStat set size " << termSet.size() << " " << termStatMap.size() << "\n";
+  //  std::cout << "TermStat set size " << termSet.size() << " " << termStatMap.size() << "\n";
  
   std::fstream* dumpStream = new std::fstream(fileToDump.c_str(), std::fstream::out | std::fstream::app);
   time_t startTime;
@@ -359,22 +415,23 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
     std::string prevDayDate = (dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
     //std::cout << "Prev Day date " << prevDayDate << " " << dirList.at(0) << "\n";
     StatDb stDb;
-    stDb.crtStreamDb(std::string("/usa/arao/test/streamid.db"), true);
-    stDb.crtTrmDb(std::string("/usa/arao/test/term")+prevDayDate, false);
+    //stDb.crtStreamDb(std::string("/usa/arao/test/streamid.db"), true);
+    stDb.crtTrmDb(std::string("/usa/arao/test/term-")+prevDayDate, false);
+    stDb.crtCrpDb(std::string("/usa/arao/test/corpus-")+prevDayDate, false);
 
     for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
       std::string dayDate = (*dirIt).substr(0, (*dirIt).rfind('-'));
        if(dayDate.compare(prevDayDate) != 0) {
 	 //   std::cout << "Day date " << prevDayDate << " size " << dirBunch.size() << "\n";
-	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET, prevDayDate);
+	 kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, filterSet, STOP_SET, prevDayDate);
          st->setTermStat(termStatMap);
          st->setCorpusStat(corpusStat);   
          st->setTermSet(termSet);
-         st->setStatDb(stDb);
+         st->setStatDb(&stDb);
          st->spawnParserNScorers(firstPass);
-	 Logger::LOG_MSG("KbaProcess.cc","perf[DormCCRTask", "finished processing "+prevDayDate);
+	 Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
          ++countPass;
-         if(firstPass && countPass >= 7)
+         if(countPass >= 13)
            firstPass = false;
          dirBunch.clear();
       }
@@ -382,17 +439,19 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
       prevDayDate = dayDate;
     }
     if(dirBunch.size() > 0) {
-      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, ENTITY_SET, STOP_SET, prevDayDate);
+      firstPass = false;
+      kba::StreamThread* st = new kba::StreamThread(dirBunch, dumpStream, filterSet, STOP_SET, prevDayDate);
        st->setTermStat(termStatMap);
        st->setCorpusStat(corpusStat);   
        st->setTermSet(termSet);
-       st->setStatDb(stDb); 
+       st->setStatDb(&stDb); 
        st->spawnParserNScorers(firstPass);
        Logger::LOG_MSG("KbaProcess.cc","performCCRTask", "finished processing "+prevDayDate);
        dirBunch.clear();
     }
     stDb.closeStreamDb();
     stDb.closeTrmDb();
+    stDb.closeCrpDb();
   }
 
   dumpStream->close(); 
@@ -406,15 +465,179 @@ void performCCRTask(std::string entityfile, std::string pathToProcess, std::stri
 
 }
 
+std::string sanitizeQueryText(std::string& text) {
+  std::stringstream ss;
+  //  assert(text.size() < 256);
+  //  std::cout << "Text size " << text.size() << std::endl;
+  for(size_t index=0; index < text.size(); index++) {
+    char c = text.at(index);
+    //    if(c == ',' || c == '.' || c == '#' || c == '(' || c == ')' || c == '<' || c == '>' || c == '[' || c == ']' || c == '-' || c == '_' || c == '\'' || c== '%' || c == ':')
+    //  continue;
+    if(isalnum(c) || isspace(c) || isblank(c))
+      ss << c;
+  }
+
+  return ss.str();
+}
+
+void processFilterThread(std::map<std::string, query_t*>& qMap, std::vector<std::string> dirList, std::vector<std::string> paramFiles, std::string dumpFile, std::map<std::string, kba::term::TermStat*> termStatMap, kba::term::CorpusStat* corpusStat) {
+  std::string prevDayDate = (dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
+  std::vector<std::string> dirBunch;
+  std::string runId = "test";
+
+  //  indri::api::Parameters params = indri::api::Parameters::instance();
+  indri::api::Parameters* params = new indri::api::Parameters();
+
+  for(std::vector<std::string>::iterator paramIt = paramFiles.begin(); paramIt != paramFiles.end(); ++paramIt) {
+    FILE* pFile = fopen((*paramIt).c_str(), "rb");
+    if(pFile != NULL) {
+      //      std::cout << "Loading file " << *paramIt << "\n";
+      params->loadFile(*paramIt);
+      fclose(pFile);
+    }
+  }
+  
+  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+    std::string dir = *dirIt;
+    FilterThread ft(*params, dir, qMap, corpusStat, termStatMap); //(prevDayDate, qMap, dumpFile, runId);
+    ft._dumpFile = dumpFile;
+    ft._runId = runId;
+      //      ft.setParamFile(paramFiles);
+    ft.process();
+  }
+  delete params;p
+} 
+
+std::map<std::string, query_t*> bootStrapIndri(std::map<std::string, query_t*>& queryMap, std::vector<std::string> dirList, std::vector<std::string> paramFiles, std::vector<kba::entity::Entity*> entities, int indexDirSize , std::map<std::string, kba::term::TermStat*>& termStatMap, kba::term::CorpusStat* corpusStat) {
+  
+  using namespace kba::term;
+
+  std::vector<std::string> stopwords;
+
+   indri::api::Parameters param = indri::api::Parameters::instance();
+  //  indri::api::Parameters* param = new indri::api::Parameters();
+  for(std::vector<std::string>::iterator paramIt = paramFiles.begin(); paramIt != paramFiles.end(); ++paramIt) {
+    FILE* pFile = fopen((*paramIt).c_str(), "rb");
+    if(pFile != NULL) {
+      param.loadFile(*paramIt);
+      fclose(pFile);
+    }
+    else
+      std::cout << "Failed to load Parameter file " <<std::endl;
+  }
+  
+  copy_parameters_to_string_vector( stopwords, param, "stopper.word" );
+  for(std::vector<std::string>::iterator wordIt = stopwords.begin(); wordIt != stopwords.end(); ++wordIt)
+      STOP_SET.insert(*wordIt);
+
+
+  std::string queryType = "indri";
+  int idx = 1;
+  for(std::vector<kba::entity::Entity*>::iterator entIt = entities.begin(); entIt != entities.end() ; ++entIt, ++idx) {
+    kba::entity::Entity* entity = *entIt;  
+    std::string label = sanitizeQueryText(entity->label);   
+        
+    std::string qtext = "#weight( 3.0 ";
+    qtext = qtext + "#combine( "+ label + ")";
+    /**
+    if((entity->abstract).size() > 0) {
+      
+      std::string s_abstract = sanitizeQueryText(entity->abstract);
+      qtext = qtext + " 1.0 #combine( " + s_abstract + ")";
+      label = label + entity->abstract;
+    }
+    */
+    qtext = qtext + ")";
+
+    //  std::cout << entity->wikiURL << " query " << qtext << "\n";
+    query_t* query = new query_t(idx, entity->wikiURL, qtext, queryType);
+    query->textVector = Tokenize::whiteSpaceSplit(query->text, STOP_SET, true, 1, true);
+    for(std::vector<std::string>::iterator wordIt = (query->textVector).begin(); wordIt != (query->textVector).end(); ++wordIt) {
+      std::string word = *wordIt;
+      if(termStatMap.find(word) == termStatMap.end()) {
+	kba::term::TermStat* stat = new kba::term::TermStat();
+        termStatMap.insert(std::pair<std::string, kba::term::TermStat*>(word, stat)); 
+      }
+    }
+    queryMap.insert(std::pair<std::string, query_t*>(entity->wikiURL, query));
+  }
+
+  std::vector<std::string> indexDir;
+  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+    if(indexDir.size() >= indexDirSize) {
+      std::cout << "index dir size " << indexDir.size() << std::endl;
+      QueryThread* qt = new QueryThread(param, indexDir);
+     
+      for(std::map<std::string, query_t*>::iterator qMapIt = queryMap.begin(); qMapIt != queryMap.end(); ++qMapIt) {
+        query_t* q = qMapIt->second;
+        qt->_runQuery(q, true, 5, 10);
+        q->addDocs(qt->getDocumentVector());       
+	std::cout << q->id << " Expanded Text " << q->expandedText << "\n";
+      }
+     
+      for(std::map<std::string, TermStat*>::iterator mapIt = termStatMap.begin(); mapIt != termStatMap.end(); ++mapIt) {
+	std::string term = mapIt->first;
+	kba::term::TermStat* termStat = mapIt->second;
+        termStat->docFreq += qt->documentCount(term);
+        termStat->collFreq += qt->termCount(term);
+      }
+
+      corpusStat->totalDocs += qt->documentCount();
+      corpusStat->collectionSize += qt->termCount();
+
+      delete qt;
+
+      indexDir.clear();
+    }
+    indexDir.push_back(*dirIt);
+  }
+
+  if(indexDir.size() > 0) {
+    std::cout << "index dir size " << indexDir.size() << std::endl;
+    QueryThread* qt = new QueryThread(param, indexDir);
+ 
+    for(std::map<std::string, query_t*>::iterator qMapIt = queryMap.begin(); qMapIt != queryMap.end(); ++qMapIt) {
+      query_t* q = qMapIt->second;
+      qt->_runQuery(q, true, 5, 10);
+      q->addDocs(qt->getDocumentVector());       
+      std::cout << q->id << " Expanded Text " << q->expandedText << "\n";
+    }
+
+    for(std::map<std::string, TermStat*>::iterator mapIt = termStatMap.begin(); mapIt != termStatMap.end(); ++mapIt) {
+	std::string term = mapIt->first;
+	kba::term::TermStat* termStat = mapIt->second;
+        termStat->docFreq += qt->documentCount(term);
+        termStat->collFreq += qt->termCount(term);
+      }
+
+      corpusStat->totalDocs += qt->documentCount();
+      corpusStat->collectionSize += qt->termCount();
+
+
+    delete qt;
+  }
+ 
+  return queryMap;
+}
+
+void prepareForCCR() {
+}
+
 int main(int argc, char *argv[]){
   std::string taggerId;
   std::string corpusPath;
   std::string topicFile;
   std::string dirList;
+  std::string processList;
   std::string stopFile;
   std::string logFile;
   std::string trainingFile;
   std::string berkleyDbDir;
+  std::string noPositiveFile;
+  std::string dumpFile;
+  std::vector<std::string> paramFiles;
+  std::string baseIndexPath;
+
   char* tz;
   tz = getenv("TZ");
   if(tz) {
@@ -430,10 +653,13 @@ int main(int argc, char *argv[]){
     ("log", cmndOp::value<std::string>(&logFile), "Log file to write msg to")
     ("file",cmndOp::value<std::string>(&corpusPath)->default_value("../help/corpus"),"the file or base dir to process" )
     ("trng",cmndOp::value<std::string>(&trainingFile),"the trec kba judgement file, for this option to work bdb-dir should be specified" )
+   
     ("stat", "Write term and corpus and topic stats")
     ("efile",cmndOp::value<std::string>(&topicFile)->default_value("../help/topic.json"),"only process the directories in this list")
-    ("dir-list",cmndOp::value<std::string>(),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
-    ("dfile",cmndOp::value<std::string>(),"The dump file")
+    ("require-positive",cmndOp::value<std::string>(&noPositiveFile)->default_value("../help/nopositive-judgementfile"),"Only process entities for which we have judgement")
+    ("dir-list",cmndOp::value<std::string>(&dirList),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
+    ("run-list",cmndOp::value<std::string>(&processList),"Process the directories in this dir list only. this when I want to distribut my job over the nodes of ir server.")
+    ("dfile",cmndOp::value<std::string>(&dumpFile),"The dump file")
     ("stop-file,SF",cmndOp::value<std::string>(&stopFile)->default_value("../help/sql40stoplist"),"the file containing the stop words") 
     ("stream-id",cmndOp::value<std::string>(),"The stream id to search") 
     ("anchor"," print anchor text")
@@ -444,6 +670,8 @@ int main(int argc, char *argv[]){
     ("print-model", "print the model")
     ("print-stream", cmndOp::value<bool>(&printStream)->default_value(false), "print the stream")
     ("equery",cmndOp::value<std::string>(), "Look up an entity")
+    ("param", cmndOp::value<std::vector<std::string> >(&paramFiles), "The parameters file for indri")
+    ("base-index", cmndOp::value<std::string>(&baseIndexPath)->default_value("/data/data/collections/KBA/2013/newindex"), "The base dir where all indexes are found")
     ("taggerId",cmndOp::value<std::string>(&taggerId)->default_value("lingpipe")," print anchor text");
 
   
@@ -453,7 +681,8 @@ int main(int argc, char *argv[]){
   
   assert(logFile.size() > 0);  
   Logger::LOGGER(logFile);
-  
+
+
   if(trainingFile.size() > 0) {
     //    storeEvaluationData(trainingFile);
     HighRecallInfo(trainingFile);
@@ -461,6 +690,63 @@ int main(int argc, char *argv[]){
 
   STOP_SET  = Tokenize::getStopSet(stopFile);
 
+  std::vector<std::string> directories; 
+  if(dirList.size() > 0) {
+    std::ifstream inputFile(dirList.c_str());
+    std::set<std::string> seen;
+    for(std::string line;getline(inputFile, line);) {
+      std::string dayDate = line.substr(0, line.rfind('-'));    
+      if(seen.find(dayDate) == seen.end()) {
+        directories.push_back(dayDate);
+        seen.insert(dayDate);
+      }
+    }
+    inputFile.close();
+    std::sort(directories.begin(), directories.end(), compareString);    
+  }
+  
+  std::vector<std::string> runDirectories; 
+  if(processList.size() > 0) {
+    std::ifstream inputFile(processList.c_str());
+    std::set<std::string> seen;
+    for(std::string line;getline(inputFile, line);) {
+      std::string dayDate = line.substr(0, line.rfind('-'));    
+      if(seen.find(dayDate) == seen.end()) {
+        runDirectories.push_back(dayDate);
+        seen.insert(dayDate);
+      }
+    }
+    inputFile.close();
+    std::sort(runDirectories.begin(), runDirectories.end(), compareString);    
+  }
+
+  if(cmndMap.count("param")) {
+    std::vector<std::string> indexDirs;
+    for(std::vector<std::string>::iterator dirIt = directories.begin(); dirIt != directories.end(); ++dirIt){
+      std::string indexPath = baseIndexPath + "/"+ *dirIt;
+      indexDirs.push_back(indexPath);
+    }
+    
+    std::vector<std::string> runDirs;
+    for(std::vector<std::string>::iterator dirIt = runDirectories.begin(); dirIt != runDirectories.end(); ++dirIt){
+      std::string indexPath = baseIndexPath + "/"+ *dirIt;
+      runDirs.push_back(indexPath);
+    }
+    
+
+    std::vector<kba::entity::Entity*> entityList = getEntityList(topicFile, noPositiveFile, true);
+    kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
+    std::map<std::string, kba::term::TermStat*> termStatMap;
+    //    std::cout << " training dirs " << indexDirs.size() << " run dir "  << runDirs.size() << "\n";
+    kba::entity::Entity* entity = entityList[0];
+    std::vector<kba::entity::Entity*> temp;
+    temp.push_back(entity);
+    std::map<std::string, query_t*> qMap;
+    bootStrapIndri(qMap, indexDirs, paramFiles, temp, 20, termStatMap, corpusStat);
+    processFilterThread(qMap, runDirs, paramFiles, dumpFile, termStatMap, corpusStat);
+  }
+
+  
   RDFParser* rdfparser = NULL; 
   if(cmndMap.count("repo") && cmndMap.count("repo-name")) {
     rdfparser = new RDFParser();   
@@ -483,7 +769,7 @@ int main(int argc, char *argv[]){
     }
   }
   
-
+  /**
   if (cmndMap.count("stat") > 0 && corpusPath.size() > 0 && topicFile.size()) {
     if(cmndMap.count("dir-list")) {
       std::vector<std::string> directories; 
@@ -509,9 +795,9 @@ int main(int argc, char *argv[]){
       std::sort(directories.begin(), directories.end(), compareString);
         
     } 
-    performCCRTask(topicFile, corpusPath, dumpFile, directories, STOP_SET);
+    performCCRTask(topicFile, corpusPath, dumpFile, directories, noPositiveFile, STOP_SET);
   }
-   
+  */
   
   if (!cmndMap.count("file") ) {
     std::cout <<  "no input file specified use --file \n";

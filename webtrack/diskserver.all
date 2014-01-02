@@ -1,8 +1,9 @@
 <parameters>
-<threads>1</threads>
+<threads>2</threads>
 <runID>intrPLe</runID>
 <trecFormat>true</trecFormat>
 <count>10000</count>
+<PassageSize>150</PassageSize>
 <index>/data/data2/index/ClueWeb12/ClueWeb12_00/full.new</index>
 <index>/data/data2/index/ClueWeb12/ClueWeb12_01/full.new</index>
 <index>/data/data2/index/ClueWeb12/ClueWeb12_02/full.new</index>

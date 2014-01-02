@@ -250,10 +250,20 @@ void kba::entity::populateEntityStruct(std::vector<kba::entity::Entity*>& entity
       kba::entity::Entity* entity = *entIt;
       std::vector<std::string> tokens = Tokenize::tokenize(entity->label, true, stopSet);
       entity->labelTokens = tokens;
+      bool createNewLabel = false;
+      if((entity->dbpediaURLs).size() <= 0)
+        createNewLabel = true;
+      std::string newLabel;
       for(std::vector<std::string>::iterator tokIt = tokens.begin(); tokIt != tokens.end(); ++tokIt) {
 	std::string tok = *tokIt;
         (entity->labelMap)[tok]++;      
+        if(createNewLabel)
+          newLabel = newLabel + " "+ tok; 
       }
+
+      if(createNewLabel)
+        entity->label = newLabel;
+ 
       entity->relatedEntities = kba::entity::getRelatedEntities(entity, repoMap, stopSet);
     }
   } catch (const std::out_of_range& oor) {

@@ -4,7 +4,7 @@ INCPATH=-I. -I../library/include  -I../kba-common
 #LIBPATH=-L../library/lib  -L/usa/arao/gcctools/lib64 -L/usa/arao/gcctools/lib
 LIBPATH=-L../library/lib -L../kba-common
 
-LIBS=-lkbacommon -lboost_program_options -lindri -llzma -lthrift -lz -liberty -lpthread  -lboost_thread-mt
+LIBS= -lindri  -lz -liberty -lpthread -lkbacommon -lboost_program_options  -llzma -lthrift   -lboost_thread-mt
 
 APP=IndriBuildIndex
 #CXX = /usa/arao/gcctools/bin/g++ 

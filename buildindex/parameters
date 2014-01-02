@@ -6,6 +6,12 @@
     <field>dir</field>
     <field>file</field>
   </metadata>
+  <metadata>
+    <forward>docno</forward>
+    <forward>time</forward>
+    <forward>dir</forward>
+    <forward>file</forward>
+  </metadata>
   <field>
     <name>time</name>
     <numeric>true</numeric>

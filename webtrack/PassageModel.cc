@@ -230,12 +230,12 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringCosineHom(QueryE
   std::map<std::string, unsigned long> collFreq;
   std::vector<std::string> qTokens = Tokenize::whiteSpaceSplit(query->query, stopSet);  
   for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
-    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(*qIt)));
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->documentCount(*qIt)));
   }
   
   std::map<std::string, ScoredExtentResult> srMap;
   LanguageModel lm;
-  unsigned long collectionSize = qe->termCount();
+  unsigned long collectionSize = qe->documentCount(); // wer are taking document count instead of the collections size
   
   std::vector<Passage*> allPsgs;
   int idx = 0;
@@ -256,6 +256,7 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringCosineHom(QueryE
     } 
  
     //    float homogeniety_my = passageutil::docPsgHomogeniety(psgs, &motherPassage, qe, true);
+    //passageutil::psgSimilarityMatrix(psgs, &motherPassage, *qe);
     float homogeniety = passageutil::psgCosineSimilarity(psgs, &motherPassage, qe);
     //std::cout << "My homg " << homogeniety_my << " homg " <<  homogeniety << "\n";
 
@@ -310,7 +311,7 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringLengthHom(QueryE
   std::vector<std::string> trecids = qe->documentMetadata(rslts, trecField);
   std::map<std::string, unsigned long> collFreq;
   for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
-    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(*qIt)));
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->documentCount(*qIt)));
   }
 
   std::map<std::string, int> docLengthMap;
@@ -339,7 +340,7 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringLengthHom(QueryE
   
   std::map<std::string, ScoredExtentResult> srMap;
   LanguageModel lm;
-  unsigned long collectionSize = qe->termCount();
+  unsigned long collectionSize = qe->documentCount();
   std::vector<Passage*> allPsgs;
   int idx = 0;
 
@@ -402,7 +403,7 @@ std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe
   std::vector<std::string> qTokens = Tokenize::whiteSpaceSplit(query->query, stopSet); 
   std::map<std::string, unsigned long> collFreq;
   for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
-    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(*qIt)));
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->documentCount(*qIt)));
   }
 
   std::vector<Passage*> allPsgs;
@@ -411,7 +412,7 @@ std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe
   std::vector<std::string> trecids = qe->documentMetadata(rslts, trecField);
   std::map<std::string, ScoredExtentResult> srMap;
   LanguageModel lm;
-  unsigned long collectionSize = qe->termCount();
+  unsigned long collectionSize = qe->documentCount();
   assert(collectionSize > 0);
   //  std::cout << " doc vector " << dvVector.size();
   for(std::vector<DocumentVector*>::iterator dvIt = dvVector.begin(); dvIt != dvVector.end(); ++dvIt, ++idx) {

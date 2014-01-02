@@ -29,24 +29,27 @@ struct query_t {
     }
   };
 
-  query_t( int _index, std::string _id, const std::string& _text, const std::string &queryType,  std::vector<std::string> workSet,   std::vector<std::string> FBDocs) :
+  query_t( int _index, std::string _id, const std::string _text, const std::string queryType,  std::vector<std::string> workSet,   std::vector<std::string> FBDocs) :
     index( _index ),
     id( _id ),
     text( _text ), qType(queryType), workingSet(workSet), relFBDocs(FBDocs)
   {
   }
 
-  query_t( int _index, std::string _id, const std::string& _text ) :
+  query_t( int _index, std::string _id, const std::string _text , std::string queryType) :
     index( _index ),
     id(_id),
-    text( _text )
+    text( _text ),
+    qType(queryType)
   {
   }
 
   std::string id;
   int index;
   std::string text;
+  std::vector<std::string> textVector;
   std::string expandedText; // Contains the expanded query
+  std::map<std::string, float> textWeight;
   std::string qType;
   // working set to restrict retrieval
   std::vector<std::string> workingSet;
@@ -58,6 +61,19 @@ struct query_t {
       delete *docIt;
     docs.clear();
   };
+
+  void clearDocs() {
+    for(std::vector<indri::api::DocumentVector*>::iterator docIt = docs.begin(); docIt != docs.end(); ++docIt)  {
+      delete *docIt;
+    }
+    docs.clear();
+  };
+
+  void addDocs(std::vector<indri::api::DocumentVector*> documents) {
+    for(std::vector<indri::api::DocumentVector*>::iterator docIt = documents.begin(); docIt != documents.end(); ++docIt)  {
+      docs.push_back(*docIt);
+    }
+  }
 };
 
 
@@ -71,7 +87,7 @@ private:
   /**
    * The parameters uploaded from parameter files
    */
-  indri::api::Parameters _parameters;
+  indri::api::Parameters& _parameters;
   /**
    * Are we going to expand the query using pseudo relevance feedback. 
    * This is specified as part of the parameters file.
@@ -97,22 +113,36 @@ private:
   int _initialRequested;
 
   std::string _runId;
-public:
-  QueryThread(indri::api::Parameters params, std::vector<std::string> indexDirs);
   UINT64 initialize();
   /**
    * Must call to free up the resources
    */
   void deinitialize();
+public:
+  QueryThread(indri::api::Parameters& params, std::vector<std::string> indexDirs);
+  QueryThread(indri::api::Parameters& params, std::string indexDir);
+  ~QueryThread();
+  
+  
   /**
    * run a text query, QueryType is always "indri"
    */
-  void _runQuery(std::string& queryText, std::string& queryType);
+  void _runQuery(std::string queryText, std::string queryType);
+  void _runQuery(query_t* query, bool feedBack, int initRequestSize, int requestSize);
   void unsetExpander();
+
   void dumpKbaResult(std::vector<indri::api::ScoredExtentResult>&, std::string query, std::string dumfile); 
-  /**
-   * Does nothing
-   */
-  ~QueryThread();
+
+  std::vector<indri::api::DocumentVector*> getDocumentVector();
+  lemur::api::DOCID_T getDocId(int idx);
+  std::vector<lemur::api::DOCID_T> getDocIds();
+  std::vector<std::string> getMetadata(std::string metaKey);
+   
+
+  indri::api::DocumentVector* getDocumentVector(indri::api::ScoredExtentResult& sr);
+  unsigned long documentCount();
+  unsigned long documentCount(std::string& term);
+  unsigned long termCount(std::string& term,bool stem=false);
+  unsigned long termCount(); // total term count in index;
 };
 #endif

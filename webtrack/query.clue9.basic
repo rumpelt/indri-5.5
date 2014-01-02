@@ -1,0 +1,202 @@
+<parameters>
+<query><number>1</number><text>#filreq(#less(spam -130) #combine( obama family tree ))</text></query>
+<query><number>10</number><text>#filreq(#less(spam -130) #combine( cheap internet ))</text></query>
+<query><number>11</number><text>#filreq(#less(spam -130) #combine( gmat prep classes ))</text></query>
+<query><number>12</number><text>#filreq(#less(spam -130) #combine( djs ))</text></query>
+<query><number>13</number><text>#filreq(#less(spam -130) #combine( map ))</text></query>
+<query><number>14</number><text>#filreq(#less(spam -130) #combine( dinosaurs ))</text></query>
+<query><number>15</number><text>#filreq(#less(spam -130) #combine( espn sports ))</text></query>
+<query><number>16</number><text>#filreq(#less(spam -130) #combine( arizona game and fish ))</text></query>
+<query><number>17</number><text>#filreq(#less(spam -130) #combine( poker tournaments ))</text></query>
+<query><number>18</number><text>#filreq(#less(spam -130) #combine( wedding budget calculator ))</text></query>
+<query><number>19</number><text>#filreq(#less(spam -130) #combine( the current ))</text></query>
+<query><number>2</number><text>#filreq(#less(spam -130) #combine( french lick resort and casino ))</text></query>
+<query><number>20</number><text>#filreq(#less(spam -130) #combine( defender ))</text></query>
+<query><number>21</number><text>#filreq(#less(spam -130) #combine( volvo ))</text></query>
+<query><number>22</number><text>#filreq(#less(spam -130) #combine( rick warren ))</text></query>
+<query><number>23</number><text>#filreq(#less(spam -130) #combine( yahoo ))</text></query>
+<query><number>24</number><text>#filreq(#less(spam -130) #combine( diversity ))</text></query>
+<query><number>25</number><text>#filreq(#less(spam -130) #combine( euclid ))</text></query>
+<query><number>26</number><text>#filreq(#less(spam -130) #combine( lower heart rate ))</text></query>
+<query><number>27</number><text>#filreq(#less(spam -130) #combine( starbucks ))</text></query>
+<query><number>28</number><text>#filreq(#less(spam -130) #combine( inuyasha ))</text></query>
+<query><number>29</number><text>#filreq(#less(spam -130) #combine( ps 2 games ))</text></query>
+<query><number>3</number><text>#filreq(#less(spam -130) #combine( getting organized ))</text></query>
+<query><number>30</number><text>#filreq(#less(spam -130) #combine( diabetes education ))</text></query>
+<query><number>31</number><text>#filreq(#less(spam -130) #combine( atari ))</text></query>
+<query><number>32</number><text>#filreq(#less(spam -130) #combine( website design hosting ))</text></query>
+<query><number>33</number><text>#filreq(#less(spam -130) #combine( elliptical trainer ))</text></query>
+<query><number>34</number><text>#filreq(#less(spam -130) #combine( cell phones ))</text></query>
+<query><number>35</number><text>#filreq(#less(spam -130) #combine( hoboken ))</text></query>
+<query><number>36</number><text>#filreq(#less(spam -130) #combine( gps ))</text></query>
+<query><number>37</number><text>#filreq(#less(spam -130) #combine( pampered chef ))</text></query>
+<query><number>38</number><text>#filreq(#less(spam -130) #combine( dogs for adoption ))</text></query>
+<query><number>39</number><text>#filreq(#less(spam -130) #combine( disneyland hotel ))</text></query>
+<query><number>4</number><text>#filreq(#less(spam -130) #combine( toilet ))</text></query>
+<query><number>40</number><text>#filreq(#less(spam -130) #combine( michworks ))</text></query>
+<query><number>41</number><text>#filreq(#less(spam -130) #combine( orange county convention center ))</text></query>
+<query><number>42</number><text>#filreq(#less(spam -130) #combine( the music man ))</text></query>
+<query><number>43</number><text>#filreq(#less(spam -130) #combine( the secret garden ))</text></query>
+<query><number>44</number><text>#filreq(#less(spam -130) #combine( map of the united states ))</text></query>
+<query><number>45</number><text>#filreq(#less(spam -130) #combine( solar panels ))</text></query>
+<query><number>46</number><text>#filreq(#less(spam -130) #combine( alexian brothers hospital ))</text></query>
+<query><number>47</number><text>#filreq(#less(spam -130) #combine( indexed annuity ))</text></query>
+<query><number>48</number><text>#filreq(#less(spam -130) #combine( wilson antenna ))</text></query>
+<query><number>49</number><text>#filreq(#less(spam -130) #combine( flame designs ))</text></query>
+<query><number>5</number><text>#filreq(#less(spam -130) #combine( mitchell college ))</text></query>
+<query><number>50</number><text>#filreq(#less(spam -130) #combine( dog heat ))</text></query>
+<query><number>6</number><text>#filreq(#less(spam -130) #combine( kcs ))</text></query>
+<query><number>7</number><text>#filreq(#less(spam -130) #combine( air travel information ))</text></query>
+<query><number>8</number><text>#filreq(#less(spam -130) #combine( appraisals ))</text></query>
+<query><number>9</number><text>#filreq(#less(spam -130) #combine( used car parts ))</text></query>
+<query><number>100</number><text>#filreq(#less(spam -130) #combine( rincon puerto rico ))</text></query>
+<query><number>51</number><text>#filreq(#less(spam -130) #combine( horse hooves ))</text></query>
+<query><number>52</number><text>#filreq(#less(spam -130) #combine( avp ))</text></query>
+<query><number>53</number><text>#filreq(#less(spam -130) #combine( discovery channel store ))</text></query>
+<query><number>54</number><text>#filreq(#less(spam -130) #combine( president of the united states ))</text></query>
+<query><number>55</number><text>#filreq(#less(spam -130) #combine( iron ))</text></query>
+<query><number>56</number><text>#filreq(#less(spam -130) #combine( uss yorktown charleston sc ))</text></query>
+<query><number>57</number><text>#filreq(#less(spam -130) #combine( ct jobs ))</text></query>
+<query><number>58</number><text>#filreq(#less(spam -130) #combine( penguins ))</text></query>
+<query><number>59</number><text>#filreq(#less(spam -130) #combine( how to build a fence ))</text></query>
+<query><number>60</number><text>#filreq(#less(spam -130) #combine( bellevue ))</text></query>
+<query><number>61</number><text>#filreq(#less(spam -130) #combine( worm ))</text></query>
+<query><number>62</number><text>#filreq(#less(spam -130) #combine( texas border patrol ))</text></query>
+<query><number>63</number><text>#filreq(#less(spam -130) #combine( flushing ))</text></query>
+<query><number>64</number><text>#filreq(#less(spam -130) #combine( moths ))</text></query>
+<query><number>65</number><text>#filreq(#less(spam -130) #combine( korean language ))</text></query>
+<query><number>66</number><text>#filreq(#less(spam -130) #combine( income tax return online ))</text></query>
+<query><number>67</number><text>#filreq(#less(spam -130) #combine( vldl levels ))</text></query>
+<query><number>68</number><text>#filreq(#less(spam -130) #combine( pvc ))</text></query>
+<query><number>69</number><text>#filreq(#less(spam -130) #combine( sewing instructions ))</text></query>
+<query><number>70</number><text>#filreq(#less(spam -130) #combine( to be or not to be that is the question ))</text></query>
+<query><number>71</number><text>#filreq(#less(spam -130) #combine( living in india ))</text></query>
+<query><number>72</number><text>#filreq(#less(spam -130) #combine( the sun ))</text></query>
+<query><number>73</number><text>#filreq(#less(spam -130) #combine( neil young ))</text></query>
+<query><number>74</number><text>#filreq(#less(spam -130) #combine( kiwi ))</text></query>
+<query><number>75</number><text>#filreq(#less(spam -130) #combine( tornadoes ))</text></query>
+<query><number>76</number><text>#filreq(#less(spam -130) #combine( raised gardens ))</text></query>
+<query><number>77</number><text>#filreq(#less(spam -130) #combine( bobcat ))</text></query>
+<query><number>78</number><text>#filreq(#less(spam -130) #combine( dieting ))</text></query>
+<query><number>79</number><text>#filreq(#less(spam -130) #combine( voyager ))</text></query>
+<query><number>80</number><text>#filreq(#less(spam -130) #combine( keyboard reviews ))</text></query>
+<query><number>81</number><text>#filreq(#less(spam -130) #combine( afghanistan ))</text></query>
+<query><number>82</number><text>#filreq(#less(spam -130) #combine( joints ))</text></query>
+<query><number>83</number><text>#filreq(#less(spam -130) #combine( memory ))</text></query>
+<query><number>84</number><text>#filreq(#less(spam -130) #combine( continental plates ))</text></query>
+<query><number>85</number><text>#filreq(#less(spam -130) #combine( milwaukee journal sentinel ))</text></query>
+<query><number>86</number><text>#filreq(#less(spam -130) #combine( bart sf ))</text></query>
+<query><number>87</number><text>#filreq(#less(spam -130) #combine( who invented music ))</text></query>
+<query><number>88</number><text>#filreq(#less(spam -130) #combine( forearm pain ))</text></query>
+<query><number>89</number><text>#filreq(#less(spam -130) #combine( ocd ))</text></query>
+<query><number>90</number><text>#filreq(#less(spam -130) #combine( mgb ))</text></query>
+<query><number>91</number><text>#filreq(#less(spam -130) #combine( er tv show ))</text></query>
+<query><number>92</number><text>#filreq(#less(spam -130) #combine( the wall ))</text></query>
+<query><number>93</number><text>#filreq(#less(spam -130) #combine( raffles ))</text></query>
+<query><number>94</number><text>#filreq(#less(spam -130) #combine( titan ))</text></query>
+<query><number>95</number><text>#filreq(#less(spam -130) #combine( earn money at home ))</text></query>
+<query><number>96</number><text>#filreq(#less(spam -130) #combine( rice ))</text></query>
+<query><number>97</number><text>#filreq(#less(spam -130) #combine( south africa ))</text></query>
+<query><number>98</number><text>#filreq(#less(spam -130) #combine( sat ))</text></query>
+<query><number>99</number><text>#filreq(#less(spam -130) #combine( satellite ))</text></query>
+<query><number>101</number><text>#filreq(#less(spam -130) #combine( ritz carlton lake las vegas ))</text></query>
+<query><number>102</number><text>#filreq(#less(spam -130) #combine( fickle creek farm ))</text></query>
+<query><number>103</number><text>#filreq(#less(spam -130) #combine( madam cj walker ))</text></query>
+<query><number>104</number><text>#filreq(#less(spam -130) #combine( indiana child support ))</text></query>
+<query><number>105</number><text>#filreq(#less(spam -130) #combine( sonoma county medical services ))</text></query>
+<query><number>106</number><text>#filreq(#less(spam -130) #combine( universal animal cuts reviews ))</text></query>
+<query><number>107</number><text>#filreq(#less(spam -130) #combine( cass county missouri ))</text></query>
+<query><number>108</number><text>#filreq(#less(spam -130) #combine( ralph owen brewster ))</text></query>
+<query><number>109</number><text>#filreq(#less(spam -130) #combine( mayo clinic jacksonville fl ))</text></query>
+<query><number>110</number><text>#filreq(#less(spam -130) #combine( map of brazil ))</text></query>
+<query><number>111</number><text>#filreq(#less(spam -130) #combine( lymphoma in dogs ))</text></query>
+<query><number>112</number><text>#filreq(#less(spam -130) #combine( kenmore gas water heater ))</text></query>
+<query><number>113</number><text>#filreq(#less(spam -130) #combine( hp mini 2140 ))</text></query>
+<query><number>114</number><text>#filreq(#less(spam -130) #combine( adobe indian houses ))</text></query>
+<query><number>115</number><text>#filreq(#less(spam -130) #combine( pacific northwest laboratory ))</text></query>
+<query><number>116</number><text>#filreq(#less(spam -130) #combine( california franchise tax board ))</text></query>
+<query><number>117</number><text>#filreq(#less(spam -130) #combine( dangers of asbestos ))</text></query>
+<query><number>118</number><text>#filreq(#less(spam -130) #combine( poem in your pocket day ))</text></query>
+<query><number>119</number><text>#filreq(#less(spam -130) #combine( interview thank you ))</text></query>
+<query><number>120</number><text>#filreq(#less(spam -130) #combine( tv on computer ))</text></query>
+<query><number>121</number><text>#filreq(#less(spam -130) #combine( sit and reach test ))</text></query>
+<query><number>122</number><text>#filreq(#less(spam -130) #combine( culpeper national cemetery ))</text></query>
+<query><number>123</number><text>#filreq(#less(spam -130) #combine( von willebrand disease ))</text></query>
+<query><number>124</number><text>#filreq(#less(spam -130) #combine( bowflex power pro ))</text></query>
+<query><number>125</number><text>#filreq(#less(spam -130) #combine( butter and margarine ))</text></query>
+<query><number>126</number><text>#filreq(#less(spam -130) #combine( us capitol map ))</text></query>
+<query><number>127</number><text>#filreq(#less(spam -130) #combine( dutchess county tourism ))</text></query>
+<query><number>128</number><text>#filreq(#less(spam -130) #combine( atypical squamous cells ))</text></query>
+<query><number>129</number><text>#filreq(#less(spam -130) #combine( iowa food stamp program ))</text></query>
+<query><number>130</number><text>#filreq(#less(spam -130) #combine( fact on uranus ))</text></query>
+<query><number>131</number><text>#filreq(#less(spam -130) #combine( equal opportunity employer ))</text></query>
+<query><number>132</number><text>#filreq(#less(spam -130) #combine( mothers day songs ))</text></query>
+<query><number>133</number><text>#filreq(#less(spam -130) #combine( all men are created equal ))</text></query>
+<query><number>134</number><text>#filreq(#less(spam -130) #combine( electronic skeet shoot ))</text></query>
+<query><number>135</number><text>#filreq(#less(spam -130) #combine( source of the nile ))</text></query>
+<query><number>136</number><text>#filreq(#less(spam -130) #combine( american military university ))</text></query>
+<query><number>137</number><text>#filreq(#less(spam -130) #combine( rock and gem shows ))</text></query>
+<query><number>138</number><text>#filreq(#less(spam -130) #combine( jax chemical company ))</text></query>
+<query><number>139</number><text>#filreq(#less(spam -130) #combine( rocky mountain news ))</text></query>
+<query><number>140</number><text>#filreq(#less(spam -130) #combine( east ridge high school ))</text></query>
+<query><number>141</number><text>#filreq(#less(spam -130) #combine( va dmv registration ))</text></query>
+<query><number>142</number><text>#filreq(#less(spam -130) #combine( illinois state tax ))</text></query>
+<query><number>143</number><text>#filreq(#less(spam -130) #combine( arkadelphia health club ))</text></query>
+<query><number>144</number><text>#filreq(#less(spam -130) #combine( trombone for sale ))</text></query>
+<query><number>145</number><text>#filreq(#less(spam -130) #combine( vines for shade ))</text></query>
+<query><number>146</number><text>#filreq(#less(spam -130) #combine( sherwood regional library ))</text></query>
+<query><number>147</number><text>#filreq(#less(spam -130) #combine( tangible personal property tax ))</text></query>
+<query><number>148</number><text>#filreq(#less(spam -130) #combine( martha stewart and imclone ))</text></query>
+<query><number>149</number><text>#filreq(#less(spam -130) #combine( uplift at yellowstone national park ))</text></query>
+<query><number>150</number><text>#filreq(#less(spam -130) #combine( tn highway patrol ))</text></query>
+<query><number>151</number><text>#filreq(#less(spam -130) #combine( 403b ))</text></query>
+<query><number>152</number><text>#filreq(#less(spam -130) #combine( angular cheilitis ))</text></query>
+<query><number>153</number><text>#filreq(#less(spam -130) #combine( pocono ))</text></query>
+<query><number>154</number><text>#filreq(#less(spam -130) #combine( figs ))</text></query>
+<query><number>155</number><text>#filreq(#less(spam -130) #combine( last supper painting ))</text></query>
+<query><number>156</number><text>#filreq(#less(spam -130) #combine( university of phoenix ))</text></query>
+<query><number>157</number><text>#filreq(#less(spam -130) #combine( the beatles rock band ))</text></query>
+<query><number>158</number><text>#filreq(#less(spam -130) #combine( septic system design ))</text></query>
+<query><number>159</number><text>#filreq(#less(spam -130) #combine( porterville ))</text></query>
+<query><number>160</number><text>#filreq(#less(spam -130) #combine( grilling ))</text></query>
+<query><number>161</number><text>#filreq(#less(spam -130) #combine( furniture for small spaces ))</text></query>
+<query><number>162</number><text>#filreq(#less(spam -130) #combine( dnr ))</text></query>
+<query><number>163</number><text>#filreq(#less(spam -130) #combine( arkansas ))</text></query>
+<query><number>164</number><text>#filreq(#less(spam -130) #combine( hobby stores ))</text></query>
+<query><number>165</number><text>#filreq(#less(spam -130) #combine( blue throated hummingbird ))</text></query>
+<query><number>166</number><text>#filreq(#less(spam -130) #combine( computer programming ))</text></query>
+<query><number>167</number><text>#filreq(#less(spam -130) #combine( barbados ))</text></query>
+<query><number>168</number><text>#filreq(#less(spam -130) #combine( lipoma ))</text></query>
+<query><number>169</number><text>#filreq(#less(spam -130) #combine( battles in the civil war ))</text></query>
+<query><number>170</number><text>#filreq(#less(spam -130) #combine( scooters ))</text></query>
+<query><number>171</number><text>#filreq(#less(spam -130) #combine( ron howard ))</text></query>
+<query><number>172</number><text>#filreq(#less(spam -130) #combine( becoming a paralegal ))</text></query>
+<query><number>173</number><text>#filreq(#less(spam -130) #combine( hip fractures ))</text></query>
+<query><number>174</number><text>#filreq(#less(spam -130) #combine( rock art ))</text></query>
+<query><number>175</number><text>#filreq(#less(spam -130) #combine( signs of a heartattack ))</text></query>
+<query><number>176</number><text>#filreq(#less(spam -130) #combine( weather strip ))</text></query>
+<query><number>177</number><text>#filreq(#less(spam -130) #combine( best long term care insurance ))</text></query>
+<query><number>178</number><text>#filreq(#less(spam -130) #combine( pork tenderloin ))</text></query>
+<query><number>179</number><text>#filreq(#less(spam -130) #combine( black history ))</text></query>
+<query><number>180</number><text>#filreq(#less(spam -130) #combine( newyork hotels ))</text></query>
+<query><number>181</number><text>#filreq(#less(spam -130) #combine( old coins ))</text></query>
+<query><number>182</number><text>#filreq(#less(spam -130) #combine( quit smoking ))</text></query>
+<query><number>183</number><text>#filreq(#less(spam -130) #combine( kansas city mo ))</text></query>
+<query><number>184</number><text>#filreq(#less(spam -130) #combine( civil right movement ))</text></query>
+<query><number>185</number><text>#filreq(#less(spam -130) #combine( credit report ))</text></query>
+<query><number>186</number><text>#filreq(#less(spam -130) #combine( unc ))</text></query>
+<query><number>187</number><text>#filreq(#less(spam -130) #combine( vanuatu ))</text></query>
+<query><number>188</number><text>#filreq(#less(spam -130) #combine( internet phone service ))</text></query>
+<query><number>189</number><text>#filreq(#less(spam -130) #combine( gs pay rate ))</text></query>
+<query><number>190</number><text>#filreq(#less(spam -130) #combine( brooks brothers clearance ))</text></query>
+<query><number>191</number><text>#filreq(#less(spam -130) #combine( churchill downs ))</text></query>
+<query><number>192</number><text>#filreq(#less(spam -130) #combine( condos in florida ))</text></query>
+<query><number>193</number><text>#filreq(#less(spam -130) #combine( dog clean up bags ))</text></query>
+<query><number>194</number><text>#filreq(#less(spam -130) #combine( designer dog breeds ))</text></query>
+<query><number>195</number><text>#filreq(#less(spam -130) #combine( pressure washers ))</text></query>
+<query><number>196</number><text>#filreq(#less(spam -130) #combine( sore throat ))</text></query>
+<query><number>197</number><text>#filreq(#less(spam -130) #combine( idaho state flower ))</text></query>
+<query><number>198</number><text>#filreq(#less(spam -130) #combine( indiana state fairgrounds ))</text></query>
+<query><number>199</number><text>#filreq(#less(spam -130) #combine( fybromyalgia ))</text></query>
+<query><number>200</number><text>#filreq(#less(spam -130) #combine( ontario california airport ))</text></query>
+</parameters>

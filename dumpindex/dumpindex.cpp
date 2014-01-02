@@ -52,7 +52,7 @@ void print_expression_list( const std::string& indexName, const std::string& exp
 
   std::cout << expression << " " << env.termCount() << " " 
             << env.documentCount() << std::endl;
-
+nnnnn
   env.close();
   // now, print the results in the format:
   // documentID weight begin end

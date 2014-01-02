@@ -1,3 +1,4 @@
+
 /*==========================================================================
  * Copyright (c) 2004 University of Massachusetts.  All Rights Reserved.
  *
@@ -401,10 +402,10 @@ std::string getTitle(streamcorpus::StreamItem& streamItem) {
   }
 }
 
-std::vector<std::string> getKbaContent(std::string fileToParse ,const std::string directory) {
+void getKbaContent(std::string fileToParse ,const std::string directory, std::vector<std::string>& pdocs) {
   using namespace indri::utility;
   using namespace indri::parse;
-  std::vector<std::string> pdocs;
+  //std::cout << "parsing " << fileToParse << std::endl;
   kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
   tdextractor->open(fileToParse);
   streamcorpus::StreamItem* streamItem = 0;
@@ -420,13 +421,15 @@ std::vector<std::string> getKbaContent(std::string fileToParse ,const std::strin
     std::string time = (streamItem->stream_id).substr(0, streamId.find("-"));
     std::string doc = "<doc>\n";
     doc = doc + "<docno>\n" + streamId + "\n</docno>" + "\n" + "<dir>\n"+directory+"\n</dir>\n"+ "<file>\n" + fileName + "\n</file>\n"+ "<time>\n"+time+ "\n</time>\n";
-    doc = doc + "<text>\n" + content + "\n</text>" + "\n<title>\n" + title + "\n</title>" + "\n<anchor>\n" + anchor + "\n</anchor>\n" + "\n</doc>";
+    if(anchor.size() > 0)
+      doc = doc + "<text>\n" + content + "\n</text>" + "\n<title>\n" + title + "\n</title>" + "\n<anchor>\n" + anchor + "\n</anchor>\n" + "\n</doc>";
+    else 
+      doc = doc + "<text>\n" + content + "\n</text>" + "\n<title>\n" + title + "\n</title>"+ "\n</doc>";
     pdocs.push_back(doc);
     //   std::cout << doc ;
   }
   
   delete tdextractor;
-  return pdocs;
 }
 std::vector<indri::api::ParsedDocument> getKbaDocs(std::string fileToParse ,const std::string directory) {
   using namespace indri::utility;
@@ -505,6 +508,7 @@ int createIndex(indri::api::Parameters& parameters, std::vector<std::string> dir
     env.setNormalization( parameters.get("normalize", true));
     env.setInjectURL( parameters.get("injectURL", false));
     env.setStoreDocs( parameters.get("storeDocs", false));
+
     /**
     std::string offsetAnnotationHint=parameters.get("offsetannotationhint", "default");
     if (offsetAnnotationHint=="ordered") {
@@ -515,6 +519,7 @@ int createIndex(indri::api::Parameters& parameters, std::vector<std::string> dir
       env.setOffsetAnnotationIndexHint(indri::parse::OAHintDefault);
     }
     */
+
     std::string stemmerName = parameters.get("stemmer.name", "");
     if( stemmerName.length() )
       env.setStemmer(stemmerName);
@@ -577,13 +582,8 @@ int createIndex(indri::api::Parameters& parameters, std::vector<std::string> dir
       buildindex_print_event( std::string() + "Created repository " + repositoryPath );
     }
 
-    for (std::vector<std::string>::iterator dirIt =  dirList.begin(); dirIt != dirList.end(); ++dirIt) {
-      std::string corpusPath = *dirIt;
-      std::string directory = corpusPath.substr(corpusPath.rfind("/")+1);
 
-      // augment field/metadata tags in the environment if needed.
-      
-      if( fileClass.length() ) {
+    if( fileClass.length() ) {
         indri::parse::FileClassEnvironmentFactory::Specification *spec = env.getFileClassSpec(fileClass);
         if( spec ) {
           // add fields if necessary, only update if changed.
@@ -591,45 +591,58 @@ int createIndex(indri::api::Parameters& parameters, std::vector<std::string> dir
             env.addFileClass(*spec);
           delete(spec);
         }
-      }
+    }
       
+    // First record the document root, and then the paths to any annotator inputs
+    
+
+    for (std::vector<std::string>::iterator dirIt =  dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+      std::string corpusPath = *dirIt;
+      std::string directory = corpusPath.substr(corpusPath.rfind("/")+1);
+
+      // augment field/metadata tags in the environment if needed.
+      
+      env.setDocumentRoot(corpusPath);  
       bool isDirectory = indri::file::Path::isDirectory(corpusPath);
  
-      // First record the document root, and then the paths to any annotator inputs
-      env.setDocumentRoot(corpusPath);
-
+      
       // Support for anchor text
       //std::string anchorText = thisCorpus.get("inlink", "");
-      //env.setAnchorTextPath("");
+      //std::string anchorText = "";
+      //env.setAnchorTextPath(anchorText);
 
       //      Support for offset annotations
       //std::string offsetAnnotationsPath = thisCorpus.get( "annotations", "" );
-      //env.setOffsetAnnotationsPath("");
+      //std::string offsetAnnotationPath ="";
+      //env.setOffsetAnnotationsPath(offsetAnnotationPath);
 
       // Support for offset metadata file
       //std::string offsetMetadataPath = thisCorpus.get( "metadata", "" );
-      //env.setOffsetMetadataPath("");
+      //std::string offsetMetadataPath = "";
+      //env.setOffsetMetadataPath(offsetMetadataPath);
 
       if( isDirectory ) {
         indri::file::FileTreeIterator files(corpusPath);
           for( ; files != indri::file::FileTreeIterator::end(); files++ ) {
 	  std::string file = *files;
+          std::vector<std::string> pdocs;
 	  //	  std::vector<indri::api::ParsedDocument> pdocs = getKbaDocs(file, directory);
-	  std::vector<std::string> pdocs = getKbaContent(file, directory);
+	  getKbaContent(file, directory, pdocs);
+          //std::cout << "got content " << file << std::endl;
           for(std::vector<std::string>::iterator pdIt = pdocs.begin(); pdIt != pdocs.end(); ++pdIt) {
 	    std::string pd = *pdIt;
-	    //	    std::cout << "doc size " << pd.size() << "\n";
-            //env.addParsedDocument(&pd);
 	    std::vector<indri::parse::MetadataPair> md;
             env.addString(pd, fileClass, md);
 	  }
+	  //          std::cout << "finished adding " << file << std::endl;
         }
       } 
     }
-
-    buildindex_print_event( "Closing index" );
+    
+    buildindex_print_event( std::string() + "Closing index" );
     env.close();
-    buildindex_print_event( "Finished" );
+    std::string fin = "finished";
+    buildindex_print_event(fin );
   } catch( lemur::api::Exception& e ) {
     LEMUR_ABORT(e);
   }
@@ -687,7 +700,9 @@ int main(int argc, char* argv[]) {
   
     if(dayDate.compare(prevDayDate) != 0) {
       std::string repoPath = baseRepoPath + "/" + prevDayDate;
+      //      std::cout << "processing " << repoPath << "\n";
       int status = createIndex(parameters, dirBunch, repoPath, fileClass);
+      
       if(status < 0)
         std::cout << "Could not create index for dir" << dayDate << "\n";
       dirBunch.clear();
@@ -706,5 +721,6 @@ int main(int argc, char* argv[]) {
       std::cout << "Could not create index for dir" << prevDayDate << "\n";
   }
 
+  std::cout << "finished processing all dir\n";
   return 0;
 }

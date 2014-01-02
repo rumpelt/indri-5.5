@@ -49,5 +49,4 @@
 <query><number>248</number><text>#filreq(#less(spam -130) #combine(eggs shelf life))</text></query>
 <query><number>249</number><text>#filreq(#less(spam -130) #combine(occupational therapist))</text></query>
 <query><number>250</number><text>#filreq(#less(spam -130) #combine(ford edge problems ))</text></query>
-<PassageSize>150</PassageSize>
 </parameters>

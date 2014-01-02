@@ -1,8 +1,16 @@
 #include "QueryThread.hpp"
 #include <dirent.h>
 
-QueryThread::QueryThread(indri::api::Parameters params, std::vector<std::string> dirs) : 
-  _parameters(params), _expander(0), _indexDirs(dirs){}
+QueryThread::QueryThread(indri::api::Parameters& params, std::vector<std::string> dirs) : 
+  _parameters(params), _expander(0), _indexDirs(dirs){
+  initialize();
+}
+
+QueryThread::QueryThread(indri::api::Parameters& params, std::string dir) : 
+  _parameters(params), _expander(0){
+  _indexDirs.push_back(dir);
+  initialize();
+}
 
 UINT64 QueryThread::initialize() {
 
@@ -54,7 +62,7 @@ UINT64 QueryThread::initialize() {
   return 0;
 }
 
-void QueryThread::_runQuery(std::string& queryText ,std::string& queryType) {
+void QueryThread::_runQuery(std::string queryText ,std::string queryType) {
   try {
     _results = _environment.runQuery( queryText, _initialRequested, queryType ); //Runs query
     if(_expander) {
@@ -62,24 +70,38 @@ void QueryThread::_runQuery(std::string& queryText ,std::string& queryType) {
       expandedQuery = _expander->expand( queryText, _results);
       _results = _environment.runQuery(expandedQuery, _requested, queryType );
     }
-    std::cout << "Num results " << _results.size() << "\n";
+    //    std::cout << "Num results " << _results.size() << "\n";
   }
   catch(lemur::api::Exception& e) {
-    _results.clear();
-    LEMUR_RETHROW(e, "QueryThread::_runQuery Exception");
+   _results.clear();
+   LEMUR_RETHROW(e, "QueryThread::_runQuery Exception");
   }
 }
 
-void QueryThread::deinitialize() {
-  if(_expander != 0)
-    delete _expander;
-  _environment.close();
+void QueryThread::_runQuery(query_t* q, bool useFeedBack, int initRequestSize, int requestSize) {
+  indri::query::QueryExpander*  localExpander=0;
+  try {
+    //    std::cout << q->text << std::endl;
+    _results = _environment.runQuery(q->text, initRequestSize, q->qType);
+    std::cout << "Init result " << _results.size() << "\n";
+    if(useFeedBack) {
+      localExpander = new indri::query::RMExpander(&_environment, _parameters);
+      q->expandedText = localExpander->expand(q->text, _results);
+      _results = _environment.runQuery(q->expandedText, requestSize, q->qType);
+      //std::cout << "Expanded Result size " << _results.size() << "\n";
+      delete localExpander;    
+    }
+  }
+  catch(lemur::api::Exception& e) {
+    if(localExpander != 0) {
+      delete localExpander;
+    }
+    LEMUR_RETHROW(e, "QueryThread::_runQuery(query_t) Exception"); 
+  }
 }
 
 
-QueryThread::~QueryThread() {
 
-}
 
 void QueryThread::dumpKbaResult(std::vector<indri::api::ScoredExtentResult>& results, std::string queryId, std::string dumpfile) {
   std::string docno = "docno";
@@ -99,10 +121,73 @@ void QueryThread::dumpKbaResult(std::vector<indri::api::ScoredExtentResult>& res
   dumpStream.close();
 }
 
+std::vector<indri::api::DocumentVector*> QueryThread::getDocumentVector() {
+  std::vector<lemur::api::DOCID_T> docIds;
+  for(std::vector<indri::api::ScoredExtentResult>::iterator srIt = _results.begin(); srIt != _results.end(); ++srIt)
+    docIds.push_back((*srIt).document);
+  return _environment.documentVectors(docIds);
+}
 
+std::vector<std::string> QueryThread::getMetadata(std::string metaKey) {
+  std::vector<lemur::api::DOCID_T> docIds;
+  for(std::vector<indri::api::ScoredExtentResult>::iterator srIt = _results.begin(); srIt != _results.end(); ++srIt)
+    docIds.push_back((*srIt).document);
+  return _environment.documentMetadata(docIds, metaKey);
+}
+
+
+
+lemur::api::DOCID_T QueryThread::getDocId(int idx) {
+  return (_results[idx]).document;
+}
+
+std::vector<lemur::api::DOCID_T> QueryThread::getDocIds() {
+  std::vector<lemur::api::DOCID_T> docIds;
+  for(std::vector<indri::api::ScoredExtentResult>::iterator srIt = _results.begin(); srIt != _results.end(); ++srIt)
+    docIds.push_back((*srIt).document);
+  return docIds;
+}
+
+indri::api::DocumentVector* QueryThread::getDocumentVector(indri::api::ScoredExtentResult& sr) {
+  std::vector<lemur::api::DOCID_T> docIds;
+  docIds.push_back(sr.document);
+  std::vector<indri::api::DocumentVector*> dvs = _environment.documentVectors(docIds);
+  if (dvs.size() <= 0)
+    return 0;
+  return dvs[0];
+}
+
+unsigned long QueryThread::documentCount() {
+  return _environment.documentCount();
+}
+
+unsigned long QueryThread::documentCount(std::string& term) {
+  return _environment.documentCount(term);
+}
+
+unsigned long QueryThread::termCount(std::string& term, bool stem) {
+  return stem? _environment.stemCount(term) : _environment.termCount(term);
+}
+
+unsigned long QueryThread::termCount() {
+  return _environment.termCount();
+}
 
 void QueryThread::unsetExpander() {
   if(_expander != 0)
       delete _expander;
-   
+      
+}
+
+void QueryThread::deinitialize() {
+  if(_expander != 0)
+    delete _expander;
+  _results.clear();
+  _environment.close();
+}
+
+QueryThread::~QueryThread() {
+  if(_expander != 0)
+    delete _expander;
+  _environment.close();
 }

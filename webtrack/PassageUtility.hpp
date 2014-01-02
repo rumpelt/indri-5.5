@@ -11,7 +11,7 @@ namespace passageutil{
   std::map<std::string, int> tfIdf(Passage* psg, indri::api::QueryEnvironment* qe, bool stem = true);
 
   float docPsgHomogeniety(std::vector<Passage*> psgs, Passage* motherPassage, indri::api::QueryEnvironment* qe, bool stem);
-
+  void psgSimilarityMatrix(std::vector<Passage*>& psgs, Passage* motherPassage, indri::api::QueryEnvironment& qe);
   float psgCosineSimilarity(std::vector<Passage*> psgs, Passage* motherPassage, indri::api::QueryEnvironment* qe);
   
   TextMatrix* makeWordPassageMatrix(std::vector<Passage*> psgs);
