@@ -6,7 +6,7 @@
 TextMatrix::TextMatrix() : _matrix(0) {}
 TextMatrix::~TextMatrix() { if(TextMatrix::_matrix != 0) delete(TextMatrix::_matrix); }
  
-void TextMatrix::initializeMatrix(std::vector<std::string> rowName, std::vector<std::string> colName) {
+void TextMatrix::initializeMatrix(std::vector<std::string>& rowName, std::vector<std::string>& colName) {
   std::set<std::string> unique;
   for(std::vector<std::string>::iterator rowIt = rowName.begin(); rowIt != rowName.end(); ++rowIt) {
     std::string rname = *rowIt;
@@ -29,7 +29,7 @@ void TextMatrix::initializeMatrix(std::vector<std::string> rowName, std::vector<
 }
 
 
-void TextMatrix::initializeMatrix(std::set<std::string> rowName, std::set<std::string> colName, const float initValue) {
+void TextMatrix::initializeMatrix(std::set<std::string>& rowName, std::set<std::string>& colName, const float& initValue) {
    
   int  rindex=0;
   for(std::set<std::string>::iterator rowIt = rowName.begin(); rowIt != rowName.end(); ++rowIt, rindex++) {
@@ -52,14 +52,14 @@ Eigen::MatrixXf* TextMatrix::getMatrix() {
 /**
  * THIS IWILL THROW ERROR if there are no rwoName
  */
-void TextMatrix::setValue(std::string rowName, std::string colName, float value) {
+void TextMatrix::setValue(std::string& rowName, std::string& colName, float value) {
   int rIdx = TextMatrix::rowIdxMap.at(rowName);
   int cIdx = TextMatrix::colIdxMap.at(colName);
   (*(TextMatrix::_matrix))(rIdx, cIdx) = value;
 }
 
 
-void TextMatrix::initializeMatrix(std::set<std::string> rowName, std::string colName, const float initValue) {
+void TextMatrix::initializeMatrix(std::set<std::string>& rowName, std::string& colName, const float& initValue) {
    
   int  rindex=0;
   for(std::set<std::string>::iterator rowIt = rowName.begin(); rowIt != rowName.end(); ++rowIt, rindex++) {
@@ -77,7 +77,7 @@ size_t TextMatrix::getNumRows() {
 }
 
 
-int TextMatrix::rIndex(std::string term) {
+int TextMatrix::rIndex(std::string& term) {
   int idx = -1;
   try {
     idx = TextMatrix::rowIdxMap.at(term);
@@ -87,7 +87,7 @@ int TextMatrix::rIndex(std::string term) {
   return idx;
 }
 
-int TextMatrix::cIndex(std::string term) {
+int TextMatrix::cIndex(std::string& term) {
   int idx = -1;
   try {
     idx = TextMatrix::colIdxMap.at(term);

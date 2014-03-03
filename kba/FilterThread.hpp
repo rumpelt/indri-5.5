@@ -10,6 +10,8 @@
 #include "indri/LocalQueryServer.hpp"
 #include "indri/ScoredExtentResult.hpp"
 #include "indri/QueryEnvironment.hpp"
+#include "Model.hpp"
+#include "Distribution.hpp"
 #include <map>
 #include <queue>
 #include <vector>
@@ -20,7 +22,7 @@ using namespace kba::term;
  */
 class FilterThread {
 private:
-  std::string _indexDir;
+  std::string  _indexDir; // This is the current directory which we will be filtering.
   indri::collection::Repository _rep;
   indri::server::LocalQueryServer* _qServer;
   CorpusStat* _corpusStat;
@@ -45,10 +47,15 @@ public:
   ~FilterThread();
   void initialize();
   void update();
-  void   process();
+  void   process(QueryThread& prevQt);
   float score(indri::api::ScoredExtentResult& sr, LanguageModelPsg& lmpsg);
-  void  scoreAndDump(std::string queryId, query_t* query, LanguageModelPsg& lm);
+  void indriBasicRun(query_t* query); 
+  Distribution* createDistribution(QueryThread& qt, std::vector<std::string>& textVector, double mu);
+  void updateModel(QueryThread& oldQt, Model* model);
+  void  scoreAndDump(std::string queryId, query_t* query, Model& model, QueryThread& oldQt);
   void setParamFile(std::vector<std::string> paramFiles);
   void dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::greater>& resultPool, std::string& dumpFile, int retainCount);
+  void dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::lesser>& resultPool, std::string& dumpFile, int retainCount);
+  void dumpKbaResult(std::string& queryId, std::vector<ResultStruct>& resultPool, std::string& dumpFile);
 };
 #endif

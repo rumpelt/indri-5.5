@@ -62,12 +62,37 @@ UINT64 QueryThread::initialize() {
   return 0;
 }
 
+void QueryThread::addIndexDir(std::string dir) {
+  DIR* dirc = opendir(dir.c_str());
+  if(dirc != NULL) {
+    //std::cout << "Adding dir " << dir << std::endl; 
+    _environment.addIndex(dir); // Add the indexes
+    closedir(dirc);
+  }
+  else {
+    std::cout << "could not open the index dir " << dir << "\n";
+  }
+}
+
+void QueryThread::removeDir(std::string dir) {
+  DIR* dirc = opendir(dir.c_str());
+  if(dirc != NULL) {
+    //   std::cout << "Removind index " << dir << std::endl;
+    _environment.removeIndex(dir); // Add the indexes
+    closedir(dirc);
+  }
+  else {
+    std::cout << "could not remove the index dir " << dir << "\n";
+  }
+}
+
 void QueryThread::_runQuery(std::string queryText ,std::string queryType) {
   try {
     _results = _environment.runQuery( queryText, _initialRequested, queryType ); //Runs query
     if(_expander) {
       std::string expandedQuery;
       expandedQuery = _expander->expand( queryText, _results);
+      //      std::cout << "Expanding query" << std::endl;
       _results = _environment.runQuery(expandedQuery, _requested, queryType );
     }
     //    std::cout << "Num results " << _results.size() << "\n";
@@ -83,7 +108,7 @@ void QueryThread::_runQuery(query_t* q, bool useFeedBack, int initRequestSize, i
   try {
     //    std::cout << q->text << std::endl;
     _results = _environment.runQuery(q->text, initRequestSize, q->qType);
-    std::cout << "Init result " << _results.size() << "\n";
+    //    std::cout << "Init result " << _results.size() << "\n";
     if(useFeedBack) {
       localExpander = new indri::query::RMExpander(&_environment, _parameters);
       q->expandedText = localExpander->expand(q->text, _results);
@@ -136,7 +161,9 @@ std::vector<std::string> QueryThread::getMetadata(std::string metaKey) {
 }
 
 
-
+float QueryThread::getScore(int index) {
+  return (_results[index]).score;
+}
 lemur::api::DOCID_T QueryThread::getDocId(int idx) {
   return (_results[idx]).document;
 }
@@ -175,8 +202,7 @@ unsigned long QueryThread::termCount() {
 
 void QueryThread::unsetExpander() {
   if(_expander != 0)
-      delete _expander;
-      
+      delete _expander;      
 }
 
 void QueryThread::deinitialize() {

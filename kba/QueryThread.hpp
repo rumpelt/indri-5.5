@@ -9,6 +9,8 @@
 #include "indri/RMExpander.hpp"
 #include <indri/ScoredExtentResult.hpp>
 
+#include "Distribution.hpp"
+
 static bool copy_parameters_to_string_vector( std::vector<std::string>& vec, indri::api::Parameters p, const std::string& parameterName ) {
   if( !p.exists(parameterName) )
     return false;
@@ -46,8 +48,10 @@ struct query_t {
 
   std::string id;
   int index;
-  std::string text;
-  std::vector<std::string> textVector;
+  std::string text;// the original query
+  std::string description; // May contain decription or abstract
+  std::vector<std::string> textVector; // Must be populated from description or text
+  Distribution* distribution;
   std::string expandedText; // Contains the expanded query
   std::map<std::string, float> textWeight;
   std::string qType;
@@ -123,7 +127,8 @@ public:
   QueryThread(indri::api::Parameters& params, std::string indexDir);
   ~QueryThread();
   
-  
+  void addIndexDir(std::string dir);  
+  void removeDir(std::string dir);
   /**
    * run a text query, QueryType is always "indri"
    */
@@ -132,8 +137,9 @@ public:
   void unsetExpander();
 
   void dumpKbaResult(std::vector<indri::api::ScoredExtentResult>&, std::string query, std::string dumfile); 
-
+  float getScore(int index);
   std::vector<indri::api::DocumentVector*> getDocumentVector();
+
   lemur::api::DOCID_T getDocId(int idx);
   std::vector<lemur::api::DOCID_T> getDocIds();
   std::vector<std::string> getMetadata(std::string metaKey);

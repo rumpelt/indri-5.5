@@ -15,9 +15,15 @@ struct ResultStruct {
       return one.score < two.score;
     }
   };
+  struct lesser {
+    bool operator() (ResultStruct& one, ResultStruct& two ) {
+      return one.score > two.score;
+    }
+  };
   std::string id; // this is document identifier;
   std::string dayDt;
   int score;
+  float origScore; // Score obtained by some other tool eg. Indri
   ResultStruct(float initSc) : score(initSc) {}
 };
 

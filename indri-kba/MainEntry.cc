@@ -1,6 +1,25 @@
 #include "Query.hpp"
 #include <vector>
 
+struct TruthData {
+  std::string topic;
+  std::string stream_id;
+  int size;
+  int rating;
+};
+
+void parseTruthFile(std::string& fileName, std::vector<TruthData*>& truthData) {
+  std::ifstream truthFile(fileName.c_str());
+  if(truthFile.is_open()) {
+    std::string line;
+    getline(truthFile,line);
+    while(getline(truthFile, line)) {
+      boost::algorithm::trim(line); 
+    }
+  }
+  truthFile.close();
+}
+
 std::vector<Query> populateEntityList(std::string fileName) {
   std::ifstream entityFile(fileName.c_str());
   std::vector<Query> queryList;

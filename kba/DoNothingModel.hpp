@@ -1,0 +1,3 @@
+#ifndef DONOTHINGMODEL_HPP
+#define DONOTHINMODEL_HPP
+#endif

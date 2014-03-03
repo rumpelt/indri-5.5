@@ -38,9 +38,27 @@ std::vector<kba::entity::Entity*> ENTITY_SET;
 std::unordered_set<std::string> STOP_SET;
 int16_t RATING_LEVEL = 2; // Just to work on vital documents
 
+
 bool compareString(std::string firstStr, std::string secondStr) {
   if(firstStr.compare(secondStr) < 0) 
     return true;
+  return false;
+}
+
+struct TruthData {
+  std::string topic;
+  std::string streamid;
+  std::string rating;
+  std::string directory;
+};
+
+/**
+ * Sorts the data on the directory information i.e. sorted on the day of the corpus
+ */
+bool compareTruthData(TruthData tdone, TruthData tdtwo) {
+  if( tdone.directory.compare(tdtwo.directory) < 0)
+    return true;
+
   return false;
 }
 
@@ -54,7 +72,9 @@ std::set<std::string> noPositiveJudgement(std::string noPositiveFile) {
   while((flStream  >> entityName)) {
     entityList.insert(entityName);
   }
+  flStream.close();
   return entityList;
+   
 }
 
 void HighRecallInfo(std::string recallFile) {
@@ -80,6 +100,7 @@ void HighRecallInfo(std::string recallFile) {
   st->closeStreamDb();
   Logger::LOG_MSG("KbaProcessing.cc", "HighRecallInfo", " finished writing the streamdbs ");
   delete st;
+  trgStream.close();
 }
 void storeEvaluationData(std::string trgFile) {
   std::ifstream trgStream(trgFile.c_str());
@@ -109,6 +130,7 @@ void storeEvaluationData(std::string trgFile) {
 
   delete st;
   st = new StatDb();
+  trgStream.close();
 }
 
 std::set<kba::term::TopicTerm*> readTermRelevance(std::string fileName) {
@@ -496,17 +518,109 @@ void processFilterThread(std::map<std::string, query_t*>& qMap, std::vector<std:
       fclose(pFile);
     }
   }
-  
-  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.end(); ++dirIt) {
+  std::vector<std::string> oldIndexDir ;//  we will be collecting index statistics from previous day indexs
+  std::string oldestDir;
+  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.begin() + 5 ; ++dirIt) {
+    oldIndexDir.push_back(*dirIt);
+  }
+
+  QueryThread qt(*params, oldIndexDir);
+
+  for(std::vector<std::string>::iterator dirIt = dirList.begin() + 5; dirIt != dirList.end(); ++dirIt) {
     std::string dir = *dirIt;
     FilterThread ft(*params, dir, qMap, corpusStat, termStatMap); //(prevDayDate, qMap, dumpFile, runId);
     ft._dumpFile = dumpFile;
     ft._runId = runId;
-      //      ft.setParamFile(paramFiles);
-    ft.process();
+    //      ft.setParamFile(paramFiles);
+    ft.process(qt);
+    std::string oldest = oldIndexDir.front();
+    oldIndexDir.erase(oldIndexDir.begin());
+    oldIndexDir.push_back(dir);
+    qt.removeDir(oldest);
+    qt.addIndexDir(dir);
   }
   delete params;
 } 
+
+/**
+ * truthVector is sorted on the directory information. eg. of directory : 2012-10-21-11
+ * dir : is the the index dir representing a day of index e.g. of content : 2012-10-21
+ * Returns the minimum rating for  the streamid and topic, else empty string if there is not rating.
+ */
+std::string returnRating(const std::string& topic, const std::string& streamId, const std::string& dir, std::vector<TruthData>& truthVector) {
+  std::string minRating;
+  int rating = 10;
+  for(std::vector<TruthData>::iterator tvIt = truthVector.begin(); tvIt != truthVector.end(); ++tvIt) {
+    TruthData td = *tvIt;
+    std::string origDir = td.directory.substr(0, td.directory.rfind('-')); 
+   
+    int cmp = dir.compare(origDir);
+    //    std::cout << origDir << std::endl;
+    if(cmp == 0) {
+      if(topic.compare(td.topic) == 0 && streamId.compare(td.streamid) == 0) {
+        int curRating = atoi(td.rating.c_str());
+        if(curRating < rating) {
+          rating = curRating;
+          minRating = td.rating;
+	} 
+      }
+    }
+    else if(cmp < 0)
+      break;
+  }
+  return minRating;
+}
+
+std::vector<TruthData> parseTruthFile(std::string fileName) {
+  std::ifstream truthFile(fileName.c_str());
+  std::string line;
+  std::vector<TruthData> truthVector;
+  while(std::getline(truthFile,line)) {
+    if (line[0] == '#')
+      continue;
+    //    std::cout << line << std::endl;
+    std::vector<std::string> tokens = Tokenize::split(line);
+    TruthData td;
+    td.streamid = tokens[2];
+    td.topic  = tokens[3];
+    td.rating = tokens[5];
+    td.directory = tokens[7];
+    truthVector.push_back(td);
+    //std::cout << "Pushing truth " << td.streamid << " " << td.topic << " " << td.rating << " " << td.directory << std::endl;
+  }
+  truthFile.close();
+  std::sort(truthVector.begin(), truthVector.end(), compareTruthData);
+  return truthVector;
+}
+
+/**
+ * We just populate the query struct
+ */
+void makeQuery(std::map<std::string, query_t*>& queryMap, std::vector<kba::entity::Entity*> entities) {
+  int idx = 1;
+  std::string queryType  = "indri";
+  for(std::vector<kba::entity::Entity*>::iterator entIt = entities.begin(); entIt != entities.end() ; ++entIt, ++idx) {
+    kba::entity::Entity* entity = *entIt;  
+    std::string qtext = sanitizeQueryText(entity->label); // We sanitize because if we use the Indri Run Query then indri crashes due to invalid characters in the text.
+    std::transform(qtext.begin(), qtext.end(), qtext.begin(), ::tolower);
+    query_t* query = new query_t(idx, entity->wikiURL, qtext, queryType);
+    query->textVector = Tokenize::split(query->text);
+    if((entity->abstract).size() > 0) {
+  
+      std::string s_abstract = sanitizeQueryText(entity->abstract);
+      std::transform(s_abstract.begin(), s_abstract.end(), s_abstract.begin(), ::tolower);
+      query->description = s_abstract;
+      // query->textVector = Tokenize::split(s_abstract);
+    }
+    // else
+    // continue;
+    
+    queryMap.insert(std::pair<std::string, query_t*>(entity->wikiURL, query));
+  }
+}
+
+void createDictionary(std::map<std::string, query_t*>& queryMap) {
+}
 
 std::map<std::string, query_t*> bootStrapIndri(std::map<std::string, query_t*>& queryMap, std::vector<std::string> dirList, std::vector<std::string> paramFiles, std::vector<kba::entity::Entity*> entities, int indexDirSize , std::map<std::string, kba::term::TermStat*>& termStatMap, kba::term::CorpusStat* corpusStat) {
   using namespace kba::term;
@@ -548,7 +662,7 @@ std::map<std::string, query_t*> bootStrapIndri(std::map<std::string, query_t*>& 
 
     //  std::cout << entity->wikiURL << " query " << qtext << "\n";
     query_t* query = new query_t(idx, entity->wikiURL, qtext, queryType);
-    query->textVector = Tokenize::whiteSpaceSplit(label, STOP_SET, true, 1, true);
+    query->textVector = Tokenize::whiteSpaceSplit(label, STOP_SET, true, 1,   true);
     for(std::vector<std::string>::iterator wordIt = (query->textVector).begin(); wordIt != (query->textVector).end(); ++wordIt) {
       std::string word = *wordIt;
       if(termStatMap.find(word) == termStatMap.end()) {
@@ -704,9 +818,15 @@ int main(int argc, char *argv[]){
   
   std::vector<std::string> runDirectories; 
   if(processList.size() > 0) {
+    //bool found = false;
+    //std::string startDate = "2012-08-11-00";
     std::ifstream inputFile(processList.c_str());
     std::set<std::string> seen;
     for(std::string line;getline(inputFile, line);) {
+      //if (!found && line.compare(startDate) == 0)
+      //  found = true;
+      //if (!found)
+      //  continue;
       std::string dayDate = line.substr(0, line.rfind('-'));    
       if(seen.find(dayDate) == seen.end()) {
         runDirectories.push_back(dayDate);
@@ -718,6 +838,10 @@ int main(int argc, char *argv[]){
   }
 
   if(cmndMap.count("param")) {
+    //    std::string testTruthFile = "/usa/arao/trec/trec-kba/2013/evaluation/kba-scorer/data/trec-kba-ccr-judgments-2013-09-26-expanded-with-ssf-inferred-vitals-plus-len-clean_visible.before-and-after-cutoff.filter-run.txt";
+    //std::vector<TruthData> truthVector = parseTruthFile(testTruthFile);
+    //    std::cout << "Rating " << returnRating(topic, streamId, dirc, truthVector) << std::endl;
+
     std::vector<std::string> indexDirs;
     for(std::vector<std::string>::iterator dirIt = directories.begin(); dirIt != directories.end(); ++dirIt){
       std::string indexPath = baseIndexPath + "/"+ *dirIt;
@@ -735,11 +859,12 @@ int main(int argc, char *argv[]){
     kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
     std::map<std::string, kba::term::TermStat*> termStatMap;
     //    std::cout << " training dirs " << indexDirs.size() << " run dir "  << runDirs.size() << "\n";
-    kba::entity::Entity* entity = entityList[1];
-    std::vector<kba::entity::Entity*> temp;
-    temp.push_back(entity);
+    //kba::entity::Entity* entity = entityList[1];
+    //std::vector<kba::entity::Entity*> temp;
+    //temp.push_back(entity);
     std::map<std::string, query_t*> qMap;
-    bootStrapIndri(qMap, indexDirs, paramFiles, temp, 20, termStatMap, corpusStat);
+    //    bootStrapIndri(qMap, indexDirs, paramFiles, temp, 20, termStatMap, corpusStat);
+    makeQuery(qMap, entityList);
     processFilterThread(qMap, runDirs, paramFiles, dumpFile, termStatMap, corpusStat);
   }
 

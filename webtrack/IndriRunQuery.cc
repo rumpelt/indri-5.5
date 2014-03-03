@@ -162,6 +162,20 @@ std::map<std::string, Query*> constructQuery(std::string queryFile) {
   return queryMap;
 }
 
+
+void makeQuery(std::vector<std::string> queryFiles, std::map<std::string, Query*>& queryMap) {
+
+  for(std::vector<std::string>::iterator fileIt = queryFiles.begin(); fileIt != queryFiles.end(); ++fileIt) {
+    std::string topicFile = *fileIt;  
+    std::map<std::string, Query*> qMap = constructQuery(topicFile);
+    for(std::map<std::string,Query*>::iterator qIt = qMap.begin(); qIt != qMap.end(); ++qIt) {
+      std::string qId = qIt->first;
+      Query* q   = qIt->second;
+      queryMap.insert(std::pair<std::string, Query*>(qId, q));
+    }
+  }
+}
+
 void prepareClueWeb9Query(std::vector<std::string> queryFiles, std::string outputFile) {
   std::ofstream ofs(outputFile.c_str(), std::ofstream::out);  
   ofs << "<parameters>" << std::endl;
@@ -170,7 +184,8 @@ void prepareClueWeb9Query(std::vector<std::string> queryFiles, std::string outpu
     std::map<std::string, Query*> queryMap = constructQuery(topicFile);
     for(std::map<std::string,Query*>::iterator qIt = queryMap.begin(); qIt != queryMap.end(); ++qIt) {
       Query* q = qIt->second;
-      ofs << "<query><number>" << q->qnum << "</number><text>#filreq(#less(spam -130) #combine( "<< q->query << " ))</text></query>" << std::endl; 
+      
+      ofs << "<query><number>" << q->qnum << "</number><text>#combine( "<< q->query << " )</text></query>" << std::endl; 
     }
 
     for(std::map<std::string,Query*>::iterator qIt = queryMap.begin(); qIt != queryMap.end(); ++qIt) {
@@ -253,7 +268,9 @@ private:
 
   std::unordered_set<std::string> _stopwords;
   std::map<std::string, Query*> _queryMap;
+  std::string _dumpFile;
   bool _postProcess;
+  
 
   // Runs the query, expanding it if necessary.  Will print output as well if verbose is on.
   void _runQuery( std::stringstream& output, const std::string& query, const std::string& qnumber,
@@ -306,9 +323,10 @@ private:
         Query* q = _queryMap[qnumber];
         int psgSize = _parameters.get("PassageSize",150);
         int wdSize = _parameters.get("WindowSize",50);
-	//	_results  = PassageModel::maxPsgScoring(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
-	//	_results  = PassageModel::intrpMaxPsgScoringLengthHom(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
-        _results = PassageModel::intrpMaxPsgScoringCosineHom(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
+	//	std::cout << "query from param " << query << " orig query " << q->query << "\n"; 
+        _results  = PassageModel::maxPsgScoring(&_environment, q, _results, true, _stopwords, _parameters);
+	//_results  = PassageModel::intrpMaxPsgScoringLengthHom(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
+        //_results = PassageModel::intrpMaxPsgScoringCosineHom(&_environment, q, _results, true, _stopwords, psgSize, wdSize);
       }
        
     }
@@ -434,7 +452,7 @@ public:
                std::priority_queue< query_t*, std::vector< query_t* >, query_t::greater >& output,
                indri::thread::Lockable& queueLock,
                indri::thread::ConditionVariable& queueEvent,
-               indri::api::Parameters& params, std::map<std::string, Query*> queryMap , bool postProcess =false) :
+               indri::api::Parameters& params, std::map<std::string, Query*> queryMap , std::string dumpFile, bool postProcess =false) :
     _queries(queries),
     _output(output),
     _queueLock(queueLock),
@@ -443,6 +461,7 @@ public:
     _expander(0),
     _annotation(0),
     _queryMap(queryMap),
+    _dumpFile(dumpFile),
     _postProcess(postProcess)
   {
   }
@@ -560,7 +579,14 @@ public:
     // push that data into an output queue...?
     {
       indri::thread::ScopedLock sl( &_queueLock );
-      _output.push( new query_t( query->index, query->number, output.str() ) );
+      if(_dumpFile.size() > 0)  {
+	std::ofstream ofs(_dumpFile, std::ofstream::app| std::ofstream::binary);
+        ofs << output.str(); 
+	ofs.close();
+      }
+      else {
+        _output.push( new query_t( query->index, query->number, output.str() ) );
+      }
       _queueEvent.notifyAll();
     }
 
@@ -607,34 +633,65 @@ void push_queue( std::queue< query_t* >& q, indri::api::Parameters& queries,
 int main(int argc, char * argv[]) {
   try {
     using namespace boost::program_options;
-    std::string topicFile;
+    std::vector<std::string> topicFiles;
+    std::vector<std::string> runQueryParams;
+    double mu=-1;
+    int psgSize=-1;
     std::vector<std::string> paramFiles;
     std::string basicRun;
     bool postProcess=true;
     std::vector<std::string> combinedQfiles;
+    std::string dumpFile;
     options_description cmndDesc("Allowed command line options");
     cmndDesc.add_options()
-      ("qfile", value<std::string>(&topicFile)->default_value("/usa/arao/trec/trec-web/clueweb12/trec2013-topics.xml"))
-      ("basic-run", value<std::string>(&basicRun)->default_value("false"))
+      ("qfile", value<std::vector<std::string> >(&topicFiles))
+        ("basic-run", value<std::string>(&basicRun)->default_value("false"))
       ("file", value<std::vector<std::string> >(&combinedQfiles), "combine trec9,10,11,12")
+      ("dfile", value<std::string>(&dumpFile), "dump the result of search to this file")
+      ("mu", value<double>(&mu), "dirichlet prior to change")
+      ("psg", value<int>(&psgSize), "passage size to work on")
+      ("r-param", value<std::vector<std::string> >(&runQueryParams), "IndriRunquery parameters which can be supplied on the command line as per documentation can be passed using this format.. the parameters supplied example as quoted string '<parameters><rule>blahblah<rule></parameters>'.")
       ("param", value<std::vector<std::string> >(&paramFiles));
 
+    
     variables_map cmndMap;
     store(parse_command_line(argc, argv,cmndDesc), cmndMap);
     notify(cmndMap);  
-   
+    //paramFiles.push_back("param/stop.param");
+
     if(combinedQfiles.size() > 0) {
       std::string ofile = "query.clue9.basic";
       prepareClueWeb9Query(combinedQfiles, ofile);
     }
+
     if(basicRun.compare("true") == 0) {
       postProcess = false;
     }
 
-    std::map<std::string, Query*> origQuery = constructQuery(topicFile);  
+    std::map<std::string, Query*> origQuery;
+    if(topicFiles.size() <= 0) {
+      std::cout << " No actual topic file specified  ..exiting" << std::endl;
+      exit(-1);
+    }
+    makeQuery(topicFiles, origQuery);
+  
+
     indri::api::Parameters param = indri::api::Parameters::instance();
     for(std::vector<std::string>::iterator fIt = paramFiles.begin(); fIt != paramFiles.end(); ++fIt) {
       param.loadFile(*fIt);
+    }
+
+    for(std::vector<std::string>::iterator rIt = runQueryParams.begin(); rIt != runQueryParams.end(); ++rIt) {
+      param.load(*rIt);
+    }
+
+    if(psgSize > 0) {
+      std::string varName = "PassageSize";
+      param.set(varName, psgSize);
+    }
+    if(mu > 0) {
+      std::string varName = "mu";
+      param.set(varName, mu);
     }
 
     if( param.get( "version", 0 ) ) {
@@ -665,8 +722,8 @@ int main(int argc, char * argv[]) {
 
     // launch threads
     for( int i=0; i<threadCount; i++ ) {
-      threads.push_back( new QueryThread( queries, output, queueLock, queueEvent, param , origQuery, postProcess) );
-      threads.back()->start();
+      threads.push_back( new QueryThread( queries, output, queueLock, queueEvent, param , origQuery, dumpFile, postProcess) );
+      threads.back()->start();   
     }
 
     int query = 0;
@@ -688,17 +745,14 @@ int main(int argc, char * argv[]) {
     << "  <description>" << std::endl << description
     << std::endl << "  </description>" << std::endl;
     }
-
     // acquire the lock.
     queueLock.lock();
-
     // process output as it appears on the queue
     while( query < queryCount ) {
       query_t* result = NULL;
 
       // wait for something to happen
       queueEvent.wait( queueLock );
-
       while( output.size() && output.top()->index == query ) {
         result = output.top();
         output.pop();
@@ -707,13 +761,12 @@ int main(int argc, char * argv[]) {
 
         std::cout << result->text;
         delete result;
-        query++;
-
         queueLock.lock();
       }
+      query++;
     }
     queueLock.unlock();
-
+    //    std::cout <<"Unlocked " <<"\n";
     if( inexFormat ) {
       std::cout << "</inex-submission>" << std::endl;
     }

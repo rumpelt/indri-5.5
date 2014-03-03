@@ -23,6 +23,9 @@ public:
    * Tokenize a  string on whitespace, non alpha numeric characters and upper case letters;
    */
   static bool isSpecialChar(char ch);
+  /**
+   * Simple split on white space..simple checks throuh is space. Words cannot be larger than 4096 characters.
+   */
   static std::vector<std::string> split(std::string& inputSource);
   static std::vector<std::string> whiteSpaceSplit(std::string& inputSource, std::unordered_set<std::string> stopSet, bool lower=true, unsigned charLimit=0, bool stem=true);
   static std::vector<std::string> tokenize(std::string& inputSource, bool lower, std::unordered_set<std::string>& stopwords, int minChar=1);

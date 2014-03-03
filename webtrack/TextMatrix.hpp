@@ -20,12 +20,12 @@ private:
 public:
   /**
    */
-  void initializeMatrix(std::vector<std::string> rowName, std::vector<std::string> colNames);
-  void initializeMatrix(std::set<std::string> rowName, std::set<std::string> colNames, const float initValue);
-  void initializeMatrix(std::set<std::string> rowName, std::string colName, const float initValue);
-  void setValue(std::string rowName, std::string colName, float value);
-  int rIndex(std::string rowName);
-  int cIndex(std::string colName);
+  void initializeMatrix(std::vector<std::string>& rowName, std::vector<std::string>& colNames);
+  void initializeMatrix(std::set<std::string>& rowName, std::set<std::string>& colNames, const float& initValue);
+  void initializeMatrix(std::set<std::string>& rowName, std::string& colName, const float& initValue);
+  void setValue(std::string& rowName, std::string& colName, float value);
+  int rIndex(std::string& rowName);
+  int cIndex(std::string& colName);
   size_t getNumRows();
   Eigen::MatrixXf* getMatrix();
   TextMatrix();

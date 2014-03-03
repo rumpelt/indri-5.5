@@ -2,9 +2,26 @@
 #include <stdexcept>
 #include <iostream>
 #include <stdio.h>
+
+Passage::Passage() {}
+Passage::Passage(int psgSize, int windowSize): passageSize(psgSize), windowSize(windowSize) {
+}
+
+void Passage::setWindowSize(int psgSize, int windowSize) {
+  Passage::windowSize = windowSize;
+  Passage::passageSize = psgSize;
+}
+
 void Passage::setTerms(std::vector<std::string> terms) {
   Passage::terms = terms;
 }
+
+void Passage::addTerms(std::vector<std::string>&  terms) {
+  for(std::vector<std::string>::iterator termIt = terms.begin(); termIt != terms.end(); termIt++) {
+    Passage::terms.push_back(*termIt);
+  }
+}
+
 
 void Passage::setPsgId(int psgId) {
   char buffer[10];
@@ -79,3 +96,4 @@ std::map<std::string, float> Passage::getTfIdf() {
 std::string Passage::getPsgId() {
   return Passage::psgId;
 }
+

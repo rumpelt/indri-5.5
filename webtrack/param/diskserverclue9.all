@@ -1,0 +1,16 @@
+<parameters>
+<threads>1</threads>
+<runID>9cos</runID>
+<trecFormat>true</trecFormat>
+<count>500</count>
+<PassageSize>250</PassageSize>
+<index>/data/data2/index/CW09_English_1</index>
+<index>/data/data2/index/CW09_English_2</index>
+<index>/data/data2/index/CW09_English_3</index>
+<index>/data/data2/index/CW09_English_4</index>
+<index>/data/data2/index/CW09_English_5</index>
+<index>/data/data2/index/CW09_English_6</index>
+<index>/data/data2/index/CW09_English_7</index>
+<index>/data/data2/index/CW09_English_8</index>
+<index>/data/data2/index/CW09_English_9</index>
+</parameters>

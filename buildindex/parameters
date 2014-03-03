@@ -28,6 +28,14 @@
     <name>anchor</name>
     <numeric>false</numeric>
   </field>
+  <field>
+    <name>dir</name>
+    <numeric>false</numeric>
+  </field>
+  <field>
+    <name>file</name>
+    <numeric>false</numeric>
+  </field>
   <stemmer>
     <name>Krovetz</name>
   </stemmer>

@@ -1,0 +1,2 @@
+1. For passage based retrieval using smoothing from other document passages and collection.
+1. also look at probability of generating passage from the document and then generating the word from the passage. Two stage probability. Look at Ogilive and Callanin 1979

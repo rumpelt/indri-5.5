@@ -83,6 +83,7 @@ Passage PassageModel::createPassage(std::vector<std::string> terms, lemur::api::
       continue;
     psg.pushTerm(term);
   }
+  psg.setWindowSize(psg.getTerms().size(), 0);
   return psg;
 }
 
@@ -111,6 +112,7 @@ std::vector<Passage*> PassageModel::createPassageFromDocumentVector(indri::api::
   std::vector<std::string> windowTokens;
   int id=1;
   std::string junk = "[OOV]";
+  Passage* prevPassage;
   for(size_t idx=0; idx < dv->positions().size(); idx++) {
     int position = dv->positions()[idx];
     std::string term = dv->stems()[position];
@@ -122,23 +124,41 @@ std::vector<Passage*> PassageModel::createPassageFromDocumentVector(indri::api::
       psg->setPsgId(id++);
       psg->setDocId(docId);
       psg->setTerms(psgTokens);
+      psg->setWindowSize(psgTokens.size(), windowTokens.size());
       psgs.push_back(psg);
-      psgTokens.clear();
+      psgTokens.clear();    
       psgTokens = windowTokens;
-      windowTokens.clear();
+      windowTokens.clear();     
     }
-    
-    
     psgTokens.push_back(term);
     windowTokens.push_back(term);
     if(windowTokens.size() >  windowSz)
       windowTokens.erase(windowTokens.begin());
   }
-  if(psgTokens.size() > 0) {
+
+  int psgSize = psgTokens.size() - windowSz; // PsgTokens.size() will be atleast windowSize if the doc content is greater than to passageSz
+  if( psgSize > windowSz || psgSize < 0) { // We have more data than windowsize  but less the fixed passage size
     Passage* psg = new Passage();
     psg->setPsgId(id++);
     psg->setDocId(docId);
     psg->setTerms(psgTokens);
+    psg->setWindowSize(psgTokens.size(), 0);
+    psgs.push_back(psg);
+  }
+  else if (psgs.size() > 0 && psgSize < windowSz){ // We push the data to the last psg.
+    //    std::cout << "Appending to last passage " << std::endl;
+    std::vector<std::string>::iterator termIt = psgTokens.begin() + windowSz;
+    Passage* lastPsg = psgs[psgs.size() -1];
+    for(;termIt != psgTokens.end(); ++ termIt) {
+      lastPsg->pushTerm(*termIt);
+    }
+  }
+  else { // the number of tokens is less than or equal to window size. 
+    Passage* psg = new Passage();
+    psg->setPsgId(id++);
+    psg->setDocId(docId);
+    psg->setTerms(psgTokens);
+    psg->setWindowSize(psgTokens.size(), 0);
     psgs.push_back(psg);
   }
   return psgs;  
@@ -163,6 +183,7 @@ std::vector<Passage*> PassageModel::createFixedWindowPassage(std::string content
       psg->setPsgId(id++);
       psg->setDocId(docId);
       psg->setTerms(psgTokens);
+      psg->setWindowSize(psgTokens.size(), windowTokens.size());
       psgs.push_back(psg);
       psgTokens.clear();
       psgTokens = windowTokens;
@@ -173,13 +194,32 @@ std::vector<Passage*> PassageModel::createFixedWindowPassage(std::string content
     if(windowTokens.size() >  windowSz)
       windowTokens.erase(windowTokens.begin());
   }
-  if(psgTokens.size() > 0) {
+
+  int psgSize = psgTokens.size() - windowSz; // PsgTokens.size() will be atleast windowSize if the doc content is greater than to passageSz
+  if( psgSize > windowSz || psgSize < 0) { // We have more data than windowsize  but less the fixed passage size
     Passage* psg = new Passage();
     psg->setPsgId(id++);
     psg->setDocId(docId);
     psg->setTerms(psgTokens);
+    psg->setWindowSize(psgTokens.size(), 0);
     psgs.push_back(psg);
   }
+  else if (psgs.size() > 0 && psgSize < windowSz){ // We push the data to the last psg.
+    std::vector<std::string>::iterator termIt = psgTokens.begin() + windowSz;
+    Passage* lastPsg = psgs[psgs.size() -1];
+    for(;termIt != psgTokens.end(); ++ termIt) {
+      lastPsg->pushTerm(*termIt);
+    }
+  }
+  else { // the number of tokens is less than or equal to window size. 
+    Passage* psg = new Passage();
+    psg->setPsgId(id++);
+    psg->setDocId(docId);
+    psg->setTerms(psgTokens);
+    psg->setWindowSize(psgTokens.size(), 0);
+    psgs.push_back(psg);
+  }
+
   return psgs;  
 }
 
@@ -198,7 +238,9 @@ std::vector<Passage*> createPassageFromParsedDoc(ParsedDocument* pdoc, bool lowe
       psg->setPsgId(id++);
       psg->setDocId(docId);
       psg->setTerms(psgTokens);
+      psg->setWindowSize(psgTokens.size(), windowTokens.size());
       psgs.push_back(psg);
+      psgTokens.clear();
       psgTokens = windowTokens;
       windowTokens.clear();
     }
@@ -207,13 +249,32 @@ std::vector<Passage*> createPassageFromParsedDoc(ParsedDocument* pdoc, bool lowe
     if(windowTokens.size() >  windowSz)
       windowTokens.erase(windowTokens.begin());
   }
-  if(psgTokens.size() > 0) {
+
+  int psgSize = psgTokens.size() - windowSz; // PsgTokens.size() will be atleast windowSize if the doc content is greater than to passageSz
+  if( psgSize > windowSz || psgSize < 0) { // We have more data than windowsize  but less the fixed passage size
     Passage* psg = new Passage();
     psg->setPsgId(id++);
     psg->setDocId(docId);
     psg->setTerms(psgTokens);
+    psg->setWindowSize(psgTokens.size(), 0);
     psgs.push_back(psg);
   }
+  else if (psgs.size() > 0 && psgSize < windowSz){ // We push the data to the last psg.
+    std::vector<std::string>::iterator termIt = psgTokens.begin() + windowSz;
+    Passage* lastPsg = psgs[psgs.size() -1];
+    for(;termIt != psgTokens.end(); ++ termIt) {
+      lastPsg->pushTerm(*termIt);
+    }
+  }
+  else { // the number of tokens is less than or equal to window size. 
+    Passage* psg = new Passage();
+    psg->setPsgId(id++);
+    psg->setDocId(docId);
+    psg->setTerms(psgTokens);
+    psg->setWindowSize(psgTokens.size(), 0);
+    psgs.push_back(psg);
+  }
+
   return psgs;  
 }
 
@@ -230,14 +291,17 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringCosineHom(QueryE
   std::map<std::string, unsigned long> collFreq;
   std::vector<std::string> qTokens = Tokenize::whiteSpaceSplit(query->query, stopSet);  
   for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
-    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->documentCount(*qIt)));
+    std::string term = *qIt;
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(term)));
   }
   
   std::map<std::string, ScoredExtentResult> srMap;
   LanguageModel lm;
-  unsigned long collectionSize = qe->documentCount(); // wer are taking document count instead of the collections size
-  
+  unsigned long collectionSize = qe->termCount(); // wer are taking document count instead of the collections size
+  unsigned long totalDocs = qe->documentCount();
+  std::map<std::string, double> docCountMap;
   std::vector<Passage*> allPsgs;
+  
   int idx = 0;
   for(std::vector<DocumentVector*>::iterator dvIt = dvVector.begin(); dvIt != dvVector.end(); ++dvIt, ++idx) {
     DocumentVector* dv = *dvIt;
@@ -245,25 +309,49 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringCosineHom(QueryE
     ScoredExtentResult ser = rslts[idx];
     std::vector<std::string> docContent = constructDocFromVector(dv, true);
     Passage motherPassage = createPassage(docContent, ser.document, true);
+    
+    /*
+    std::vector<std::string> terms = motherPassage.getTerms();
+    std::cout << "Mother passage " << std::endl;
+    for(std::vector<std::string>::iterator termIt = terms.begin(); termIt != terms.end(); ++termIt) {
+      std::cout << *termIt << " ";
+    }
+    std::cout << "\n";
+    */
+
     motherPassage.crtTermFreq();
     
     std::vector<Passage*> psgs = createPassageFromDocumentVector(dv, true, passageSz, windowSz ,ser.document);
    
     for(std::vector<Passage*>::iterator psgIt = psgs.begin(); psgIt != psgs.end(); ++psgIt) {
       Passage* psg = *psgIt;
+
+      /**      
+      std::cout << "Passage " << std::endl;
+      std::vector<std::string> terms = psg->getTerms();
+      for(std::vector<std::string>::iterator termIt = terms.begin(); termIt != terms.end(); ++termIt) {
+       std::cout << *termIt << " ";
+      }
+      std::cout << "\n";
+      */
+
       psg->crtTermFreq();
       psg->setTrecId(trecId);
     } 
  
     //    float homogeniety_my = passageutil::docPsgHomogeniety(psgs, &motherPassage, qe, true);
     //passageutil::psgSimilarityMatrix(psgs, &motherPassage, *qe);
-    float homogeniety = passageutil::psgCosineSimilarity(psgs, &motherPassage, qe);
+    float homogeniety = passageutil::psgCosineSimilarity(psgs, &motherPassage, qe, totalDocs, docCountMap);
+    //float homogeniety = passageutil::psgSimpleCosineSimilarity(psgs, &motherPassage);
+    //    std::cout << homogeniety << " " << std::endl;
     //std::cout << "My homg " << homogeniety_my << " homg " <<  homogeniety << "\n";
 
     for(std::vector<Passage*>::iterator psgIt = psgs.begin(); psgIt != psgs.end(); ++psgIt) {
       Passage* psg = *psgIt;
       float score = lm.score(qTokens, psg, collFreq, collectionSize);
+      //std::cout << "Passage Scre " << score << std::endl;
       score = (homogeniety * ser.score ) + (1 - homogeniety) * score;
+      
       psg->setScore(score);
       allPsgs.push_back(psg);
       srMap.insert(std::pair<std::string, ScoredExtentResult>(trecId, ser));
@@ -391,7 +479,11 @@ std::vector<ScoredExtentResult> PassageModel::intrpMaxPsgScoringLengthHom(QueryE
   return srs;  
 }
 
-std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe, Query* query, std::vector<ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz) {
+std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe, Query* query, std::vector<ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, indri::api::Parameters& param) {
+  int passageSz = param.get("PassageSize",150);
+  int windowSz = param.get("WindowSize", 50);
+  float mu = param.get("mu", 2500);
+  //std::cout << "mu value "<< mu << " " << passageSz << " " << windowSz << std::endl;
    // = qe->documents(rslts); // caller has to delete result ParsedDocuments
   //std::vector<ParsedDocument*> pdocs = qe->documents(rslts); // caller has to delete result ParsedDocuments
   std::vector<lemur::api::DOCID_T> docIds;
@@ -403,7 +495,7 @@ std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe
   std::vector<std::string> qTokens = Tokenize::whiteSpaceSplit(query->query, stopSet); 
   std::map<std::string, unsigned long> collFreq;
   for(std::vector<std::string>::iterator qIt = qTokens.begin(); qIt != qTokens.end(); ++qIt) {
-    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->documentCount(*qIt)));
+    collFreq.insert(std::pair<std::string, unsigned long>(*qIt, qe->termCount(*qIt)));
   }
 
   std::vector<Passage*> allPsgs;
@@ -411,8 +503,8 @@ std::vector<ScoredExtentResult> PassageModel::maxPsgScoring(QueryEnvironment* qe
   const std::string trecField = "docno";
   std::vector<std::string> trecids = qe->documentMetadata(rslts, trecField);
   std::map<std::string, ScoredExtentResult> srMap;
-  LanguageModel lm;
-  unsigned long collectionSize = qe->documentCount();
+  LanguageModel lm(mu);
+  unsigned long collectionSize = qe->termCount();
   assert(collectionSize > 0);
   //  std::cout << " doc vector " << dvVector.size();
   for(std::vector<DocumentVector*>::iterator dvIt = dvVector.begin(); dvIt != dvVector.end(); ++dvIt, ++idx) {

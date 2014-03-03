@@ -31,8 +31,10 @@ extern "C" {
 #include "indri/MetadataPair.hpp"
 #include "indri/DocumentVector.hpp"
 #include "indri/TagExtent.hpp"
+#include "indri/Parameters.hpp"
 #include "Passage.hpp"
 #include "PassageModel.hpp"
+
 #include "Tokenize.hpp"
 #include "LanguageModel.hpp"
 #include "Query.hpp"
@@ -41,7 +43,7 @@ namespace PassageModel {
   std::vector<Passage*> createFixedWindowPassage(std::string content, bool lower, std::unordered_set<std::string> stopwordSet, const int passageSz, const int windowSz, unsigned long docId);
 
 
-std::vector<indri::api::ScoredExtentResult> maxPsgScoring(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
+  std::vector<indri::api::ScoredExtentResult> maxPsgScoring(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, indri::api::Parameters& param);
 
   std::vector<indri::api::ScoredExtentResult> intrpMaxPsgScoringLengthHom(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
 
@@ -50,6 +52,8 @@ std::vector<indri::api::ScoredExtentResult> maxPsgScoring(indri::api::QueryEnvir
   Passage createPassage(std::vector<std::string> terms, lemur::api::DOCID_T docId, bool discard);
 
   std::vector<indri::api::ScoredExtentResult> intrpMaxPsgScoringCosineHom(indri::api::QueryEnvironment* qe, Query* query, std::vector<indri::api::ScoredExtentResult>& rslts, const bool lower, std::unordered_set<std::string> stopSet, const int passageSz, const int windowSz);
+
+  float psgSimpleCosineSimilarity(std::vector<Passage*>& psgs, Passage* motherPassage);
 
   std::vector<std::string> constructDocFromVector(indri::api::DocumentVector *dv, bool  discardJunk);
 };

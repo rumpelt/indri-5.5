@@ -8,6 +8,7 @@ private:
   float _mu;
 public:
   LanguageModel();
+  LanguageModel(float mu);
   float score(std::vector<std::string> query, Passage* psg, std::map<std::string, unsigned long> collFreq, unsigned long collSize);
 };
 #endif

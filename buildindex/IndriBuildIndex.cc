@@ -405,9 +405,10 @@ std::string getTitle(streamcorpus::StreamItem& streamItem) {
 void getKbaContent(std::string fileToParse ,const std::string directory, std::vector<std::string>& pdocs) {
   using namespace indri::utility;
   using namespace indri::parse;
-  //std::cout << "parsing " << fileToParse << std::endl;
+  std::cout << "parsing " << fileToParse << std::endl;
   kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
   tdextractor->open(fileToParse);
+  //std::cout << "Uncompressed " << std::endl;
   streamcorpus::StreamItem* streamItem = 0;
   std::string fileName = fileToParse.substr(fileToParse.rfind("/")+1);
 
@@ -428,7 +429,7 @@ void getKbaContent(std::string fileToParse ,const std::string directory, std::ve
     pdocs.push_back(doc);
     //   std::cout << doc ;
   }
-  
+  //  std::cout << "Parsed " << std::endl;
   delete tdextractor;
 }
 std::vector<indri::api::ParsedDocument> getKbaDocs(std::string fileToParse ,const std::string directory) {

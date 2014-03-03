@@ -21,6 +21,8 @@ void kba::thrift::ThriftDocumentExtractor::open( const std::string& filename ) {
     std::cout << "Could not decmpress xz file :"+filename+"\n";
     return;
   }
+  //  else
+  //  std::cout << "Uncompressed " << std::endl;
   lzma_end(&_lzmaStream);
 
   _memoryTransport = boost::shared_ptr<apache::thrift::transport::TMemoryBuffer>(new apache::thrift::transport::TMemoryBuffer(_dynBuff->_data, _dynBuff->_size));
