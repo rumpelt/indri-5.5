@@ -52,7 +52,6 @@ void print_expression_list( const std::string& indexName, const std::string& exp
 
   std::cout << expression << " " << env.termCount() << " " 
             << env.documentCount() << std::endl;
-nnnnn
   env.close();
   // now, print the results in the format:
   // documentID weight begin end
@@ -366,6 +365,42 @@ void print_document_data( indri::collection::Repository& r, const char* number )
   delete document;
 }
 
+void print_text_documentvector( indri::collection::Repository& r, const char* number ) {
+  indri::server::LocalQueryServer local(r);
+  lemur::api::DOCID_T documentID = atoi( number );
+
+  std::vector<lemur::api::DOCID_T> documentIDs;
+  documentIDs.push_back(documentID);
+
+  indri::server::QueryServerVectorsResponse* response = local.documentVectors( documentIDs );
+  std::string junk = "[OOV]";
+  if( response->getResults().size() ) {
+    indri::api::DocumentVector* docVector = response->getResults()[0];
+    /**    
+    std::cout << "--- Fields ---" << std::endl;
+
+    for( size_t i=0; i<docVector->fields().size(); i++ ) {
+      const indri::api::DocumentVector::Field& field = docVector->fields()[i];
+      std::cout << field.name << " " << field.begin << " " << field.end << " " << field.number << std::endl;
+    }
+
+    std::cout << "--- Terms ---" << std::endl;
+    */
+    for( size_t i=0; i<docVector->positions().size(); i++ ) {
+      int position = docVector->positions()[i];
+      const std::string& stem = docVector->stems()[position];
+      if (stem.compare(junk) != 0)
+	std::cout << stem << " ";
+      //      std::cout << i << " " << position << " " << stem << std::endl;
+    }
+    std::cout << std::endl;
+    delete docVector;
+  }
+
+  delete response;
+}
+
+
 void print_document_vector( indri::collection::Repository& r, const char* number ) {
   indri::server::LocalQueryServer local(r);
   lemur::api::DOCID_T documentID = atoi( number );
@@ -542,7 +577,11 @@ int main( int argc, char** argv ) {
       } else if( command == "dv" || command == "documentvector" ) {
         REQUIRE_ARGS(4);
         print_document_vector( r, argv[3] );
-      } else if( command == "di" || command == "documentid" ) {
+      } else if( command == "tdv" || command == "textdocumentvector" ) {
+        REQUIRE_ARGS(4);
+        print_text_documentvector( r, argv[3] );
+      }    
+       else if( command == "di" || command == "documentid" ) {
         REQUIRE_ARGS(5);
         print_document_id( r, argv[3], argv[4] );
       } else if( command == "il" || command == "invlist" ) {

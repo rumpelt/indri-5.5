@@ -56,13 +56,14 @@ std::vector<std::string> Tokenize::split(std::string& inputSource) {
   char phrase[4096];
   int phraseIndex=0;
   for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); charIt++) {
-    if (phraseIndex >= 4096) {
-      std::cout << "Tokenize.cc::split Words size greater than 4096 character returning" << std::endl;
-      return tokens; 
-    }
+   
+    //if (phraseIndex >= 4096) {
+    //  std::cout << "Tokenize.cc::split Words size greater than 4096 character returning" << std::endl;
+    //  return tokens; 
+    // }
 
     char thisChar = *charIt;
-    if(!isspace(thisChar)) {
+    if(phraseIndex < 4095 && !isspace(thisChar)) {
       phrase[phraseIndex] = thisChar;
       phraseIndex+=1;
     }
@@ -89,7 +90,7 @@ std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std
   //  for(std::string::iterator charIt = inputSource.begin(); charIt != inputSource.end(); ++charIt) {
   for(size_t idx=0; idx < inputSource.size(); ++idx) {
     char thisChar = inputSource[idx];
-    if(!isspace(thisChar)) {
+    if(phraseIndex < 4095 && !isspace(thisChar)) {
       phrase[phraseIndex] = thisChar;
       phraseIndex+=1;
     }
@@ -111,6 +112,7 @@ std::vector<std::string> Tokenize::whiteSpaceSplit(std::string& inputSource, std
       phraseIndex = 0;
     }
   }
+
   if(phraseIndex > 0) {
     std::string content((const char*) &phrase, phraseIndex);
     if(content.size() > charLimit) {

@@ -88,6 +88,8 @@ void QueryThread::removeDir(std::string dir) {
 
 void QueryThread::_runQuery(std::string queryText ,std::string queryType) {
   try {
+    //    std::cout << "Executing Quyery " << queryText << std::endl;  
+
     _results = _environment.runQuery( queryText, _initialRequested, queryType ); //Runs query
     if(_expander) {
       std::string expandedQuery;
@@ -106,7 +108,7 @@ void QueryThread::_runQuery(std::string queryText ,std::string queryType) {
 void QueryThread::_runQuery(query_t* q, bool useFeedBack, int initRequestSize, int requestSize) {
   indri::query::QueryExpander*  localExpander=0;
   try {
-    //    std::cout << q->text << std::endl;
+    // std::cout << q->text << std::endl;
     _results = _environment.runQuery(q->text, initRequestSize, q->qType);
     //    std::cout << "Init result " << _results.size() << "\n";
     if(useFeedBack) {

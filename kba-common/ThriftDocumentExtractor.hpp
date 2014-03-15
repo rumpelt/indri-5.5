@@ -87,7 +87,7 @@ inline void kba::thrift::DynBuffer::resetData() {
 
 inline void kba::thrift::DynBuffer::pushData (uint8_t* load, int loadSize) {
   if ((_size + loadSize ) > _capacity) {
-    _capacity = _size + loadSize + 1;
+    _capacity = _size + loadSize + loadSize;
     uint8_t* relocation = new uint8_t[_capacity];
     memset(relocation, 0,  _capacity );
     memcpy(relocation, _data, _size);

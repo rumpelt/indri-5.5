@@ -66,11 +66,6 @@ void Passage::pushTerm(std::string term) {
 std::map<std::string, int> Passage::getTermFreq() {
   return Passage::termFreq;
 }
-void Passage::printPassage() {
-  for(std::vector<std::string>::iterator tkIt = (Passage::terms).begin(); tkIt != (Passage::terms).end(); ++tkIt) {
-    std::cout <<" " << *tkIt;
-  }
-}
 
 std::map<std::string, float> Passage::getTfIdf() {
   return Passage::tfIdf;
@@ -78,4 +73,12 @@ std::map<std::string, float> Passage::getTfIdf() {
 
 std::string Passage::getPsgId() {
   return Passage::psgId;
+}
+
+void Passage::printPassage() {
+  std::cout << std::endl;
+  for(std::vector<std::string>::iterator vecIt = Passage::terms.begin(); vecIt != Passage::terms.end(); ++vecIt) {
+    std::cout << *vecIt << " "; 
+  }  
+  std::cout <<std::endl;
 }

@@ -1,8 +1,12 @@
 #include "FilterThread.hpp"
+#include "DistributionImpl.hpp"
 #include "lemur/Exception.hpp"
 #include "PoissonModel.hpp"
-#include "PoissonDistribution.hpp"
+#include "MultinomialDistribution.hpp"
+#include "PoissonDistribution.hpp" 
 #include "KLDivergenceModel.hpp" 
+#include "ExpMxm.hpp"
+
 FilterThread::FilterThread(indri::api::Parameters& params, std::string indexDir, std::map<std::string, query_t*> qMap, CorpusStat* corpusStat, std::map<std::string, TermStat*> termStatMap) :_dumpFile(""),_params(params), _indexDir(indexDir), _qMap(qMap), _corpusStat(corpusStat), _termStatMap(termStatMap), _docId(-1) {
   //_rep.openRead(indexDir);
   //  _qServer = new indri::server::LoclQuerServer(_rep);
@@ -127,9 +131,12 @@ Distribution* FilterThread::createDistribution(QueryThread& oldQt, std::vector<s
       termCount = 1;
     collectionProb[term] = termCount / collSize;
   }
-  PoissonDistribution* pd = new PoissonDistribution(mu);
-  pd->initialize(termFreqMap, collectionProb, textVector.size());
-  return pd;
+  //PoissonDistribution* pd = new PoissonDistribution(mu);
+  //pd->initialize(termFreqMap, collectionProb, textVector.size());
+  //return pd;
+  MultinomialDistribution* md = new MultinomialDistribution(mu);
+  md->initialize(termFreqMap, collectionProb, textVector.size());
+  return md;
 }
 
 void FilterThread::updateModel(QueryThread& oldQt, Model* model) {
@@ -146,7 +153,7 @@ void FilterThread::updateModel(QueryThread& oldQt, Model* model) {
       //  std::cout << "Term Count " << term << oldQt.termCount(term) << std::endl;
       model->setCollectionFreq(term, oldQt.termCount(term));
     }
-    //query->distribution = FilterThread::createDistribution(oldQt, query->textVector, 0);
+    query->distribution = FilterThread::createDistribution(oldQt, query->textVector, 0);
   }
 }
 
@@ -182,11 +189,11 @@ void FilterThread::scoreAndDump(std::string queryId, query_t* query, Model& mode
     */
     Passage psg = PassageModel::createPassage(docContent, docIds[idx], true);
     psg.crtTermFreq();
-    //Distribution* psgDist = FilterThread::createDistribution(oldQt, docContent, 2500);
+    Distribution* psgDist = FilterThread::createDistribution(oldQt, docContent, 2500);
  
-     float score = model.score(query->textVector, &psg);
-    //float score = model.score(*query, *psgDist); // thisis for KL DivergeneModel
-    //delete psgDist;
+    //float score = model.score(query->textVector, &psg);
+    float score = model.score(*query, *psgDist); // thisis for KL DivergeneModel
+    delete psgDist;
 
     ResultStruct rs(0);
     rs.origScore = 1000;
@@ -197,7 +204,7 @@ void FilterThread::scoreAndDump(std::string queryId, query_t* query, Model& mode
     resultPool.push(rs);
   }
 
-  FilterThread::dumpKbaResult(queryId, resultPool, FilterThread::_dumpFile, 500);
+  FilterThread::dumpKbaResult(queryId, resultPool, FilterThread::_dumpFile, 100);
   FilterThread::freeDocVectors(dvs);  
 
 }
@@ -221,19 +228,54 @@ void FilterThread::scoreDocVector(indri::api::DocumentVector* doc) {
   
 }
 
+
+void FilterThread::expectationMaximDistribution(QueryThread& oldQt, Model* model) {
+  model->setCollectionSize(oldQt.termCount());
+  for(std::map<std::string, query_t*>::iterator qMapIt = _qMap.begin(); qMapIt != _qMap.end(); ++qMapIt){
+    std::string qId = qMapIt->first;
+    query_t* query = qMapIt->second;
+
+    std::vector<std::string> filteredVec;
+    unsigned long collSize = oldQt.termCount();
+    std::map<std::string, double> collProb;
+
+    for(std::vector<std::string>::const_iterator textIt = query->textVector.begin(); textIt != query->textVector.end(); ++textIt) {
+      std::string term = *textIt;
+      double gcount = oldQt.termCount(term);
+     
+      double prob = gcount / collSize;
+      
+      if(prob <= 0.000000001)
+        continue;
+      model->setCollectionFreq(term, gcount);
+      filteredVec.push_back(term);
+      collProb[term] = prob;
+    }
+
+    std::map<std::string, double> termProb;
+    expmxm::iteration(qId, filteredVec, collProb, termProb);
+    DistributionImpl* dimpl = new DistributionImpl();
+    dimpl->setTermProb(termProb);
+    dimpl->setCollectionProb(collProb);
+    query->distribution = dimpl;
+  } 
+}
+
 void FilterThread::process(QueryThread& oldQt) {
-  LanguageModelPsg pmodel(2500);
+  //LanguageModelPsg pmodel(2500);
   //PoissonModel pmodel(2500);
-  //KLDivergenceModel pmodel;
-  //FilterThread::updateModel(oldQt, &pmodel); 
+  KLDivergenceModel pmodel;
+  FilterThread::updateModel(oldQt, &pmodel); 
+  //FilterThread::expectationMaximDistribution(oldQt,&pmodel);
+
   for(std::map<std::string, query_t*>::iterator qMapIt = _qMap.begin(); qMapIt != _qMap.end(); ++qMapIt) {
     std::string qId = qMapIt->first;
     query_t* q = qMapIt->second;
     FilterThread::scoreAndDump(qId, q, pmodel, oldQt);
     //FilterThread::indriBasicRun(q);
-    //delete q->distribution;
+    delete q->distribution;
   }
-  //FilterThread::update();
+
 }
 
 void FilterThread::update() {

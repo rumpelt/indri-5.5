@@ -57,5 +57,6 @@ public:
   void dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::greater>& resultPool, std::string& dumpFile, int retainCount);
   void dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::lesser>& resultPool, std::string& dumpFile, int retainCount);
   void dumpKbaResult(std::string& queryId, std::vector<ResultStruct>& resultPool, std::string& dumpFile);
+  void expectationMaximDistribution(QueryThread& oldQt, Model* model);
 };
 #endif

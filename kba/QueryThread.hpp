@@ -10,6 +10,7 @@
 #include <indri/ScoredExtentResult.hpp>
 
 #include "Distribution.hpp"
+#include "Passage.hpp"
 
 static bool copy_parameters_to_string_vector( std::vector<std::string>& vec, indri::api::Parameters p, const std::string& parameterName ) {
   if( !p.exists(parameterName) )
@@ -54,6 +55,7 @@ struct query_t {
   Distribution* distribution;
   std::string expandedText; // Contains the expanded query
   std::map<std::string, float> textWeight;
+  std::vector<Passage> relevantDocs;
   std::string qType;
   // working set to restrict retrieval
   std::vector<std::string> workingSet;

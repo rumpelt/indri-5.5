@@ -22,6 +22,7 @@
 #include "DumpKbaResult.hpp"
 #include "StreamThread.hpp"
 #include "ParsedStream.hpp"
+#include "Passage.hpp"
 #include "StreamIndex.hpp"
 #include <boost/thread.hpp>
 #include <time.h>
@@ -503,7 +504,9 @@ std::string sanitizeQueryText(std::string& text) {
 }
 
 void processFilterThread(std::map<std::string, query_t*>& qMap, std::vector<std::string> dirList, std::vector<std::string> paramFiles, std::string dumpFile, std::map<std::string, kba::term::TermStat*> termStatMap, kba::term::CorpusStat* corpusStat) {
-  std::string prevDayDate = (dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
+  //std::cout << " Number of dir " << dirList.size() << std::endl;
+  std::string prevDayDate = dirList.at(0); //(dirList.at(0)).substr(0, (dirList.at(0)).rfind('-'));
+  //std::cout << "prev Day " << prevDayDate << std::endl;
   std::vector<std::string> dirBunch;
   std::string runId = "test";
 
@@ -533,6 +536,7 @@ void processFilterThread(std::map<std::string, query_t*>& qMap, std::vector<std:
     ft._runId = runId;
     //      ft.setParamFile(paramFiles);
     ft.process(qt);
+    //ft.expectationMaxim(qt);
     std::string oldest = oldIndexDir.front();
     oldIndexDir.erase(oldIndexDir.begin());
     oldIndexDir.push_back(dir);
@@ -593,6 +597,138 @@ std::vector<TruthData> parseTruthFile(std::string fileName) {
   return truthVector;
 }
 
+std::map<std::string, Passage> getPassages(std::string dir, std::set<std::string>& streamIds) {
+  std::map<std::string, Passage> psgMap;
+  indri::file::FileTreeIterator files(dir);
+  //std::cout << "Parsing Directoru "<< dir << std::endl;
+  for(; files != indri::file::FileTreeIterator::end() ;files++) {
+    std::string fName = *files;
+    kba::thrift::ThriftDocumentExtractor* tdextractor= new kba::thrift::ThriftDocumentExtractor();
+    tdextractor->open(fName);
+    streamcorpus::StreamItem* streamItem = 0;
+    while((streamItem = tdextractor->nextStreamItem()) != 0) {
+      std::string docId  = streamItem->stream_id;
+      if(streamIds.find(docId) == streamIds.end() && (streamItem->body).clean_visible.size() <= 0) 
+        continue;
+
+        std::string title = streamcorpus::utils::getTitle(*streamItem);
+        std::string anchor = streamcorpus::utils::getAnchor(*streamItem);
+        std::string body = (streamItem->body).clean_visible;
+        std::string fullContent = title + " "+  anchor + " " + body;  
+	std::vector<std::string> tokens = Tokenize::whiteSpaceSplit(fullContent, STOP_SET, true, 1, true);
+        Passage psg;
+        psg.setTrecId(docId);
+        psg.setTerms(tokens);
+        //psg.crtTermFreq();
+        psgMap[docId] = psg;
+    }
+    delete tdextractor;
+  }
+  //std::cout << "End of parsing " << std::endl;
+  return psgMap;
+}
+
+void loadQueryDocumentFromFile(std::map<std::string, query_t*>& queryMap, std::string fileName, std::string rating) {
+  std::ifstream infile(fileName.c_str());
+  std::string line;
+  long lineNo = 1;
+  query_t* query= 0;
+  std::string trecId;
+  while(std::getline(infile, line)) {
+    std::vector<std::string> tokens = Tokenize::split(line);
+    if((lineNo % 2) == 1) {
+      std::string curRating = tokens[2];
+      if(curRating.compare(rating) == 0) {
+        std::string topicId = tokens[0];
+        query = queryMap[topicId];
+        trecId = tokens[1];
+      }
+      else
+        query = 0;
+    }
+    else {
+      if(query != 0) {
+        bool alreadyPushed = false;
+        for(std::vector<Passage>::iterator psgIt = query->relevantDocs.begin(); psgIt != query->relevantDocs.end(); ++psgIt) {
+        Passage passage = *psgIt; 
+        if (passage.getTrecId().compare(trecId) == 0)
+          alreadyPushed = true;
+	}
+        if (alreadyPushed)
+          continue;
+        Passage psg;
+        psg.setTerms(tokens);
+        psg.setTrecId(trecId);
+        psg.crtTermFreq();
+        query->relevantDocs.push_back(psg);
+      }
+    }
+  }
+  infile.close();
+  
+}
+
+void loadQueryDocuments(std::map<std::string, query_t*>& queryMap) {
+  std::ofstream outfile("../help/VitalQueryDocuments", std::ofstream::out);
+  std::string testTruthFile = "/usa/arao/trec/trec-kba/2013/evaluation/kba-scorer/data/trec-kba-ccr-judgments-2013-09-26-expanded-with-ssf-inferred-vitals-plus-len-clean_visible.before-and-after-cutoff.filter-run.txt";
+  std::vector<TruthData> truth = parseTruthFile(testTruthFile);
+  //std::cout << "Rating " << returnRating(topic, streamId, dirc, truthVector) << std::endl;
+
+  std::map<std::string, Passage> psgMap;
+  std::set<std::string> streamToGet;
+  std::string stopDir = "2012-03-01-00";
+
+  for(std::vector<TruthData>::iterator dtIt = truth.begin();  dtIt != truth.end(); ++dtIt) {
+    TruthData tdata = *dtIt;
+    if(tdata.directory.compare(stopDir) >= 0)
+      continue;
+    if(tdata.rating.compare("2") == 0)
+      streamToGet.insert(tdata.streamid);
+  }
+
+  std::map<std::string, Passage> strmPsgMap;
+  std::string prevDir = "";
+  for(int idx = 0 ; idx < truth.size(); ++idx) {
+    TruthData td = truth[idx];
+    if(td.directory.compare(stopDir) >= 0 || td.rating.compare("2") != 0) {
+      continue;
+    }
+    if(td.directory.compare(prevDir) != 0) {
+      strmPsgMap.clear();
+      std::string corpus = "../help/corpus/"+td.directory;
+      strmPsgMap = getPassages(corpus, streamToGet);
+      prevDir = td.directory;
+    }
+    Passage psg;
+    query_t* query = 0; 
+    try {
+      psg = strmPsgMap.at(td.streamid); 
+      query = queryMap.at(td.topic);
+    } catch  (std::out_of_range& expt){
+      continue;
+    }
+    bool alreadyPushed = false;
+    for(std::vector<Passage>::iterator psgIt = query->relevantDocs.begin(); psgIt != query->relevantDocs.end(); ++psgIt) {
+      Passage passage = *psgIt; 
+      if (passage.getTrecId().compare(td.streamid) == 0)
+        alreadyPushed = true;
+    }
+    if (alreadyPushed)
+      continue;
+    //std::cout << "Adding Psg to " << query->id << psg.getTerms().size() << std::endl;
+    outfile << td.topic <<  " " << td.streamid << " " << td.rating << " " << td.directory << std::endl;
+    std::vector<std::string> terms = psg.getTerms();  
+    for(std::vector<std::string>::iterator vecIt = terms.begin(); vecIt != terms.end(); ++vecIt) {
+      outfile << *vecIt << " ";
+    }
+    outfile << std::endl;
+    query->relevantDocs.push_back(psg);
+    prevDir =  td.directory; 
+  }  
+  //  outfile << "Done";
+  outfile.close();
+}
+
 /**
  * We just populate the query struct
  */
@@ -610,10 +746,10 @@ void makeQuery(std::map<std::string, query_t*>& queryMap, std::vector<kba::entit
       std::string s_abstract = sanitizeQueryText(entity->abstract);
       std::transform(s_abstract.begin(), s_abstract.end(), s_abstract.begin(), ::tolower);
       query->description = s_abstract;
-      // query->textVector = Tokenize::split(s_abstract);
+      query->textVector = Tokenize::whiteSpaceSplit(s_abstract, STOP_SET, true, 1,true);
     }
-    // else
-    // continue;
+    else
+      continue;
     
     queryMap.insert(std::pair<std::string, query_t*>(entity->wikiURL, query));
   }
@@ -817,19 +953,22 @@ int main(int argc, char *argv[]){
   }
   
   std::vector<std::string> runDirectories; 
+  //std::cout << " size " << processList.size() << std::endl;
   if(processList.size() > 0) {
     //bool found = false;
-    //std::string startDate = "2012-08-11-00";
+    //std::string startDate = "2012-12-20-00";
+    //    std::cout << " size " << processList << std::endl;
     std::ifstream inputFile(processList.c_str());
     std::set<std::string> seen;
     for(std::string line;getline(inputFile, line);) {
       //if (!found && line.compare(startDate) == 0)
-      //  found = true;
+	// found = true;
       //if (!found)
       //  continue;
       std::string dayDate = line.substr(0, line.rfind('-'));    
       if(seen.find(dayDate) == seen.end()) {
         runDirectories.push_back(dayDate);
+	//std::cout << "Adding " << dayDate << std::endl;
         seen.insert(dayDate);
       }
     }
@@ -838,10 +977,7 @@ int main(int argc, char *argv[]){
   }
 
   if(cmndMap.count("param")) {
-    //    std::string testTruthFile = "/usa/arao/trec/trec-kba/2013/evaluation/kba-scorer/data/trec-kba-ccr-judgments-2013-09-26-expanded-with-ssf-inferred-vitals-plus-len-clean_visible.before-and-after-cutoff.filter-run.txt";
-    //std::vector<TruthData> truthVector = parseTruthFile(testTruthFile);
-    //    std::cout << "Rating " << returnRating(topic, streamId, dirc, truthVector) << std::endl;
-
+    
     std::vector<std::string> indexDirs;
     for(std::vector<std::string>::iterator dirIt = directories.begin(); dirIt != directories.end(); ++dirIt){
       std::string indexPath = baseIndexPath + "/"+ *dirIt;
@@ -858,13 +994,14 @@ int main(int argc, char *argv[]){
     std::vector<kba::entity::Entity*> entityList = getEntityList(topicFile, noPositiveFile, true);
     kba::term::CorpusStat* corpusStat = new kba::term::CorpusStat();
     std::map<std::string, kba::term::TermStat*> termStatMap;
-    //    std::cout << " training dirs " << indexDirs.size() << " run dir "  << runDirs.size() << "\n";
+    //std::cout << " training dirs " << indexDirs.size() << " run dir "  << runDirs.size() << "\n";
     //kba::entity::Entity* entity = entityList[1];
     //std::vector<kba::entity::Entity*> temp;
     //temp.push_back(entity);
     std::map<std::string, query_t*> qMap;
     //    bootStrapIndri(qMap, indexDirs, paramFiles, temp, 20, termStatMap, corpusStat);
     makeQuery(qMap, entityList);
+    //loadQueryDocuments(qMap);
     processFilterThread(qMap, runDirs, paramFiles, dumpFile, termStatMap, corpusStat);
   }
 

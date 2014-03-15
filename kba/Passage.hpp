@@ -31,10 +31,9 @@ public:
   std::vector<std::string> getTerms();
   std::string getTrecId();
   std::map<std::string, int> getTermFreq();
-
+  void printPassage();
   std::map<std::string, float> getTfIdf(); // a map of terms to float values. to be used for various purpuses.
   int freq(std::string term);
-  void printPassage();
 };
 
 #endif

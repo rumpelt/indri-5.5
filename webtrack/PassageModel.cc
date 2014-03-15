@@ -2,12 +2,13 @@
 #include "PassageUtility.hpp"
 
 using namespace indri::api; 
+
 namespace cmndOp = boost::program_options;
 
 struct ClueResult {
   std::string tpcNum;
   std::string q0; //fixed
-  std::string docId;
+   std::string docId;
   int rank;
   float score;
   std::string runTag;

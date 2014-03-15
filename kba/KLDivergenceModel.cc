@@ -8,7 +8,7 @@ float KLDivergenceModel::score(query_t& query, Distribution& psg) {
     std::string term = *textIt;
     
     double prob = qDist->termProb(term , qDist->collectionProb(term)) * psg.logTermProb(term, qDist->collectionProb(term));
-    //    std::cout << "term " << term << " Query Term Prob " << qDist->termProb(term, qDist->collectionProb(term)) << " document  prob " << psg.logTermProb(term, qDist->collectionProb(term)) << " coll pron " << qDist->collectionProb(term) << " Doc term frewq " <<  psg.termFreq(term) << std::endl;
+    //       std::cout << "term " << term << " Query Term Prob " << qDist->termProb(term, qDist->collectionProb(term)) << " document  prob " << psg.logTermProb(term, qDist->collectionProb(term)) << " coll pron " << qDist->collectionProb(term) << " Doc term frewq " <<  psg.termFreq(term) << std::endl;
     score = score + prob;
   }
 
