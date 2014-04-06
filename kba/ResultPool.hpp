@@ -23,7 +23,8 @@ struct ResultStruct {
   std::string id; // this is document identifier;
   std::string dayDt;
   int score;
-  float origScore; // Score obtained by some other tool eg. Indri
+  float origScore; // Score obtained by model
+  float indriScore; // score obtained by indri
   ResultStruct(float initSc) : score(initSc) {}
 };
 

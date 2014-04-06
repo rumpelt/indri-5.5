@@ -38,9 +38,11 @@ float PoissonModel::score(std::vector<std::string>& query, Passage* psg) {
     double lambdaEnh = lambda * psgSize;
     //double exponent = exp(lambdaEnh);
     //    double lambdaPow = pow(lambdaEnh, freq);
+    if(freq == 0)
+      freq = 1;
     double termScore = (freq * log(lambdaEnh)) - ((lambdaEnh * 1) + logFactorial);
     
-    //std::cout << "Term " << term << " Psg fre " << freq << " global prb " << globalProb << " lambda " << lambda << " psg size " << psgSize << "lambda enh " << lambdaEnh << " "  << " termscore " << termScore << " factorial " << logFactorial <<std::endl;
+    //std::cout << "Term " << term << " Psg fre " << freq << " global prb " << globalProb << " lambda " << lambda << " lambda enh " << lambdaEnh << " psg size " << psgSize << "lambda enh " << lambdaEnh << " "  << " termscore " << termScore << " factorial " << logFactorial <<std::endl;
     score = score + termScore;
   }
 

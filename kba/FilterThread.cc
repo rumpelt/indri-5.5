@@ -7,6 +7,8 @@
 #include "KLDivergenceModel.hpp" 
 #include "ExpMxm.hpp"
 
+std::fstream FilterThread::dumpStream;
+
 FilterThread::FilterThread(indri::api::Parameters& params, std::string indexDir, std::map<std::string, query_t*> qMap, CorpusStat* corpusStat, std::map<std::string, TermStat*> termStatMap) :_dumpFile(""),_params(params), _indexDir(indexDir), _qMap(qMap), _corpusStat(corpusStat), _termStatMap(termStatMap), _docId(-1) {
   //_rep.openRead(indexDir);
   //  _qServer = new indri::server::LoclQuerServer(_rep);
@@ -67,32 +69,32 @@ void FilterThread::dumpKbaResult(std::string& queryId, std::vector<ResultStruct>
 }
 
 void FilterThread::dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::lesser>& resultPool, std::string &dumpFile, int retainCount) {
-  std::fstream dumpStream(dumpFile.c_str(), std::fstream::out | std::fstream::app);
+  //std::fstream dumpStream(dumpFile.c_str(), std::fstream::out | std::fstream::app);
   std::string teamId = "udel";
   int count = 0;
   while(!resultPool.empty() && (count < retainCount)) {
     ResultStruct rs  = resultPool.top();
     resultPool.pop();
-    dumpStream << teamId << " " << FilterThread::_runId << " " << rs.id << " " << queryId << " " << 1000 << " " << "2" << " " << "1" << " " << rs.dayDt << " " << "NULL" << " " << "-1" << " " <<"0-0" <<  "  " << rs.score << "\n";
+    dumpStream << teamId << " " << FilterThread::_runId << " " << rs.id << " " << queryId << " " << 1000 << " " << "2" << " " << "1" << " " << rs.dayDt << " " << "NULL" << " " << "-1" << " " <<"0-0" <<  "  " << rs.score  << " " << rs.indriScore << "\n";
     //    std::cout << rs.score << "\n";
     count++;
   }
-  dumpStream.close();
+  //dumpStream.close();
 }
 
 
-void FilterThread::dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::greater>& resultPool, std::string &dumpFile, int retainCount) {
-  std::fstream dumpStream(dumpFile.c_str(), std::fstream::out | std::fstream::app);
+void FilterThread::dumpKbaResult(std::string& queryId, std::priority_queue<ResultStruct, std::vector<ResultStruct>, ResultStruct::greater>& resultPool, std::string& dumpFile, int retainCount) {
+  //std::fstream dumpStream(dumpFile.c_str(), std::fstream::out | std::fstream::app);
   std::string teamId = "udel";
   int count = 0;
   while(!resultPool.empty() && (count < retainCount)) {
     ResultStruct rs  = resultPool.top();
     resultPool.pop();
-    dumpStream << teamId << " " << FilterThread::_runId << " " << rs.id << " " << queryId << " " << 1000 << " " << "2" << " " << "1" << " " << rs.dayDt << " " << "NULL" << " " << "-1" << " " <<"0-0" <<  "  " << rs.score << "\n";
+    dumpStream << teamId << " " << FilterThread::_runId << " " << rs.id << " " << queryId << " " << 1000 << " " << "2" << " " << "1" << " " << rs.dayDt << " " << "NULL" << " " << "-1" << " " <<"0-0" <<  "  " << rs.score << " " << rs.indriScore <<"\n";
     //    std::cout << rs.score << "\n";
     count++;
   }
-  dumpStream.close();
+  //dumpStream.close();
 }
 
 void FilterThread::indriBasicRun(query_t* query) {
@@ -153,14 +155,25 @@ void FilterThread::updateModel(QueryThread& oldQt, Model* model) {
       //  std::cout << "Term Count " << term << oldQt.termCount(term) << std::endl;
       model->setCollectionFreq(term, oldQt.termCount(term));
     }
-    query->distribution = FilterThread::createDistribution(oldQt, query->textVector, 0);
+    //query->distribution = FilterThread::createDistribution(oldQt, query->textVector, 0);
   }
+}
+
+void FilterThread::dumpDayStat(QueryThread& oldQt) {
+  QueryThread qt(FilterThread::_params, FilterThread::_indexDir);
+  // std::cout << qt.documentCount() << " " <<  oldQt.documentCount() << std::endl;
+  double todayDocSize = 0.0;
+  if (qt.documentCount() > 0.0) 
+    todayDocSize = qt.termCount() / qt.documentCount();
+  double oldDocSize = oldQt.termCount() / oldQt.documentCount();
+  //FilterThread::dumpStream << FilterThread::_indexDir << "," << "present-day," << todayDocSize << "\n";
+  FilterThread::dumpStream << FilterThread::_indexDir << "," << "past-5-day," << oldDocSize << "\n";
 }
 
 void FilterThread::scoreAndDump(std::string queryId, query_t* query, Model& model, QueryThread& oldQt) {
   //  std::cout << "Scoring dir " << _indexDir << std::endl;
   QueryThread qt(FilterThread::_params, FilterThread::_indexDir);
-  qt._runQuery(query, false, 1000, 1000);
+  qt._runQuery(query, false, 10000, 10000);
   std::string kbaIdKey = "docno";
   std::vector<std::string> kbaIds = qt.getMetadata(kbaIdKey);
   //if (kbaIds.size() <= 0)
@@ -179,6 +192,7 @@ void FilterThread::scoreAndDump(std::string queryId, query_t* query, Model& mode
 
   std::vector<lemur::api::DOCID_T> docIds = qt.getDocIds();
   for(std::vector<indri::api::DocumentVector*>::iterator dvsIt = dvs.begin(); dvsIt != dvs.end() ; ++dvsIt, ++idx) {
+    //    std::cout << "Indri score " << qt.getScore(idx) << std::endl;
     indri::api::DocumentVector* dv = *dvsIt;
     std::vector<std::string> docContent = PassageModel::constructDocFromVector(dv, true);
     /**
@@ -189,14 +203,15 @@ void FilterThread::scoreAndDump(std::string queryId, query_t* query, Model& mode
     */
     Passage psg = PassageModel::createPassage(docContent, docIds[idx], true);
     psg.crtTermFreq();
-    Distribution* psgDist = FilterThread::createDistribution(oldQt, docContent, 2500);
+    //Distribution* psgDist = FilterThread::createDistribution(oldQt, docContent, 2500);
  
-    //float score = model.score(query->textVector, &psg);
-    float score = model.score(*query, *psgDist); // thisis for KL DivergeneModel
-    delete psgDist;
+    float score = model.score(query->textVector, &psg);
+    //float score = model.score(*query, *psgDist); // thisis for KL DivergeneModel
+    //delete psgDist;
 
     ResultStruct rs(0);
     rs.origScore = 1000;
+    rs.indriScore = (int)(qt.getScore(idx));
     rs.id = kbaIds[idx];
     rs.dayDt = FilterThread::_indexDir;
     rs.score = (int) score;
@@ -262,20 +277,21 @@ void FilterThread::expectationMaximDistribution(QueryThread& oldQt, Model* model
 }
 
 void FilterThread::process(QueryThread& oldQt) {
-  //LanguageModelPsg pmodel(2500);
-  //PoissonModel pmodel(2500);
-  KLDivergenceModel pmodel;
+  LanguageModelPsg pmodel(5000);
+  //PoissonModel pmodel(5000);
+  //KLDivergenceModel pmodel;
   FilterThread::updateModel(oldQt, &pmodel); 
   //FilterThread::expectationMaximDistribution(oldQt,&pmodel);
-
+  
+  //dumpStream.open(FilterThread::_dumpFile.c_str(), std::fstream::out | std::fstream::app);
   for(std::map<std::string, query_t*>::iterator qMapIt = _qMap.begin(); qMapIt != _qMap.end(); ++qMapIt) {
     std::string qId = qMapIt->first;
     query_t* q = qMapIt->second;
     FilterThread::scoreAndDump(qId, q, pmodel, oldQt);
     //FilterThread::indriBasicRun(q);
-    delete q->distribution;
+    //delete q->distribution;
   }
-
+  //  dumpStream.close();
 }
 
 void FilterThread::update() {

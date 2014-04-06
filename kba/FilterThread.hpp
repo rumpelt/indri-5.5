@@ -40,6 +40,7 @@ private:
 
 public:
   std::string _dumpFile;
+  static std::fstream dumpStream;
   std::string _runId;
   indri::api::Parameters& _params;
   FilterThread(indri::api::Parameters& param, std::string indexDir, std::map<std::string, query_t*> qMap, CorpusStat* corpusStat, std::map<std::string, TermStat*> termStatMap);
@@ -47,6 +48,7 @@ public:
   ~FilterThread();
   void initialize();
   void update();
+  void dumpDayStat(QueryThread& oldQt);
   void   process(QueryThread& prevQt);
   float score(indri::api::ScoredExtentResult& sr, LanguageModelPsg& lmpsg);
   void indriBasicRun(query_t* query); 

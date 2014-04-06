@@ -2,5 +2,5 @@
 <threads>1</threads>
 <runID>base</runID>
 <count>10000</count>
-<rule>method:dirichlet,mu:0</rule>
+<rule>method:dirichlet,mu:1</rule>
 </parameters>

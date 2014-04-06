@@ -189,7 +189,6 @@ std::set<kba::term::TopicTerm*>& getTermRelevance(std::vector<std::string> dirLi
         int dtSize = (streamItem->body).clean_visible.size();
         if (dtSize <= 0)
           continue;
-        
 	std::vector<boost::shared_ptr<EvaluationData> > evDts = st.getEvalData(stream_id, false, true);     
 	//	std::cout << "Streaim id " << stream_id << " "<<evDts.size() << " " << ev->rating << "\n";   
         if(evDts.size() <= 0)
@@ -523,19 +522,22 @@ void processFilterThread(std::map<std::string, query_t*>& qMap, std::vector<std:
   }
   std::vector<std::string> oldIndexDir ;//  we will be collecting index statistics from previous day indexs
   std::string oldestDir;
-  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.begin() + 5 ; ++dirIt) {
+  int numHistoryDays = 5;
+  for(std::vector<std::string>::iterator dirIt = dirList.begin(); dirIt != dirList.begin() + numHistoryDays ; ++dirIt) {
     oldIndexDir.push_back(*dirIt);
   }
 
   QueryThread qt(*params, oldIndexDir);
+  FilterThread::dumpStream.open(dumpFile.c_str(), std::fstream::out | std::fstream::app); 
 
-  for(std::vector<std::string>::iterator dirIt = dirList.begin() + 5; dirIt != dirList.end(); ++dirIt) {
+  for(std::vector<std::string>::iterator dirIt = dirList.begin() + numHistoryDays; dirIt != dirList.end(); ++dirIt) {
     std::string dir = *dirIt;
     FilterThread ft(*params, dir, qMap, corpusStat, termStatMap); //(prevDayDate, qMap, dumpFile, runId);
     ft._dumpFile = dumpFile;
     ft._runId = runId;
     //      ft.setParamFile(paramFiles);
-    ft.process(qt);
+    //ft.process(qt);
+    ft.dumpDayStat(qt);
     //ft.expectationMaxim(qt);
     std::string oldest = oldIndexDir.front();
     oldIndexDir.erase(oldIndexDir.begin());
@@ -543,6 +545,8 @@ void processFilterThread(std::map<std::string, query_t*>& qMap, std::vector<std:
     qt.removeDir(oldest);
     qt.addIndexDir(dir);
   }
+
+  FilterThread::dumpStream.close();
   delete params;
 } 
 
@@ -746,10 +750,10 @@ void makeQuery(std::map<std::string, query_t*>& queryMap, std::vector<kba::entit
       std::string s_abstract = sanitizeQueryText(entity->abstract);
       std::transform(s_abstract.begin(), s_abstract.end(), s_abstract.begin(), ::tolower);
       query->description = s_abstract;
-      query->textVector = Tokenize::whiteSpaceSplit(s_abstract, STOP_SET, true, 1,true);
+      //query->textVector = Tokenize::whiteSpaceSplit(s_abstract, STOP_SET, true, 1,true);
     }
-    else
-      continue;
+    //else
+    //  continue;
     
     queryMap.insert(std::pair<std::string, query_t*>(entity->wikiURL, query));
   }
@@ -955,16 +959,16 @@ int main(int argc, char *argv[]){
   std::vector<std::string> runDirectories; 
   //std::cout << " size " << processList.size() << std::endl;
   if(processList.size() > 0) {
-    //bool found = false;
-    //std::string startDate = "2012-12-20-00";
+    bool found = false;
+    //std::string startDate = "2012-10-14-00";
     //    std::cout << " size " << processList << std::endl;
     std::ifstream inputFile(processList.c_str());
     std::set<std::string> seen;
     for(std::string line;getline(inputFile, line);) {
       //if (!found && line.compare(startDate) == 0)
-	// found = true;
+      //  found = true;
       //if (!found)
-      //  continue;
+      // continue;
       std::string dayDate = line.substr(0, line.rfind('-'));    
       if(seen.find(dayDate) == seen.end()) {
         runDirectories.push_back(dayDate);

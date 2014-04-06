@@ -1,0 +1,8 @@
+<parameters>
+<threads>1</threads>
+<runID>base</runID>
+<count>100</count>
+<fbDocs>50</fbDocs>
+<fbTerms>10</fbTerms>
+<fbOrigWeight>0.7</fbOrigWeight>
+</parameters>
